@@ -15,6 +15,7 @@ const Weapons = {
     cannonMetalCost: 100,
     cannonEnergyCost: 50,
     selectedWeaponType: "cannon",
+    fireHeld: false,
     weaponStats: {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
@@ -31,6 +32,7 @@ const Weapons = {
         this.selectedCannons = [];
         this.selectedTool = null;
         this.selectedWeaponType = "cannon";
+        this.fireHeld = false;
         this.mineDragging = false;
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
@@ -105,8 +107,11 @@ const Weapons = {
             button.dataset.toolCategory = "weapons";
             button.innerHTML = label + "<small>" + costLabel + "</small>";
             const cannonButton = document.getElementById("btn-cannon");
-            if (cannonButton && cannonButton.parentElement) {
-                cannonButton.insertAdjacentElement("afterend", button);
+            const previousButton = weaponType === "megaCannon"
+                ? document.getElementById("btn-machine-gun") || cannonButton
+                : cannonButton;
+            if (previousButton && previousButton.parentElement) {
+                previousButton.insertAdjacentElement("afterend", button);
             } else {
                 (document.querySelector(".toolbar") || document.body).appendChild(button);
             }
@@ -342,6 +347,7 @@ const Weapons = {
 
         if (selected.length) {
             this.handlePointerMove(x, y);
+            this.fireHeld = selected.some(cannon => cannon.weaponType === "machineGun");
             for (const cannon of selected) this.fire(cannon);
             return true;
         }
@@ -350,6 +356,7 @@ const Weapons = {
     },
 
     handlePointerUp(x, y) {
+        this.fireHeld = false;
         if (!this.mineDragging) return false;
 
         this.mineDragging = false;
@@ -385,6 +392,7 @@ const Weapons = {
 
     cancelMineDrag() {
         this.mineDragging = false;
+        this.fireHeld = false;
     },
 
     fire(cannon) {
@@ -417,7 +425,8 @@ const Weapons = {
         projectile.isProjectile = true;
         projectile.damage = stats.damage;
         projectile.team = cannon.team;
-        projectile.life = 5000;
+        projectile.life = 20000;
+        projectile.displayRadius = stats.radius;
         projectile.hasHit = false;
 
         Matter.Composite.add(Physics.world, projectile);
@@ -438,6 +447,15 @@ const Weapons = {
         for (const cannon of this.cannons) {
             if (cannon.cooldown > 0) {
                 cannon.cooldown = Math.max(0, cannon.cooldown - seconds);
+            }
+        }
+
+        if (this.fireHeld) {
+            const selected = this.selectedCannons.length
+                ? this.selectedCannons
+                : (this.selectedCannon ? [this.selectedCannon] : []);
+            for (const cannon of selected) {
+                if (cannon.weaponType === "machineGun") this.fire(cannon);
             }
         }
 
@@ -550,7 +568,7 @@ const Weapons = {
             ctx.arc(
                 projectile.position.x,
                 projectile.position.y,
-                5,
+                projectile.displayRadius || 5,
                 0,
                 Math.PI * 2
             );
