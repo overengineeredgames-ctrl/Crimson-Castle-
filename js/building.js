@@ -307,18 +307,20 @@ const Building = {
             render: { visible: false }
         });
 
-        // Non-physical sensor used for projectile detection.
+        // Keep the beam hitbox as a sensor. The Matter constraint is what
+        // physically connects the joints; making this rectangle solid causes
+        // it to collide with its own endpoint nodes and fight that constraint,
+        // pulling the fort apart or toward nearby joints/cores.
+        // Opposing-team construction collision is handled by canPlaceStrut().
         const beamBody = Matter.Bodies.rectangle(
             (a.x + b.x) / 2,
             (a.y + b.y) / 2,
             length,
             material.width,
             {
-                // Solid beam body: blocks both player and AI structures.
                 isStatic: true,
-                isSensor: false,
-                friction: 0.8,
-                frictionStatic: 1,
+                isSensor: true,
+                friction: 0,
                 restitution: 0,
                 angle: Math.atan2(b.y - a.y, b.x - a.x),
                 label: "fort-beam"
