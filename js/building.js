@@ -163,8 +163,45 @@ const Building = {
     },
 
     canPlaceNode(x, y, team = "player") {
+        if (team !== "player") return true;
+
+        const point = { x, y };
+        const nodeClearance = this.nodeRadius * 2 + 5;
+
+        // Never allow a new player joint to be placed inside an enemy joint.
+        for (const node of this.nodes) {
+            if (node.team !== "enemy" || node.removed || node.hidden) continue;
+
+            if (this.distance(point, node.body.position) < nodeClearance) {
+                return false;
+            }
+        }
+
+        // Keep player joints out of enemy beams as well. Without this check,
+        // a player could start a new beam from a joint placed directly on an
+        // enemy beam, making the two forts visually overlap.
+        for (const strut of this.struts) {
+            if (
+                strut.team !== "enemy" ||
+                strut.removed ||
+                !strut.a ||
+                !strut.b ||
+                strut.a.removed ||
+                strut.b.removed
+            ) continue;
+
+            if (this.pointToSegmentDistance(
+                x,
+                y,
+                strut.a.body.position,
+                strut.b.body.position
+            ) < this.nodeRadius + strut.width / 2 + 6) {
+                return false;
+            }
+        }
+
         // Keep player construction clear of enemy cannon bodies and barrels.
-        if (team === "player" && typeof Weapons !== "undefined") {
+        if (typeof Weapons !== "undefined") {
             for (const cannon of Weapons.cannons || []) {
                 if (
                     cannon.team !== "enemy" ||
@@ -173,8 +210,7 @@ const Building = {
                 ) continue;
 
                 const p = cannon.node.body.position;
-                // Cannon footprint plus roughly 5 cm of extra clearance.
-                if (Math.hypot(x - p.x, y - p.y) < 42) return false;
+                if (Math.hypot(x - p.x, y - p.y) < 46) return false;
             }
         }
 
