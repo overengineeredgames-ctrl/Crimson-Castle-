@@ -110,7 +110,8 @@ const Building = {
         return this.createNode(anchorX, anchorY, {
             team,
             isFoundation: true,
-            hidden: true
+            isGroundJoint: true,
+            hidden: false
         });
     },
 
@@ -268,6 +269,7 @@ const Building = {
             material: materialName,
             isFoundation,
             isBaseAnchor: !!options.isBaseAnchor,
+            isGroundJoint: !!options.isGroundJoint,
             isCore,
             hidden: !!options.hidden,
             canHoldMine: !isCore &&
