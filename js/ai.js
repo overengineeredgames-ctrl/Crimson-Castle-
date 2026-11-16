@@ -61,56 +61,13 @@ const AI = {
     },
 
     createEnemyFort() {
-        const worldWidth =
-            Physics.worldWidth || window.innerWidth * 1.5;
+        // Build the enemy using the exact same fort template as the player.
+        const fort = Building.createStartingFort("enemy");
 
-        const leftX = Math.round(worldWidth * 0.65);
-        // Keep every diagonal brace within the 220px strut limit.
-        const rightX = leftX + 140;
-
-        const baseY = Building.groundY - Building.nodeRadius;
-        const topY = baseY - 150;
-
-        const lb = Building.createNode(leftX, baseY, {
-            isFoundation: true,
-            team: "enemy"
-        });
-
-        const rb = Building.createNode(rightX, baseY, {
-            isFoundation: true,
-            team: "enemy"
-        });
-
-        const lt = Building.createNode(leftX, topY, {
-            team: "enemy"
-        });
-
-        const rt = Building.createNode(rightX, topY, {
-            team: "enemy"
-        });
-
-        const core = Building.createCore(
-            (leftX + rightX) / 2,
-            (baseY + topY) / 2,
-            "enemy"
-        );
-
-        Building.createStrut(lb, rb, { material: "steel" });
-        Building.createStrut(lb, lt, { material: "steel" });
-        Building.createStrut(rb, rt, { material: "steel" });
-        Building.createStrut(lt, rt, { material: "steel" });
-
-        Building.createStrut(lb, rt, { material: "steel" });
-        Building.createStrut(rb, lt, { material: "steel" });
-
-        Building.createStrut(core, lt, { material: "steel" });
-        Building.createStrut(core, rt, { material: "steel" });
-
-        Building.checkSupport();
-
-        Weapons.addCannon(rt, "enemy", true);
+        if (fort && fort.topRight) {
+            Weapons.addCannon(fort.topRight, "enemy", true);
+        }
     },
-
     getPlayerNodes() {
         return Building.nodes.filter(node =>
             node.team === "player" &&
@@ -124,10 +81,10 @@ const AI = {
         return Building.struts.filter(strut =>
             strut.team === "player" &&
             !strut.removed &&
-            strut.nodeA &&
-            strut.nodeB &&
-            !strut.nodeA.removed &&
-            !strut.nodeB.removed
+            strut.a &&
+            strut.b &&
+            !strut.a.removed &&
+            !strut.b.removed
         );
     },
 
@@ -139,8 +96,8 @@ const AI = {
             };
         }
 
-        const a = target.strut.nodeA.body.position;
-        const b = target.strut.nodeB.body.position;
+        const a = target.strut.a.body.position;
+        const b = target.strut.b.body.position;
 
         return {
             x: (a.x + b.x) / 2,
@@ -156,8 +113,8 @@ const AI = {
             };
         }
 
-        const a = target.strut.nodeA.body.velocity;
-        const b = target.strut.nodeB.body.velocity;
+        const a = target.strut.a.body.velocity;
+        const b = target.strut.b.body.velocity;
 
         return {
             x: (a.x + b.x) / 2,
@@ -211,8 +168,8 @@ const AI = {
         }
 
         for (const strut of this.getPlayerStruts()) {
-            const a = strut.nodeA.body.position;
-            const b = strut.nodeB.body.position;
+            const a = strut.a.body.position;
+            const b = strut.b.body.position;
 
             const x = (a.x + b.x) / 2;
             const y = (a.y + b.y) / 2;
@@ -231,15 +188,15 @@ const AI = {
             score += (1 - healthRatio) * 320;
 
             if (
-                strut.nodeA.isCore ||
-                strut.nodeB.isCore
+                strut.a.isCore ||
+                strut.b.isCore
             ) {
                 score += 240;
             }
 
             if (
-                strut.nodeA.isFoundation ||
-                strut.nodeB.isFoundation
+                strut.a.isFoundation ||
+                strut.b.isFoundation
             ) {
                 score += 45;
             }
@@ -468,8 +425,8 @@ const AI = {
             const connected = Building.struts.filter(strut =>
                 !strut.removed &&
                 (
-                    strut.nodeA === node ||
-                    strut.nodeB === node
+                    strut.a === node ||
+                    strut.b === node
                 )
             );
 
@@ -511,10 +468,10 @@ const AI = {
             const alreadyConnected = Building.struts.some(strut =>
                 !strut.removed &&
                 (
-                    (strut.nodeA === foundation &&
-                     strut.nodeB === weakestNode) ||
-                    (strut.nodeB === foundation &&
-                     strut.nodeA === weakestNode)
+                    (strut.a === foundation &&
+                     strut.b === weakestNode) ||
+                    (strut.b === foundation &&
+                     strut.a === weakestNode)
                 )
             );
 
@@ -530,7 +487,7 @@ const AI = {
             Building.createStrut(
                 bestFoundation,
                 weakestNode,
-                "steel"
+                { material: "steel" }
             );
         }
     },
