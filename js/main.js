@@ -42,7 +42,19 @@ const Game = {
         this.setupInput();
 
         this.state = "menu";
-        this.playBootSequence();
+
+        // A battle restart skips the studio boot animation once.
+        let skipBoot = false;
+        try {
+            skipBoot = sessionStorage.getItem("ccSkipBootOnce") === "1";
+            if (skipBoot) sessionStorage.removeItem("ccSkipBootOnce");
+        } catch (error) {
+            skipBoot = false;
+        }
+
+        if (skipBoot) this.showOnly(this.startScreen);
+        else this.playBootSequence();
+
         this.running = true;
         this.lastFrame = performance.now();
 
@@ -390,13 +402,13 @@ const Game = {
             .addEventListener("click", () => this.resumeGame());
 
         this.pauseScreen.querySelector("#forts-pause-restart")
-            .addEventListener("click", () => window.location.reload());
+            .addEventListener("click", () => this.restartBattle());
 
         this.pauseScreen.querySelector("#forts-main-menu-button")
             .addEventListener("click", () => this.showMainMenu());
 
         this.endScreen.querySelector("#forts-end-restart")
-            .addEventListener("click", () => window.location.reload());
+            .addEventListener("click", () => this.restartBattle());
 
         this.endScreen.querySelector("#forts-end-menu")
             .addEventListener("click", () => this.showMainMenu());
@@ -466,6 +478,15 @@ const Game = {
         }
 
         if (screen) screen.style.display = "flex";
+    },
+
+    restartBattle() {
+        try {
+            sessionStorage.setItem("ccSkipBootOnce", "1");
+        } catch (error) {
+            // If session storage is unavailable, the game still restarts normally.
+        }
+        window.location.reload();
     },
 
     startGame() {
