@@ -1366,7 +1366,8 @@ const Building = {
             sourceStrut.team !== "player"
         ) return false;
 
-        const material = this.settings(this.material);
+        const materialName = this.material;
+        const material = this.settings(materialName);
         const a = sourceStrut.a.body.position;
         const b = sourceStrut.b.body.position;
         const sourceMid = {
