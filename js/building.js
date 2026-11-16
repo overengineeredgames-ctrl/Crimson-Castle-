@@ -8,6 +8,7 @@ const Building = {
     drag: null,
 
     repairMode: false,
+    deleteMode: false,
     repairTarget: null,
     repairMouse: { x: 0, y: 0 },
     repairRate: 45,
@@ -573,6 +574,7 @@ const Building = {
     setupToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const deleteButton = document.getElementById("btn-delete");
 
         if (woodButton) {
             woodButton.onclick = () => this.setMaterial("wood");
@@ -582,6 +584,10 @@ const Building = {
             steelButton.onclick = () => this.setMaterial("steel");
         }
 
+        if (deleteButton) {
+            deleteButton.onclick = () => this.setDeleteMode(!this.deleteMode);
+        }
+
         this.updateToolbar();
     },
 
@@ -589,19 +595,42 @@ const Building = {
         if (material !== "wood" && material !== "steel") return;
 
         this.material = material;
+        this.setDeleteMode(false);
+        this.updateToolbar();
+    },
+
+    setDeleteMode(enabled) {
+        this.deleteMode = !!enabled;
+        if (this.deleteMode) {
+            this.repairMode = false;
+            this.repairTarget = null;
+            if (typeof Weapons !== "undefined" && Weapons.clearSelectedTool) {
+                Weapons.clearSelectedTool();
+            }
+        }
         this.updateToolbar();
     },
 
     updateToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const deleteButton = document.getElementById("btn-delete");
 
         if (woodButton) {
             woodButton.classList.toggle("active", this.material === "wood");
         }
 
         if (steelButton) {
-            steelButton.classList.toggle("active", this.material === "steel");
+            steelButton.classList.toggle("active", !this.deleteMode && this.material === "steel");
+        }
+
+        if (woodButton) {
+            woodButton.classList.toggle("active", !this.deleteMode && this.material === "wood");
+        }
+
+        if (deleteButton) {
+            deleteButton.classList.toggle("active", this.deleteMode);
+            deleteButton.setAttribute("aria-pressed", String(this.deleteMode));
         }
     },
 
