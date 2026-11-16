@@ -922,9 +922,11 @@ const Building = {
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.lineWidth = Math.max(2, strut.width - 3);
-            ctx.strokeStyle = damage > 0.05
-                ? (damage > 0.65 ? "#563b37" : "#"+Math.round(169*(1-damage)+105*damage).toString(16).padStart(2,"0")+"6c35")
-                : material.color;
+            ctx.strokeStyle = damage > 0.65
+                ? "#563b37"
+                : damage > 0.2
+                    ? "#9a5845"
+                    : material.color;
             ctx.stroke();
 
             // Cracks become more visible as a beam loses health.
