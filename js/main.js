@@ -468,7 +468,9 @@ const Game = {
                 ? "Could not check for updates. Check your internet connection."
                 : info.updateAvailable
                     ? "An update is available. Follow the update window to install it."
-                    : "You're up to date!";
+                    : "No newer published release was found (installed v" +
+                        info.currentVersion + ", latest published v" +
+                        info.latestVersion + "). GitHub code changes are not installable until a new game release is published.";
         });
 
         this.startScreen.querySelector("#forts-open-settings")
