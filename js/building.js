@@ -119,7 +119,29 @@ const Building = {
         return nearest;
     },
 
+    canPlaceNode(x, y, team = "player") {
+        // Keep player construction clear of enemy cannon bodies and barrels.
+        if (team === "player" && typeof Weapons !== "undefined") {
+            for (const cannon of Weapons.cannons || []) {
+                if (
+                    cannon.team !== "enemy" ||
+                    !cannon.node ||
+                    cannon.node.removed
+                ) continue;
+
+                const p = cannon.node.body.position;
+                // Cannon footprint plus roughly 5 cm of extra clearance.
+                if (Math.hypot(x - p.x, y - p.y) < 42) return false;
+            }
+        }
+
+        return true;
+    },
+
     createNode(x, y, options = {}) {
+        const team = options.team || "player";
+        if (!this.canPlaceNode(x, y, team)) return null;
+
         const materialName = options.material || this.material;
         const material = this.settings(materialName);
         const isCore = !!options.isCore;
@@ -200,6 +222,24 @@ const Building = {
     canPlaceStrut(nodeA, nodeB, width = 7) {
         const a = nodeA.body.position;
         const b = nodeB.body.position;
+
+        // Do not allow a player beam to pass through an enemy cannon.
+        // The 42px cannon footprint includes approximately 5cm grace.
+        if (nodeA.team === "player" && typeof Weapons !== "undefined") {
+            for (const cannon of Weapons.cannons || []) {
+                if (
+                    cannon.team !== "enemy" ||
+                    !cannon.node ||
+                    cannon.node.removed
+                ) continue;
+
+                const p = cannon.node.body.position;
+                const clearance = 42 + width / 2;
+                if (this.pointToSegmentDistance(p.x, p.y, a, b) < clearance) {
+                    return false;
+                }
+            }
+        }
 
         // Opposing beams may touch neither beams nor joints.
         for (const other of this.struts) {
