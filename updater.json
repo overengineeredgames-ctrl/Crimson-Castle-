@@ -1,0 +1,15 @@
+{
+  "game": "Crimson Castle",
+  "shortName": "CC",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-16T01:34:46.546Z",
+  "channel": "stable",
+  "title": "Crimson Castle initial release",
+  "description": "Initial version information for Crimson Castle. Automatic update checking and installation will be connected to this manifest as the updater is implemented.",
+  "changes": [
+    "Established the initial Crimson Castle version record.",
+    "Added a central update-information file for the game's startup update prompt."
+  ],
+  "required": false,
+  "minimumVersion": "1.0.0"
+}
