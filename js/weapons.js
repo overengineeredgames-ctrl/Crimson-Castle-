@@ -155,7 +155,7 @@ const Weapons = {
                 .filter(candidate =>
                     !candidate.removed &&
                     candidate.team === "player" &&
-                    !candidate.isFoundation &&
+                    (!candidate.isFoundation || candidate.isGroundJoint) &&
                     !candidate.isCore &&
                     !this.cannons.some(cannon => cannon.node === candidate)
                 )
@@ -166,7 +166,7 @@ const Weapons = {
                         candidate.body.position.y - y
                     )
                 }))
-                .filter(entry => entry.distance <= 25)
+                .filter(entry => entry.distance <= 42)
                 .sort((a, b) => a.distance - b.distance)[0]?.node || null;
 
             let mountCost = 0;
@@ -174,7 +174,7 @@ const Weapons = {
             // If there is no usable joint under the cursor, mount directly
             // onto the closest player beam instead.
             if (!node) {
-                const beam = Building.getStrutAtPoint(x, y, 30);
+                const beam = Building.getStrutAtPoint(x, y, 42);
 
                 if (beam && beam.team === "player" && beam.a && beam.b) {
                     const a = beam.a.body.position;
