@@ -1,15 +1,16 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "releaseDate": "2026-11-15T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.0.2",
-  "description": "Crimson Castle 1.0.2 is available.",
+  "title": "Crimson Castle 1.0.3",
+  "description": "Crimson Castle 1.0.3 is available.",
   "changes": [
-    "Added a version label to the in-battle HUD.",
-    "Improved version display across the game.",
-    "Prepared the in-game automatic updater for the 1.0.2 release."
+    "AI automatically rebuilds a cannon if all enemy cannons are destroyed.",
+    "Select up to three player cannons with Ctrl + click.",
+    "Aim selected cannons together and fire them with one click.",
+    "Portable ZIP is now included with Windows releases."
   ],
   "required": false,
   "minimumVersion": "1.0.0"
