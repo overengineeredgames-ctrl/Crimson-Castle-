@@ -187,8 +187,8 @@ const Building = {
             material: materialName,
             isFoundation,
             isCore,
-            canHoldMine: !isFoundation && !isCore &&
-                y + (isCore ? this.coreRadius : this.nodeRadius) >= this.groundY - 3,
+            canHoldMine: !isCore &&
+                Math.abs(y + (isCore ? this.coreRadius : this.nodeRadius) - this.groundY) <= 8,
             health: isCore ? this.coreHealth : material.maxHealth,
             maxHealth: isCore ? this.coreHealth : material.maxHealth,
             supported: isFoundation,
@@ -506,9 +506,9 @@ const Building = {
 
     addMine(node) {
         if (!node || node.team !== "player") return false;
-        if (node.isFoundation || node.isCore) return false;
-        // A ground-touching joint can hold a mine without a foundation link.
-        if (!node.canHoldMine && !this.isGroundConnected(node)) return false;
+        if (node.isCore || !node.canHoldMine) return false;
+        // Mines require actual ground contact; being connected to a
+        // foundation somewhere else in the fort is not enough.
 
         if (this.mines.some(mine => mine.node === node)) {
             return false;
@@ -1098,9 +1098,8 @@ const Building = {
             const bottom = node.body.position.y + radius;
             node.canHoldMine =
                 !node.removed &&
-                !node.isFoundation &&
                 !node.isCore &&
-                bottom >= this.groundY - 3;
+                Math.abs(bottom - this.groundY) <= 8;
         }
 
         for (const strut of [...this.struts]) {
