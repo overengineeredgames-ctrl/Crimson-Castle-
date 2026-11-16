@@ -1046,7 +1046,7 @@ const Game = {
         );
 
         ctx.fillText(
-            "Mine: drag onto a ground joint | Drill: uses power to produce metal | Windmill: needs open air | Battery: stores power",
+            "Mine / Metal Drill: ground only | Tree Mine: inside a box, produces wood | Windmill: open air | Battery: stores power",
             14,
             this.canvas.height - 58
         );
