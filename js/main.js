@@ -1092,6 +1092,12 @@ const Game = {
             drills.length * Building.utilityDefinitions.drill.drillRate *
                 drillEfficiency * seconds;
 
+        const treeMines = Building.installations.filter(item =>
+            !item.removed && item.type === "treeMine"
+        );
+        Building.resources.wood += treeMines.length *
+            Building.utilityDefinitions.treeMine.woodRate * seconds;
+
         this.resourceTimer += delta;
         if (this.resourceTimer >= 250) {
             this.resourceTimer %= 250;
