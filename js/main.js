@@ -427,8 +427,10 @@ const Game = {
                     Drag between joints to build beams<br>
                     Select Mine, then drag onto a joint to place it<br>
                     Mines cost 50 metal and generate 2 energy per second<br>
-                    Cannons cost 100 metal and 50 energy<br>
-                    Double-click a cannon to select it; move mouse to aim, click to fire<br>
+                    Cannon: 100 metal / 50 energy<br>
+                    Machine Gun: hold fire for rapid, light damage<br>
+                    Mega Cannon: 220 damage with a 15-second reload<br>
+                    Click a cannon to select; aim and click to fire<br>
                     Press ESC to pause
                 </div>
             </div>
