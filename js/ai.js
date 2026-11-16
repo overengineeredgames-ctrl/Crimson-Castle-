@@ -54,13 +54,13 @@ const AI = {
         },
 
         mega: {
-            targetInterval: 0.06,
-            repairInterval: 0.45,
-            buildInterval: 1.15,
-            repairAmount: 34,
-            extraCannonTime: 2.2,
-            maxCannons: 12,
-            aimError: 0.008
+            targetInterval: 0.045,
+            repairInterval: 0.25,
+            buildInterval: 0.8,
+            repairAmount: 48,
+            extraCannonTime: 1.7,
+            maxCannons: 16,
+            aimError: 0.003
         }
     },
 
