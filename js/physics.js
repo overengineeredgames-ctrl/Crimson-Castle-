@@ -23,8 +23,8 @@ const Physics = {
         this.engine.constraintIterations = 8;
         this.engine.enableSleeping = false;
 
-        // Make the world wider than the screen.
-        this.worldWidth = Math.round(window.innerWidth * 1.5);
+        // A wider battlefield gives both forts room to expand and fight.
+        this.worldWidth = Math.round(window.innerWidth * 2.4);
         this.groundY = window.innerHeight * 0.82;
 
         const groundThickness = 160;
