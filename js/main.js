@@ -880,7 +880,7 @@ const Game = {
 
         // Capture keyboard shortcuts even when the canvas or a toolbar button has focus.
         document.addEventListener("keydown", event => {
-            if (event.repeat) return;
+            if (event.repeat && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
             if (event.key === "Escape") {
                 this.togglePause();
