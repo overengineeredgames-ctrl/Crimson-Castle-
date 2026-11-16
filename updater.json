@@ -1,12 +1,13 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "releaseDate": "2026-11-15T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.0.3",
-  "description": "Crimson Castle 1.0.3 is available.",
+  "title": "Crimson Castle 1.0.4",
+  "description": "Crimson Castle 1.0.4 is available.",
   "changes": [
+    "Windows installer and uninstaller now use the Crimson Castle game icon.",
     "AI automatically rebuilds a cannon if all enemy cannons are destroyed.",
     "Select up to three player cannons with Ctrl + click.",
     "Aim selected cannons together and fire them with one click.",
