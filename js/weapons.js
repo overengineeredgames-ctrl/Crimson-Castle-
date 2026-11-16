@@ -136,29 +136,56 @@ const Weapons = {
         }
 
         if (this.selectedTool === "cannon") {
-            let node = Building.getNearestNode(x, y, 25);
+            // Prefer a nearby player joint that does not already hold a cannon.
+            // Ignore foundations, cores, enemy joints, and occupied mounts.
+            let node = Building.nodes
+                .filter(candidate =>
+                    !candidate.removed &&
+                    candidate.team === "player" &&
+                    !candidate.isFoundation &&
+                    !candidate.isCore &&
+                    !this.cannons.some(cannon => cannon.node === candidate)
+                )
+                .map(candidate => ({
+                    node: candidate,
+                    distance: Math.hypot(
+                        candidate.body.position.x - x,
+                        candidate.body.position.y - y
+                    )
+                }))
+                .filter(entry => entry.distance <= 25)
+                .sort((a, b) => a.distance - b.distance)[0]?.node || null;
+
             let mountCost = 0;
 
-            // If the player clicks a beam instead of a joint, add a small
-            // supported mounting joint directly onto that beam.
-            if (
-                (!node || node.team !== "player" || node.isFoundation || node.isCore)
-            ) {
-                const beam = Building.getStrutAtPoint(x, y, 26);
+            // If there is no usable joint under the cursor, mount directly
+            // onto the closest player beam instead.
+            if (!node) {
+                const beam = Building.getStrutAtPoint(x, y, 30);
 
-                if (beam && beam.team === "player") {
+                if (beam && beam.team === "player" && beam.a && beam.b) {
                     const a = beam.a.body.position;
                     const b = beam.b.body.position;
                     const dx = b.x - a.x;
                     const dy = b.y - a.y;
                     const lengthSq = dx * dx + dy * dy;
-                    const t = lengthSq
-                        ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSq))
+                    const beamLength = Math.sqrt(lengthSq);
+
+                    // Keep the new mounting joint far enough from either
+                    // endpoint to avoid zero-length or duplicate support beams.
+                    if (beamLength < 30) return true;
+
+                    let t = lengthSq
+                        ? ((x - a.x) * dx + (y - a.y) * dy) / lengthSq
                         : 0.5;
-                    const mountPoint = Building.snapPoint(
-                        a.x + dx * t,
-                        a.y + dy * t
-                    );
+
+                    const endMargin = Math.min(0.2, 12 / beamLength);
+                    t = Math.max(endMargin, Math.min(1 - endMargin, t));
+
+                    const mountPoint = {
+                        x: a.x + dx * t,
+                        y: a.y + dy * t
+                    };
 
                     mountCost = Building.settings(Building.material).cost * 2;
                     const totalMetal = this.cannonMetalCost + mountCost;
@@ -168,51 +195,44 @@ const Weapons = {
                         Building.resources.energy < this.cannonEnergyCost
                     ) return true;
 
-                    Building.resources.metal -= mountCost;
                     node = Building.createNode(mountPoint.x, mountPoint.y, {
                         team: "player"
                     });
+
+                    if (!node) return true;
 
                     const firstSupport = Building.createStrut(beam.a, node);
                     const secondSupport = Building.createStrut(node, beam.b);
 
                     if (!firstSupport || !secondSupport) {
                         Building.removeNode(node);
-                        Building.resources.metal += mountCost;
                         Building.updateHUD();
                         return true;
                     }
                 }
             }
 
-            if (
-                !node ||
-                node.isFoundation ||
-                node.isCore ||
-                node.team !== "player"
-            ) return true;
+            if (!node || this.cannons.some(cannon => cannon.node === node)) {
+                return true;
+            }
 
             if (
-                Building.resources.metal < this.cannonMetalCost ||
+                Building.resources.metal < this.cannonMetalCost + mountCost ||
                 Building.resources.energy < this.cannonEnergyCost
             ) {
-                if (mountCost) {
-                    Building.removeNode(node);
-                    Building.resources.metal += mountCost;
-                }
+                if (mountCost) Building.removeNode(node);
                 Building.updateHUD();
                 return true;
             }
 
             if (this.addCannon(node, "player")) {
-                Building.resources.metal -= this.cannonMetalCost;
+                Building.resources.metal -= this.cannonMetalCost + mountCost;
                 Building.resources.energy -= this.cannonEnergyCost;
                 Building.checkSupport();
                 Building.updateHUD();
                 this.clearSelectedTool();
             } else if (mountCost) {
                 Building.removeNode(node);
-                Building.resources.metal += mountCost;
                 Building.updateHUD();
             }
 
