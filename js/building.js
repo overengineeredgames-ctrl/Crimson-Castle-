@@ -258,7 +258,9 @@ const Building = {
         const leftX = team === "enemy"
             ? Math.round(worldWidth * 0.65)
             : cameraOffset + 100;
-        const rightX = leftX + 160;
+        // The enemy uses a slightly narrower span so both crossing
+        // braces are comfortably below the maximum strut length.
+        const rightX = leftX + (team === "enemy" ? 120 : 160);
 
         const bottomLeft = this.createNode(leftX, baseY, {
             isFoundation: true,
