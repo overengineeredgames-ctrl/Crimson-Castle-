@@ -167,6 +167,18 @@ window.CCUpdater = (() => {
         Game.startScreen.classList.add("cc-menu-enter");
     }
 
+    async function checkNow() {
+        if (!window.ccUpdater) return null;
+        try {
+            const info = await window.ccUpdater.checkForUpdates();
+            if (info && info.updateAvailable) showPopup(info);
+            return info;
+        } catch (error) {
+            console.warn("CC update check failed:", error.message);
+            return null;
+        }
+    }
+
     async function finishBoot() {
         const info = await beginCheck();
         if (info && info.updateAvailable) {
@@ -180,5 +192,5 @@ window.CCUpdater = (() => {
         window.addEventListener("load", beginCheck, { once: true });
     }
 
-    return { beginCheck, finishBoot };
+    return { beginCheck, checkNow, finishBoot };
 })();
