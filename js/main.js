@@ -678,6 +678,7 @@ const Game = {
 
         Weapons.selectedTool = null;
         Weapons.selectedCannon = null;
+        Weapons.selectedCannons = [];
 
         if (typeof Weapons.updateToolButtons === "function") {
             Weapons.updateToolButtons();
@@ -716,7 +717,7 @@ const Game = {
                 return;
             }
 
-            if (Weapons.handlePointerDown(p.x, p.y)) return;
+            if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey)) return;
 
             Building.startDrag(p.x, p.y);
         });
