@@ -23,7 +23,7 @@ const AI = {
             repairInterval: 1.2,
             buildInterval: 11,
             repairAmount: 5,
-            extraCannonTime: Infinity,
+            extraCannonTime: 36,
             aimError: 0.24
         },
 
