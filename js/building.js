@@ -173,6 +173,65 @@ const Building = {
         });
     },
 
+    segmentsIntersect(a1, a2, b1, b2) {
+        const orient = (p, q, r) =>
+            (q.x - p.x) * (r.y - p.y) -
+            (q.y - p.y) * (r.x - p.x);
+        const onSegment = (p, q, r) =>
+            q.x >= Math.min(p.x, r.x) - 0.001 &&
+            q.x <= Math.max(p.x, r.x) + 0.001 &&
+            q.y >= Math.min(p.y, r.y) - 0.001 &&
+            q.y <= Math.max(p.y, r.y) + 0.001;
+
+        const o1 = orient(a1, a2, b1);
+        const o2 = orient(a1, a2, b2);
+        const o3 = orient(b1, b2, a1);
+        const o4 = orient(b1, b2, a2);
+
+        if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) &&
+            ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) return true;
+
+        return (Math.abs(o1) < 0.001 && onSegment(a1, b1, a2)) ||
+            (Math.abs(o2) < 0.001 && onSegment(a1, b2, a2)) ||
+            (Math.abs(o3) < 0.001 && onSegment(b1, a1, b2)) ||
+            (Math.abs(o4) < 0.001 && onSegment(b1, a2, b2));
+    },
+
+    canPlaceStrut(nodeA, nodeB, width = 7) {
+        const a = nodeA.body.position;
+        const b = nodeB.body.position;
+
+        // Opposing beams may touch neither beams nor joints.
+        for (const other of this.struts) {
+            if (other.team === nodeA.team || !other.a || !other.b) continue;
+
+            const c = other.a.body.position;
+            const d = other.b.body.position;
+            const clearance = (width + other.width) / 2 + 3;
+
+            if (this.segmentsIntersect(a, b, c, d) ||
+                this.pointToSegmentDistance(a.x, a.y, c, d) < clearance ||
+                this.pointToSegmentDistance(b.x, b.y, c, d) < clearance ||
+                this.pointToSegmentDistance(c.x, c.y, a, b) < clearance ||
+                this.pointToSegmentDistance(d.x, d.y, a, b) < clearance) {
+                return false;
+            }
+        }
+
+        for (const node of this.nodes) {
+            if (node.team === nodeA.team || node.removed ||
+                node === nodeA || node === nodeB) continue;
+
+            if (this.pointToSegmentDistance(
+                node.body.position.x,
+                node.body.position.y,
+                a, b
+            ) < this.nodeRadius + width / 2 + 3) return false;
+        }
+
+        return true;
+    },
+
     createStrut(nodeA, nodeB, options = {}) {
         if (!nodeA || !nodeB || nodeA === nodeB) return null;
         if (nodeA.team !== nodeB.team) return null;
@@ -185,6 +244,10 @@ const Building = {
         const material = this.settings(materialName);
 
         if (length < 5 || length > material.maxLength) {
+            return null;
+        }
+
+        if (!this.canPlaceStrut(nodeA, nodeB, material.width)) {
             return null;
         }
 
@@ -211,9 +274,11 @@ const Building = {
             length,
             material.width,
             {
+                // Solid beam body: blocks both player and AI structures.
                 isStatic: true,
-                isSensor: true,
-                friction: 0,
+                isSensor: false,
+                friction: 0.8,
+                frictionStatic: 1,
                 restitution: 0,
                 angle: Math.atan2(b.y - a.y, b.x - a.x),
                 label: "fort-beam"
@@ -222,6 +287,7 @@ const Building = {
 
         beamBody.isFortBeam = true;
         beamBody.team = nodeA.team;
+        beamBody.fortLength = length;
 
         const strut = {
             a: nodeA,
@@ -963,6 +1029,14 @@ const Building = {
             const centerX = (a.x + b.x) / 2;
             const centerY = (a.y + b.y) / 2;
             const angle = Math.atan2(b.y - a.y, b.x - a.x);
+
+            // Keep the solid collision rectangle aligned and sized to its
+            // endpoints as the structure moves under physics.
+            if (strut.body.fortLength && Math.abs(length - strut.body.fortLength) > 0.5) {
+                const scale = length / strut.body.fortLength;
+                Matter.Body.scale(strut.body, scale, 1);
+                strut.body.fortLength = length;
+            }
 
             Matter.Body.setPosition(strut.body, {
                 x: centerX,
