@@ -698,14 +698,16 @@ const Game = {
 
             const p = this.mousePosition(event);
 
-            if (event.button === 2) {
-                Building.deleteAt(p.x, p.y);
-                return;
-            }
-
+            // Right-click no longer deletes anything. Deletion requires
+            // explicitly selecting the Delete tool in the toolbar.
             if (event.button !== 0) return;
 
             this.canvas.setPointerCapture(event.pointerId);
+
+            if (Building.deleteMode) {
+                Building.deleteAt(p.x, p.y);
+                return;
+            }
 
             if (Building.repairMode) {
                 Building.startRepairAt(p.x, p.y, this.difficulty);
@@ -886,7 +888,7 @@ const Game = {
         );
 
         ctx.fillText(
-            "Right-click: delete | G: grid | R: repair mode | 1: wood | 2: steel | ESC: pause",
+            "Select DELETE tool before removing pieces | G: grid | R: repair mode | 1: wood | 2: steel | ESC: pause",
             14,
             this.canvas.height - 38
         );
