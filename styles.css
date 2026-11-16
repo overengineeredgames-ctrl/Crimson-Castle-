@@ -85,6 +85,11 @@ html, body {
     color: #65dfff;
 }
 
+.wood,
+#wood-count {
+    color: #a8d58b;
+}
+
 .resource-icon {
     margin-right: 5px;
 }
