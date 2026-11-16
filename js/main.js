@@ -558,6 +558,11 @@ const Game = {
 
             this.canvas.setPointerCapture(event.pointerId);
 
+            if (Building.repairMode) {
+                Building.startRepairAt(p.x, p.y, this.difficulty);
+                return;
+            }
+
             if (Weapons.handlePointerDown(p.x, p.y)) return;
 
             Building.startDrag(p.x, p.y);
@@ -569,6 +574,10 @@ const Game = {
             if (this.state !== "playing") return;
 
             Building.setMousePosition(p.x, p.y);
+            if (Building.repairMode) {
+                Building.repairMouse.x = p.x;
+                Building.repairMouse.y = p.y;
+            }
             Weapons.handlePointerMove(p.x, p.y);
         });
 
@@ -605,6 +614,12 @@ const Game = {
 
             if (event.key.toLowerCase() === "g") {
                 Building.gridEnabled = !Building.gridEnabled;
+            }
+
+            if (event.key.toLowerCase() === "r") {
+                Building.setRepairMode(!Building.repairMode, this.difficulty);
+                Weapons.selectedCannon = null;
+                Weapons.clearSelectedTool();
             }
 
             if (event.key === "1") {
@@ -719,13 +734,15 @@ const Game = {
         );
 
         ctx.fillText(
-            "Right-click: delete | G: grid | 1: wood | 2: steel | ESC: pause",
+            "Right-click: delete | G: grid | R: repair mode | 1: wood | 2: steel | ESC: pause",
             14,
             this.canvas.height - 38
         );
 
         ctx.fillText(
-            "Double-click cannon to select; move mouse to aim, click to fire",
+            Building.repairMode
+                ? "REPAIR MODE: click a damaged player beam inside the green circle"
+                : "Double-click cannon to select; move mouse to aim, click to fire",
             14,
             this.canvas.height - 18
         );
