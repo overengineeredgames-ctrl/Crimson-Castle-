@@ -1,6 +1,6 @@
 {
   "name": "crimson-castle",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Crimson Castle - a fortress warfare game",
   "main": "electron-main.js",
   "scripts": {
@@ -55,7 +55,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Crimson Castle"
+      "shortcutName": "Crimson Castle",
+      "installerIcon": "CrimsonCastle.ico",
+      "uninstallerIcon": "CrimsonCastle.ico"
     }
   }
 }
