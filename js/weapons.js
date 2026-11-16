@@ -136,29 +136,84 @@ const Weapons = {
         }
 
         if (this.selectedTool === "cannon") {
-            const node = Building.getNearestNode(x, y, 25);
+            let node = Building.getNearestNode(x, y, 25);
+            let mountCost = 0;
+
+            // If the player clicks a beam instead of a joint, add a small
+            // supported mounting joint directly onto that beam.
+            if (
+                (!node || node.team !== "player" || node.isFoundation || node.isCore)
+            ) {
+                const beam = Building.getStrutAtPoint(x, y, 26);
+
+                if (beam && beam.team === "player") {
+                    const a = beam.a.body.position;
+                    const b = beam.b.body.position;
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const lengthSq = dx * dx + dy * dy;
+                    const t = lengthSq
+                        ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSq))
+                        : 0.5;
+                    const mountPoint = Building.snapPoint(
+                        a.x + dx * t,
+                        a.y + dy * t
+                    );
+
+                    mountCost = Building.settings(Building.material).cost * 2;
+                    const totalMetal = this.cannonMetalCost + mountCost;
+
+                    if (
+                        Building.resources.metal < totalMetal ||
+                        Building.resources.energy < this.cannonEnergyCost
+                    ) return true;
+
+                    Building.resources.metal -= mountCost;
+                    node = Building.createNode(mountPoint.x, mountPoint.y, {
+                        team: "player"
+                    });
+
+                    const firstSupport = Building.createStrut(beam.a, node);
+                    const secondSupport = Building.createStrut(node, beam.b);
+
+                    if (!firstSupport || !secondSupport) {
+                        Building.removeNode(node);
+                        Building.resources.metal += mountCost;
+                        Building.updateHUD();
+                        return true;
+                    }
+                }
+            }
 
             if (
                 !node ||
                 node.isFoundation ||
                 node.isCore ||
                 node.team !== "player"
-            ) {
-                return true;
-            }
+            ) return true;
 
             if (
                 Building.resources.metal < this.cannonMetalCost ||
                 Building.resources.energy < this.cannonEnergyCost
             ) {
+                if (mountCost) {
+                    Building.removeNode(node);
+                    Building.resources.metal += mountCost;
+                }
+                Building.updateHUD();
                 return true;
             }
 
             if (this.addCannon(node, "player")) {
                 Building.resources.metal -= this.cannonMetalCost;
                 Building.resources.energy -= this.cannonEnergyCost;
+                Building.checkSupport();
                 Building.updateHUD();
                 this.clearSelectedTool();
+            } else if (mountCost) {
+                Building.removeNode(node);
+                Building.resources.metal += mountCost;
+                Building.updateHUD();
             }
 
             return true;
