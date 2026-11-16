@@ -16,6 +16,9 @@ const Game = {
     pauseScreen: null,
 
     difficulty: "normal",
+    settingsScreen: null,
+    settingsReturnScreen: null,
+    preferences: { theme: "dark", fastBoot: false },
 
     get cameraX() {
         const worldWidth = Physics.worldWidth || this.canvas.width;
@@ -31,6 +34,8 @@ const Game = {
         }
 
         this.ctx = this.canvas.getContext("2d", { alpha: false });
+        this.loadPreferences();
+        this.applyTheme();
         this.resizeCanvas();
 
         Physics.init();
@@ -177,6 +182,30 @@ const Game = {
                 font-size:12px;
                 line-height:1.6;
             }
+
+            .forts-settings-row {
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:16px;
+                margin:18px 0;
+                padding:14px;
+                border:1px solid #536b80;
+                border-radius:8px;
+                background:rgba(0,0,0,.16);
+                text-align:left;
+            }
+
+            .forts-settings-row strong { display:block; margin-bottom:5px; }
+            .forts-settings-row small { color:#9fb1c1; line-height:1.4; }
+            .forts-settings-row select { min-width:125px; padding:9px; border-radius:6px; }
+            .forts-settings-row input { width:20px; height:20px; accent-color:#d9a83e; }
+            .forts-settings-status { min-height:18px; color:#e7c56f; font-size:12px; }
+
+            .cc-fast-boot .cc-boot-game { animation-duration:.7s; }
+            .cc-fast-boot .cc-boot-studio { animation-duration:1.1s; animation-delay:.65s; }
+            .cc-fast-boot .cc-gear-arrival { animation-duration:.65s; animation-delay:.7s; }
+            .cc-fast-boot .cc-gear { animation-duration:1.5s; animation-delay:1.35s; }
 
             .forts-pause-label {
                 color:#f0c45b;
@@ -327,6 +356,7 @@ const Game = {
                 <button class="forts-menu-button primary" id="forts-start-button">
                     START BATTLE
                 </button>
+                <button class="forts-menu-button" id="forts-open-settings">SETTINGS</button>
 
                 <div class="forts-menu-help">
                     Drag between joints to build beams<br>
@@ -358,6 +388,7 @@ const Game = {
                 <button class="forts-menu-button" id="forts-main-menu-button">
                     MAIN MENU
                 </button>
+                <button class="forts-menu-button" id="forts-pause-settings">SETTINGS</button>
 
                 <div class="forts-menu-help">Press ESC to resume</div>
             </div>
@@ -379,6 +410,59 @@ const Game = {
                 </button>
             </div>
         `);
+
+        this.settingsScreen = this.createOverlay("forts-settings-screen", `
+            <div class="forts-menu-card">
+                <div class="forts-pause-label">GAME PREFERENCES</div>
+                <h1 class="forts-menu-title">SETTINGS</h1>
+                <div class="forts-settings-row">
+                    <div><strong>Appearance</strong><small>Choose the game's menu and interface theme.</small></div>
+                    <select id="cc-theme-select" aria-label="Appearance">
+                        <option value="dark">Dark mode</option>
+                        <option value="light">Light mode</option>
+                    </select>
+                </div>
+                <label class="forts-settings-row" for="cc-fast-boot">
+                    <div><strong>Fast boot</strong><small>Shorten the opening studio animation when the game starts.</small></div>
+                    <input id="cc-fast-boot" type="checkbox">
+                </label>
+                <div class="forts-settings-status" id="cc-settings-status"></div>
+                <button class="forts-menu-button" id="cc-check-updates">CHECK FOR UPDATES</button>
+                <button class="forts-menu-button primary" id="cc-settings-back">BACK</button>
+            </div>
+        `);
+
+        this.settingsScreen.querySelector("#cc-theme-select").value = this.preferences.theme;
+        this.settingsScreen.querySelector("#cc-fast-boot").checked = this.preferences.fastBoot;
+        this.settingsScreen.querySelector("#cc-theme-select").addEventListener("change", event => {
+            this.preferences.theme = event.target.value === "light" ? "light" : "dark";
+            this.savePreferences();
+            this.applyTheme();
+        });
+        this.settingsScreen.querySelector("#cc-fast-boot").addEventListener("change", event => {
+            this.preferences.fastBoot = event.target.checked;
+            this.savePreferences();
+        });
+        this.settingsScreen.querySelector("#cc-settings-back").addEventListener("click", () => {
+            this.showOnly(this.settingsReturnScreen || this.startScreen);
+        });
+        this.settingsScreen.querySelector("#cc-check-updates").addEventListener("click", async () => {
+            const status = this.settingsScreen.querySelector("#cc-settings-status");
+            status.textContent = "Checking for updates...";
+            if (!window.CCUpdater || typeof window.CCUpdater.checkNow !== "function") {
+                status.textContent = "Update checking is only available in the installed game.";
+                return;
+            }
+            const info = await window.CCUpdater.checkNow();
+            status.textContent = info && info.updateAvailable
+                ? "An update is available. Follow the update window to install it."
+                : "You're up to date!";
+        });
+
+        this.startScreen.querySelector("#forts-open-settings")
+            .addEventListener("click", () => this.openSettings(this.startScreen));
+        this.pauseScreen.querySelector("#forts-pause-settings")
+            .addEventListener("click", () => this.openSettings(this.pauseScreen));
 
         this.startScreen.querySelector("#forts-start-button")
             .addEventListener("click", () => this.startGame());
@@ -443,6 +527,10 @@ const Game = {
 
         this.showOnly(this.bootScreen);
 
+        // Fast boot keeps both opening scenes but shortens their timing.
+        if (this.preferences.fastBoot) this.bootScreen.classList.add("cc-fast-boot");
+        else this.bootScreen.classList.remove("cc-fast-boot");
+
         // Let the studio ident finish, then fade the main menu in from black.
         window.setTimeout(() => {
             if (window.CCUpdater && typeof window.CCUpdater.finishBoot === "function") {
@@ -454,7 +542,35 @@ const Game = {
             this.startScreen.classList.remove("cc-menu-enter");
             void this.startScreen.offsetWidth;
             this.startScreen.classList.add("cc-menu-enter");
-        }, 6450);
+        }, this.preferences.fastBoot ? 2300 : 6450);
+    },
+
+    loadPreferences() {
+        try {
+            const saved = JSON.parse(localStorage.getItem("ccPreferences") || "{}");
+            this.preferences.theme = saved.theme === "light" ? "light" : "dark";
+            this.preferences.fastBoot = Boolean(saved.fastBoot);
+        } catch (error) {
+            this.preferences = { theme: "dark", fastBoot: false };
+        }
+    },
+
+    savePreferences() {
+        try { localStorage.setItem("ccPreferences", JSON.stringify(this.preferences)); }
+        catch (error) { console.warn("Could not save settings:", error); }
+    },
+
+    applyTheme() {
+        document.body.classList.toggle("cc-theme-light", this.preferences.theme === "light");
+        document.body.classList.toggle("cc-theme-dark", this.preferences.theme !== "light");
+    },
+
+    openSettings(returnScreen) {
+        this.settingsReturnScreen = returnScreen || this.startScreen;
+        this.settingsScreen.querySelector("#cc-theme-select").value = this.preferences.theme;
+        this.settingsScreen.querySelector("#cc-fast-boot").checked = this.preferences.fastBoot;
+        this.settingsScreen.querySelector("#cc-settings-status").textContent = "";
+        this.showOnly(this.settingsScreen);
     },
 
     createOverlay(id, html) {
@@ -472,7 +588,8 @@ const Game = {
             this.startScreen,
             this.pauseScreen,
             this.endScreen,
-            this.bootScreen
+            this.bootScreen,
+            this.settingsScreen
         ]) {
             if (item) item.style.display = "none";
         }
@@ -678,13 +795,14 @@ const Game = {
 
         const sky = ctx.createLinearGradient(0, 0, 0, h);
 
-        sky.addColorStop(0, "#72b5e5");
-        sky.addColorStop(1, "#d8e9f4");
+        const lightMode = this.preferences.theme === "light";
+        sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
+        sky.addColorStop(1, lightMode ? "#f1f7fb" : "#d8e9f4");
 
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, w, h);
 
-        ctx.fillStyle = "#94b77b";
+        ctx.fillStyle = lightMode ? "#b3cf9b" : "#94b77b";
         ctx.beginPath();
         ctx.moveTo(0, groundY);
 
@@ -702,13 +820,13 @@ const Game = {
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "#64834c";
+        ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
         ctx.fillRect(0, groundY, w, h - groundY);
 
-        ctx.fillStyle = "#896a48";
+        ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
         ctx.fillRect(0, groundY + 12, w, h - groundY - 12);
 
-        ctx.fillStyle = "#405c35";
+        ctx.fillStyle = lightMode ? "#648b50" : "#405c35";
         ctx.fillRect(0, groundY, w, 5);
     },
 
