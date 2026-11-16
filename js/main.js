@@ -753,7 +753,8 @@ const Game = {
             event.preventDefault();
         });
 
-        window.addEventListener("keydown", event => {
+        // Capture keyboard shortcuts even when the canvas or a toolbar button has focus.
+        document.addEventListener("keydown", event => {
             if (event.repeat) return;
 
             if (event.key === "Escape") {
@@ -763,7 +764,16 @@ const Game = {
 
             if (this.state !== "playing") return;
 
-            if (event.key.toLowerCase() === "d") {
+            const target = event.target;
+            const typing = target && (
+                target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.isContentEditable
+            );
+            if (typing) return;
+
+            if (event.code === "KeyD" || event.key.toLowerCase() === "d") {
+                event.preventDefault();
                 Building.setDeleteMode(!Building.deleteMode);
                 return;
             }
@@ -785,7 +795,7 @@ const Game = {
             if (event.key === "2") {
                 Building.setMaterial("steel");
             }
-        });
+        }, true);
 
         window.addEventListener("resize", () => this.resizeCanvas());
     },
