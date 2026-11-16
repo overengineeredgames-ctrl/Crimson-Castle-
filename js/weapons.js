@@ -14,6 +14,12 @@ const Weapons = {
     projectileSpeed: 12,
     cannonMetalCost: 100,
     cannonEnergyCost: 50,
+    selectedWeaponType: "cannon",
+    weaponStats: {
+        cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
+        machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
+        megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 }
+    },
     lastCannonClick: 0,
     lastClickedCannon: null,
     doubleClickTime: 350,
@@ -24,6 +30,7 @@ const Weapons = {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.selectedTool = null;
+        this.selectedWeaponType = "cannon";
         this.mineDragging = false;
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
@@ -35,10 +42,16 @@ const Weapons = {
                 if (typeof Building !== "undefined" && Building.deleteMode) {
                     Building.setDeleteMode(false);
                 }
-                this.selectedTool = this.selectedTool === "cannon" ? null : "cannon";
+                const alreadySelected = this.selectedTool === "cannon" &&
+                    this.selectedWeaponType === "cannon";
+                this.selectedWeaponType = "cannon";
+                this.selectedTool = alreadySelected ? null : "cannon";
                 this.updateToolButtons();
             };
         }
+
+        this.createWeaponButton("machine-gun", "Machine Gun", "machineGun", "140 Metal");
+        this.createWeaponButton("mega-cannon", "Mega Cannon", "megaCannon", "260 Metal");
 
         let mineButton = document.getElementById("btn-mine");
 
@@ -82,17 +95,49 @@ const Weapons = {
         }
     },
 
+    createWeaponButton(id, label, weaponType, costLabel) {
+        let button = document.getElementById("btn-" + id);
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "btn-" + id;
+            button.type = "button";
+            button.className = "tool";
+            button.dataset.toolCategory = "weapons";
+            button.innerHTML = label + "<small>" + costLabel + "</small>";
+            const cannonButton = document.getElementById("btn-cannon");
+            if (cannonButton && cannonButton.parentElement) {
+                cannonButton.insertAdjacentElement("afterend", button);
+            } else {
+                (document.querySelector(".toolbar") || document.body).appendChild(button);
+            }
+        }
+        button.onclick = () => {
+            if (typeof Building !== "undefined" && Building.deleteMode) {
+                Building.setDeleteMode(false);
+            }
+            const alreadySelected = this.selectedTool === "cannon" &&
+                this.selectedWeaponType === weaponType;
+            this.selectedWeaponType = weaponType;
+            this.selectedTool = alreadySelected ? null : "cannon";
+            this.updateToolButtons();
+        };
+    },
+
     updateToolButtons() {
-        const cannonButton = document.getElementById("btn-cannon");
+        const buttons = [
+            ["btn-cannon", "cannon"],
+            ["btn-machine-gun", "machineGun"],
+            ["btn-mega-cannon", "megaCannon"]
+        ];
+        for (const [id, type] of buttons) {
+            const button = document.getElementById(id);
+            if (button) button.classList.toggle(
+                "active",
+                this.selectedTool === "cannon" && this.selectedWeaponType === type
+            );
+        }
         const mineButton = document.getElementById("btn-mine");
-
-        if (cannonButton) {
-            cannonButton.classList.toggle("active", this.selectedTool === "cannon");
-        }
-
-        if (mineButton) {
-            mineButton.classList.toggle("active", this.selectedTool === "mine");
-        }
+        if (mineButton) mineButton.classList.toggle("active", this.selectedTool === "mine");
     },
 
     clearSelectedTool() {
@@ -101,19 +146,18 @@ const Weapons = {
         this.updateToolButtons();
     },
 
-    addCannon(node, team = "player", isAI = false) {
+    addCannon(node, team = "player", isAI = false, weaponType = "cannon") {
         if (!node || node.removed) return null;
-
-        if (this.cannons.some(c => c.node === node)) {
-            return null;
-        }
-
+        if (this.cannons.some(c => c.node === node)) return null;
+        const stats = this.weaponStats[weaponType] || this.weaponStats.cannon;
         const cannon = {
             node,
             team,
             isAI,
+            weaponType: this.weaponStats[weaponType] ? weaponType : "cannon",
             angle: team === "enemy" ? Math.PI : 0,
-            cooldown: 0
+            cooldown: 0,
+            cooldownMax: stats.cooldown
         };
 
         this.cannons.push(cannon);
@@ -169,6 +213,9 @@ const Weapons = {
                 .filter(entry => entry.distance <= 42)
                 .sort((a, b) => a.distance - b.distance)[0]?.node || null;
 
+            const selectedStats = this.weaponStats[this.selectedWeaponType] || this.weaponStats.cannon;
+            const weaponMetalCost = selectedStats.metal;
+            const weaponEnergyCost = selectedStats.energy;
             let mountCost = 0;
 
             // If there is no usable joint under the cursor, mount directly
@@ -201,11 +248,11 @@ const Weapons = {
                     };
 
                     mountCost = Building.settings(Building.material).cost * 2;
-                    const totalMetal = this.cannonMetalCost + mountCost;
+                    const totalMetal = weaponMetalCost + mountCost;
 
                     if (
                         Building.resources.metal < totalMetal ||
-                        Building.resources.energy < this.cannonEnergyCost
+                        Building.resources.energy < weaponEnergyCost
                     ) return true;
 
                     node = Building.createNode(mountPoint.x, mountPoint.y, {
@@ -230,17 +277,17 @@ const Weapons = {
             }
 
             if (
-                Building.resources.metal < this.cannonMetalCost + mountCost ||
-                Building.resources.energy < this.cannonEnergyCost
+                Building.resources.metal < weaponMetalCost + mountCost ||
+                Building.resources.energy < weaponEnergyCost
             ) {
                 if (mountCost) Building.removeNode(node);
                 Building.updateHUD();
                 return true;
             }
 
-            if (this.addCannon(node, "player")) {
-                Building.resources.metal -= this.cannonMetalCost + mountCost;
-                Building.resources.energy -= this.cannonEnergyCost;
+            if (this.addCannon(node, "player", false, this.selectedWeaponType)) {
+                Building.resources.metal -= weaponMetalCost + mountCost;
+                Building.resources.energy -= weaponEnergyCost;
                 Building.checkSupport();
                 Building.updateHUD();
                 this.clearSelectedTool();
@@ -353,10 +400,11 @@ const Weapons = {
         const start = cannon.node.body.position;
         const angle = cannon.angle;
 
+        const stats = this.weaponStats[cannon.weaponType] || this.weaponStats.cannon;
         const projectile = Matter.Bodies.circle(
-            start.x + Math.cos(angle) * 30,
-            start.y + Math.sin(angle) * 30,
-            5,
+            start.x + Math.cos(angle) * 34,
+            start.y + Math.sin(angle) * 34,
+            stats.radius,
             {
                 label: "cannon-projectile",
                 density: 0.003,
@@ -367,7 +415,7 @@ const Weapons = {
         );
 
         projectile.isProjectile = true;
-        projectile.damage = 35;
+        projectile.damage = stats.damage;
         projectile.team = cannon.team;
         projectile.life = 5000;
         projectile.hasHit = false;
@@ -375,12 +423,13 @@ const Weapons = {
         Matter.Composite.add(Physics.world, projectile);
 
         Matter.Body.setVelocity(projectile, {
-            x: Math.cos(angle) * this.projectileSpeed,
-            y: Math.sin(angle) * this.projectileSpeed
+            x: Math.cos(angle) * stats.speed,
+            y: Math.sin(angle) * stats.speed
         });
 
         this.projectiles.push(projectile);
-        cannon.cooldown = this.fireCooldown;
+        cannon.cooldownMax = stats.cooldown;
+        cannon.cooldown = stats.cooldown;
     },
 
     update(delta = 16.667) {
@@ -433,18 +482,43 @@ const Weapons = {
             ctx.translate(pos.x, pos.y);
             ctx.rotate(cannon.angle);
 
+            const type = cannon.weaponType || "cannon";
             ctx.fillStyle = cannon.team === "enemy" ? "#672d35" : "#303944";
             ctx.beginPath();
-            ctx.arc(0, 0, 11, 0, Math.PI * 2);
+            ctx.arc(0, 0, type === "megaCannon" ? 14 : 11, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = cannon.team === "enemy" ? "#e16b70" : "#8796a5";
-            ctx.fillRect(0, -5, 32, 10);
-
+            ctx.fillStyle = type === "machineGun"
+                ? "#e2bd55"
+                : type === "megaCannon"
+                    ? "#b85bdf"
+                    : (cannon.team === "enemy" ? "#e16b70" : "#8796a5");
+            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
+            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
+            ctx.fillRect(0, -barrelHeight / 2, barrelLength, barrelHeight);
             ctx.fillStyle = "#394653";
-            ctx.fillRect(25, -4, 8, 8);
+            ctx.fillRect(barrelLength - 5, -barrelHeight / 2 - 1, 8, barrelHeight + 2);
 
             ctx.restore();
+
+            if (cannon.cooldown > 0) {
+                const stats = this.weaponStats[cannon.weaponType] || this.weaponStats.cannon;
+                const progress = Math.max(0, Math.min(1, cannon.cooldown / (cannon.cooldownMax || stats.cooldown)));
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 19, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+                ctx.strokeStyle = cannon.weaponType === "megaCannon" ? "#d98aff" : "#ffd166";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                if (cannon.weaponType === "megaCannon") {
+                    ctx.font = "bold 12px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "#ffffff";
+                    ctx.strokeStyle = "rgba(10,12,20,.9)";
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(cannon.cooldown.toFixed(1) + "s", pos.x, pos.y - 25);
+                    ctx.fillText(cannon.cooldown.toFixed(1) + "s", pos.x, pos.y - 25);
+                }
+            }
 
             if (this.selectedCannons.includes(cannon) ||
                 (this.selectedCannons.length === 0 && cannon === this.selectedCannon)) {
