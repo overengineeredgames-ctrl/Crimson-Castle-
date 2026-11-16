@@ -881,7 +881,8 @@ const Building = {
         }
         for (const strut of this.struts) {
             if (strut.removed || strut.team !== "player") continue;
-            if (anchors.has(strut.a) && anchors.has(strut.b)) continue;
+            // The beam or joint carrying the windmill is allowed to touch its mast.
+            if (anchors.has(strut.a) || anchors.has(strut.b)) continue;
             if (this.pointToSegmentDistance(
                 x,y,strut.a.body.position,strut.b.body.position
             ) < clearance * 0.72) return false;
@@ -893,28 +894,94 @@ const Building = {
         if (!this.utilityTool) return false;
         const type = this.utilityTool;
         const definition = this.utilityDefinitions[type];
+
+        let anchorNodes = [];
+        let mountX = x;
+        let mountY = y;
+        let windmillMountFound = false;
+
+        // Windmills mount directly on a joint, or at the exact midpoint of a beam.
+        if (type === "windmill") {
+            const nearestNode = this.nodes
+                .filter(node => node.team === "player" && !node.removed && !node.isCore)
+                .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
+                .filter(item => item.distance <= 48)
+                .sort((a,b) => a.distance-b.distance)[0];
+
+            if (nearestNode) {
+                anchorNodes = [nearestNode.node];
+                mountX = nearestNode.node.body.position.x;
+                mountY = nearestNode.node.body.position.y;
+                windmillMountFound = true;
+            } else {
+                const nearestBeam = this.struts
+                    .filter(beam => beam.team === "player" && !beam.removed &&
+                        beam.a && beam.b && !beam.a.removed && !beam.b.removed)
+                    .map(beam => {
+                        const a = beam.a.body.position;
+                        const b = beam.b.body.position;
+                        const dx = b.x - a.x;
+                        const dy = b.y - a.y;
+                        const lengthSquared = dx * dx + dy * dy;
+                        const t = lengthSquared
+                            ? ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared
+                            : 0;
+                        const clampedT = Math.max(0, Math.min(1, t));
+                        const px = a.x + dx * clampedT;
+                        const py = a.y + dy * clampedT;
+                        return {
+                            beam,
+                            t,
+                            x: px,
+                            y: py,
+                            distance: Math.hypot(x - px, y - py)
+                        };
+                    })
+                    .filter(item => item.t >= 0.35 && item.t <= 0.65 && item.distance <= 32)
+                    .sort((a,b) => a.distance-b.distance)[0];
+
+                if (nearestBeam) {
+                    anchorNodes = [nearestBeam.beam.a, nearestBeam.beam.b];
+                    mountX = (anchorNodes[0].body.position.x + anchorNodes[1].body.position.x) / 2;
+                    mountY = (anchorNodes[0].body.position.y + anchorNodes[1].body.position.y) / 2;
+                    windmillMountFound = true;
+                }
+            }
+        }
+
         const cell = this.getEnclosedCells("player").find(item =>
             this.pointInPolygon({x,y}, item.polygon)
         );
 
-        let anchorNodes = cell ? cell.nodes : [];
-        if (!anchorNodes.length) {
-            const nearest = this.nodes
-                .filter(node => node.team === "player" && !node.removed && !node.isCore)
-                .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
-                .filter(item => item.distance < 115)
-                .sort((a,b) => a.distance-b.distance)[0];
-            if (nearest) anchorNodes = [nearest.node];
+        if (type !== "windmill") {
+            anchorNodes = cell ? cell.nodes : [];
+            if (!anchorNodes.length) {
+                const nearest = this.nodes
+                    .filter(node => node.team === "player" && !node.removed && !node.isCore)
+                    .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
+                    .filter(item => item.distance < 115)
+                    .sort((a,b) => a.distance-b.distance)[0];
+                if (nearest) anchorNodes = [nearest.node];
+            }
         }
 
-        if (!anchorNodes.length) return true;
-        // A windmill cannot be installed inside a sealed fort cell.
-        // It also needs a clear radius around the rotor in the open world.
-        if (type === "windmill" &&
-            (cell || !this.hasOpenAir(x,y,anchorNodes))) {
-            this.showPlacementMessage("Windmills need clear open air around them");
+        if (!anchorNodes.length) {
+            if (type === "windmill") {
+                this.showPlacementMessage("Place a windmill on a node or near the middle of a beam");
+            }
             return true;
         }
+
+        if (type === "windmill") {
+            // Check the air around the rotor, above the mounting point.
+            const rotorX = mountX;
+            const rotorY = mountY - 48;
+            if (!windmillMountFound || !this.hasOpenAir(rotorX, rotorY, anchorNodes)) {
+                this.showPlacementMessage("Windmills need clear open air above the mount");
+                return true;
+            }
+        }
+
         if (!this.charge(definition.metalCost)) return true;
 
         const anchorCenter = {
@@ -923,9 +990,10 @@ const Building = {
         };
         const installation = {
             type,
-            x, y,
-            offsetX: x - anchorCenter.x,
-            offsetY: y - anchorCenter.y,
+            x: type === "windmill" ? mountX : x,
+            y: type === "windmill" ? mountY : y,
+            offsetX: (type === "windmill" ? mountX : x) - anchorCenter.x,
+            offsetY: (type === "windmill" ? mountY : y) - anchorCenter.y,
             anchorNodes: [...anchorNodes],
             removed: false,
             angle: 0,
