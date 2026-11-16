@@ -763,6 +763,11 @@ const Game = {
 
             if (this.state !== "playing") return;
 
+            if (event.key.toLowerCase() === "d") {
+                Building.setDeleteMode(!Building.deleteMode);
+                return;
+            }
+
             if (event.key.toLowerCase() === "g") {
                 Building.gridEnabled = !Building.gridEnabled;
             }
