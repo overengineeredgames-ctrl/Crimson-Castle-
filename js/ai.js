@@ -51,6 +51,16 @@ const AI = {
             extraCannonTime: 8,
             maxCannons: 4,
             aimError: 0.06
+        },
+
+        mega: {
+            targetInterval: 0.06,
+            repairInterval: 0.45,
+            buildInterval: 1.15,
+            repairAmount: 34,
+            extraCannonTime: 2.2,
+            maxCannons: 12,
+            aimError: 0.008
         }
     },
 
@@ -727,81 +737,109 @@ const AI = {
 
     buildForwardCannon() {
         const enemyNodes = Building.nodes.filter(node =>
-            node.team === "enemy" && !node.removed && !node.isCore
+            node.team === "enemy" && !node.removed && !node.isCore && node.body
         );
-        if (!enemyNodes.length) return false;
-
-        // Pick the forward-most structural joint, then build toward the player.
         const anchors = enemyNodes.filter(node => !node.isFoundation);
         if (!anchors.length) return false;
+
+        // The AI advances its front line through five distinct engineering
+        // patterns instead of repeatedly stamping the same little triangle.
         anchors.sort((a, b) => a.body.position.x - b.body.position.x);
         const anchor = anchors[0];
+        const origin = anchor.body.position;
         const baseY = Building.groundY - Building.nodeRadius;
-        const x = anchor.body.position.x - 180;
-
-        if (x < 80) return false;
-
-        const mountY = anchor.body.position.y;
-        const plannedMount = { x, y: mountY };
-        const plannedUpper = { x, y: mountY - 100 };
-        const plannedSegments = [
-            [anchor.body.position, plannedMount],
-            [anchor.body.position, plannedUpper],
-            [plannedMount, plannedUpper]
+        const paths = [
+            {
+                name: "Low Armored Bridge",
+                points: { mount: [-145, -18], crown: [-145, -112], brace: [-65, -65] },
+                edges: [["mount","crown"],["crown","brace"],["brace","mount"],["anchor","mount"],["anchor","crown"]],
+                mount: "crown"
+            },
+            {
+                name: "Rising Rampart",
+                points: { foot: [-105, -48], mount: [-205, -125], peak: [-115, -215] },
+                edges: [["anchor","foot"],["foot","mount"],["mount","peak"],["peak","foot"],["anchor","peak"]],
+                mount: "mount"
+            },
+            {
+                name: "Layered Defense Wall",
+                points: { lower: [-165, -12], gun: [-165, -105], upper: [-75, -190], center: [-75, -95] },
+                edges: [["anchor","lower"],["lower","gun"],["gun","upper"],["upper","center"],["center","lower"],["anchor","center"],["gun","center"]],
+                mount: "gun"
+            },
+            {
+                name: "Zigzag Advance",
+                points: { lower: [-100, -55], left: [-205, -130], far: [-305, -55], high: [-205, -220] },
+                edges: [["anchor","lower"],["lower","left"],["left","far"],["far","high"],["high","left"],["lower","high"]],
+                mount: "far"
+            },
+            {
+                name: "Fortified Box Push",
+                points: { nearLow: [-115, -20], farLow: [-215, -20], farHigh: [-215, -115], nearHigh: [-115, -115] },
+                edges: [["anchor","nearLow"],["nearLow","farLow"],["farLow","farHigh"],["farHigh","nearHigh"],["nearHigh","nearLow"],["anchor","nearHigh"],["farLow","nearHigh"]],
+                mount: "farHigh"
+            }
         ];
+        const path = paths[this.expansionCount % paths.length];
+        const plannedNodes = {};
+        for (const [key, offset] of Object.entries(path.points)) {
+            plannedNodes[key] = {
+                x: origin.x + offset[0],
+                y: origin.y + offset[1]
+            };
+        }
+        plannedNodes.anchor = { x: origin.x, y: origin.y };
 
-        // Stop at the player's actual wall instead of spawning AI beams through it.
-        if (this.wouldCrossPlayerDefense(
-            [plannedMount, plannedUpper],
-            plannedSegments
-        )) {
+        const plannedSegments = path.edges.map(([a, b]) => [
+            plannedNodes[a],
+            plannedNodes[b]
+        ]);
+        const maxLength = Building.settings("steel").maxLength;
+        if (plannedSegments.some(([a, b]) =>
+            !a || !b || Building.distance(a, b) > maxLength
+        )) return false;
+
+        const plannedPoints = Object.values(path.points).map(([dx, dy]) => ({
+            x: origin.x + dx,
+            y: origin.y + dy
+        }));
+        if (this.wouldCrossPlayerDefense(plannedPoints, plannedSegments)) {
             this.extraCannonTimer = 0;
             return false;
         }
 
-        const mount = Building.createNode(x, mountY, {
-            team: "enemy",
-            material: "steel"
-        });
-        const upper = Building.createNode(x, mountY - 100, {
-            team: "enemy",
-            material: "steel"
-        });
-
-        // A braced forward tower: cannon mount, vertical armor and diagonals.
-        const foundation = enemyNodes
-            .filter(node => node.isFoundation)
-            .sort((a, b) =>
-                Math.abs(a.body.position.x - anchor.body.position.x) -
-                Math.abs(b.body.position.x - anchor.body.position.x)
-            )[0];
-
-        const beams = [
-            Building.createStrut(anchor, mount, { material: "steel" }),
-            Building.createStrut(anchor, upper, { material: "steel" }),
-            Building.createStrut(mount, upper, { material: "steel" })
-        ];
-
-        if (foundation) {
-            const distance = Building.distance(
-                foundation.body.position,
-                mount.body.position
-            );
-            if (distance <= Building.settings("steel").maxLength) {
-                beams.push(Building.createStrut(foundation, mount, {
-                    material: "steel"
-                }));
+        const created = { anchor };
+        for (const [key, point] of Object.entries(plannedNodes)) {
+            if (key === "anchor") continue;
+            created[key] = Building.createNode(point.x, point.y, {
+                team: "enemy",
+                material: "steel"
+            });
+            if (!created[key]) {
+                for (const node of Object.values(created)) {
+                    if (node && node !== anchor) Building.removeNode(node);
+                }
+                return false;
             }
         }
 
-        if (beams.some(beam => !beam)) {
-            Building.removeNode(mount);
-            Building.removeNode(upper);
-            return false;
+        const beams = [];
+        for (const [a, b] of path.edges) {
+            const beam = Building.createStrut(created[a], created[b], {
+                material: "steel"
+            });
+            if (!beam) {
+                for (const node of Object.values(created)) {
+                    if (node && node !== anchor) Building.removeNode(node);
+                }
+                return false;
+            }
+            beams.push(beam);
         }
 
         Building.checkSupport();
-        Weapons.addCannon(mount, "enemy", true, this.chooseAIWeaponType());
+        const turret = created[path.mount];
+        Weapons.addCannon(turret, "enemy", true, this.chooseAIWeaponType());
         this.expansionCount++;
         this.extraCannonTimer = 0;
         return true;
