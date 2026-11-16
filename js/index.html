@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forts - Canvas Remake</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="hud">
+        <div class="game-title">FORTS</div>
+
+        <div class="resources">
+            <div class="resource metal">
+                <span class="resource-icon">◆</span>
+                Metal: <span id="metal-count">500</span>
+            </div>
+
+            <div class="resource energy">
+                <span class="resource-icon">⚡</span>
+                Energy: <span id="energy-count">100</span>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button id="btn-wood" class="tool active">
+                Wood
+                <small>Build</small>
+            </button>
+
+            <button id="btn-steel" class="tool">
+                Steel
+                <small>Build</small>
+            </button>
+
+            <button id="btn-cannon" class="tool">
+                Cannon
+                <small>Weapons</small>
+            </button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Matter.js physics engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+
+    <!-- Game scripts: order matters -->
+    <script src="js/config.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/building.js"></script>
+    <script src="js/weapons.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
+
