@@ -74,7 +74,7 @@ window.CCUpdater = (() => {
         cancelButton.addEventListener("click", () => {
             if (updateInfo && updateInfo.required) return;
             popup.style.display = "none";
-            if (window.Game) Game.showOnly(Game.startScreen);
+            showMainMenu();
         });
 
         actions.append(updateButton, cancelButton);
@@ -159,12 +159,20 @@ window.CCUpdater = (() => {
         return checkPromise;
     }
 
+    function showMainMenu() {
+        if (typeof Game === "undefined") return;
+        Game.showOnly(Game.startScreen);
+        Game.startScreen.classList.remove("cc-menu-enter");
+        void Game.startScreen.offsetWidth;
+        Game.startScreen.classList.add("cc-menu-enter");
+    }
+
     async function finishBoot() {
         const info = await beginCheck();
         if (info && info.updateAvailable) {
             showPopup(info);
-        } else if (window.Game) {
-            Game.showOnly(Game.startScreen);
+        } else {
+            showMainMenu();
         }
     }
 
