@@ -1701,34 +1701,23 @@ const Building = {
         ctx.strokeStyle = "rgba(255,255,255,0.06)";
         ctx.lineWidth = 1;
 
-        const cameraOffset = Math.max(
-            0,
-            (Physics.worldWidth - window.innerWidth) / 2
-        );
+        const cameraOffset = typeof Game !== "undefined" ? Game.cameraX : 0;
+        const zoom = typeof Game !== "undefined" ? Game.cameraZoom : 1;
+        const visibleWidth = ctx.canvas.width / zoom;
+        const visibleHeight = ctx.canvas.height / zoom;
 
-        const startX = Math.floor(
-            cameraOffset / this.gridSize
-        ) * this.gridSize;
-
-        for (
-            let x = startX;
-            x < cameraOffset + ctx.canvas.width;
-            x += this.gridSize
-        ) {
+        const startX = Math.floor(cameraOffset / this.gridSize) * this.gridSize;
+        for (let x = startX; x < cameraOffset + visibleWidth; x += this.gridSize) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, ctx.canvas.height);
+            ctx.lineTo(x, visibleHeight);
             ctx.stroke();
         }
 
-        for (
-            let y = 0;
-            y < ctx.canvas.height;
-            y += this.gridSize
-        ) {
+        for (let y = 0; y < visibleHeight; y += this.gridSize) {
             ctx.beginPath();
             ctx.moveTo(cameraOffset, y);
-            ctx.lineTo(cameraOffset + ctx.canvas.width, y);
+            ctx.lineTo(cameraOffset + visibleWidth, y);
             ctx.stroke();
         }
 
