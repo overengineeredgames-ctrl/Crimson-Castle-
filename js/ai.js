@@ -80,10 +80,12 @@ const AI = {
 
         const bottomLeft = Building.createNode(leftX, baseY, {
             isFoundation: true,
+            isBaseAnchor: true,
             team: "enemy"
         });
         const bottomRight = Building.createNode(rightX, baseY, {
             isFoundation: true,
+            isBaseAnchor: true,
             team: "enemy"
         });
 
