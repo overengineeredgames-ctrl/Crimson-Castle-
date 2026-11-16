@@ -176,6 +176,10 @@ const AI = {
         let bestScore = -Infinity;
 
         for (const node of this.getPlayerNodes()) {
+            // Never choose the ground/foundation as a preferred target.
+            // This was the main reason the AI kept aiming into the floor.
+            if (node.isFoundation) continue;
+
             const position = node.body.position;
 
             const distance = Math.hypot(
@@ -212,6 +216,9 @@ const AI = {
         }
 
         for (const strut of this.getPlayerStruts()) {
+            // Ground-level foundation beams are not useful combat targets.
+            if (strut.a.isFoundation || strut.b.isFoundation) continue;
+
             const a = strut.a.body.position;
             const b = strut.b.body.position;
 
@@ -266,7 +273,10 @@ const AI = {
         // Matter.js uses a 60 FPS reference timestep.
         const frameTime = 1000 / 60;
 
-        return gravity * frameTime * frameTime;
+        // Physics.update() advances Matter in four quarter-frame substeps.
+        // Match that integration here; using a full-frame gravity value made
+        // the AI aim far too high/low compared with real projectile motion.
+        return gravity * frameTime * frameTime / 4;
     },
 
     solveTrajectory(start, target, velocity, speed) {
