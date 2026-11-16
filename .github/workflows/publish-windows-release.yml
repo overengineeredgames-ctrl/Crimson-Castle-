@@ -41,3 +41,21 @@ jobs:
         run: npm run release:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build portable ZIP
+        run: npm run dist:portable
+
+      - name: Upload portable ZIP to the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          $zip = Get-ChildItem -Path dist -Filter "*-Desktop.zip" -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $zip) {
+            throw "Portable ZIP was not created in the dist folder."
+          }
+          gh release upload "v$version" $zip.FullName --clobber
+          Write-Host "Uploaded portable package: $($zip.Name)"
