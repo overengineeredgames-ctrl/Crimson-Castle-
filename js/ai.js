@@ -11,7 +11,7 @@ const AI = {
 
     currentTarget: null,
     extraCannonBuilt: false,
-    cannonRange: 1250,
+    cannonRange: 430,
     expansionCount: 0,
     fortifyTimer: 0,
 
@@ -23,7 +23,7 @@ const AI = {
             repairInterval: 1.2,
             buildInterval: 11,
             repairAmount: 5,
-            extraCannonTime: 36,
+            extraCannonTime: 9,
             aimError: 0.24
         },
 
@@ -32,7 +32,7 @@ const AI = {
             repairInterval: 0.7,
             buildInterval: 6.5,
             repairAmount: 9,
-            extraCannonTime: 18,
+            extraCannonTime: 5,
             aimError: 0.12
         },
 
@@ -41,7 +41,7 @@ const AI = {
             repairInterval: 0.4,
             buildInterval: 4.5,
             repairAmount: 14,
-            extraCannonTime: 12,
+            extraCannonTime: 3.5,
             aimError: 0.06
         }
     },
@@ -570,7 +570,7 @@ const AI = {
         anchors.sort((a, b) => a.body.position.x - b.body.position.x);
         const anchor = anchors[0];
         const baseY = Building.groundY - Building.nodeRadius;
-        const x = anchor.body.position.x - 150;
+        const x = anchor.body.position.x - 180;
 
         if (x < 80) return false;
 
