@@ -865,12 +865,18 @@ const Game = {
             if (this.state !== "playing") return;
             event.preventDefault();
 
-            if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-                this.cameraOffsetX += (event.deltaX || event.deltaY) / this.cameraZoom;
+            // Any horizontal wheel/trackpad movement pans sideways.
+            // Some mice report horizontal scrolling with deltaX and deltaY
+            // together, so do not compare their magnitudes before deciding.
+            if (event.deltaX !== 0 || event.shiftKey) {
+                const movement = event.deltaX !== 0 ? event.deltaX : event.deltaY;
+                this.cameraOffsetX += movement / this.cameraZoom;
                 this.clampCamera();
                 return;
             }
 
+            // Only a purely vertical wheel gesture controls zoom.
+            if (event.deltaY === 0) return;
             const factor = event.deltaY > 0 ? 0.9 : 1.1;
             this.setCameraZoomAt(event.clientX, this.cameraZoom * factor);
         }, { passive: false });
