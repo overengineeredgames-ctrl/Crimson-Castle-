@@ -1,4 +1,3 @@
-
 "use strict";
 
 const AI = {
@@ -55,9 +54,10 @@ const AI = {
 
         mega: {
             targetInterval: 0.045,
-            repairInterval: 0.25,
+            repairInterval: 1.25,
             buildInterval: 0.8,
-            repairAmount: 48,
+            repairAmount: 12,
+            maxRepairTargets: 3,
             extraCannonTime: 1.7,
             maxCannons: 16,
             aimError: 0.003
@@ -475,31 +475,38 @@ const AI = {
 
     repairFort() {
         const config = this.config;
+        const maxTargets = config.maxRepairTargets || Infinity;
 
-        for (const node of Building.nodes) {
-            if (
-                node.team !== "enemy" ||
-                node.removed ||
-                node.health >= node.maxHealth
-            ) {
-                continue;
-            }
+        const damagedNodes = Building.nodes
+            .filter(node =>
+                node.team === "enemy" &&
+                !node.removed &&
+                node.health < node.maxHealth
+            )
+            .sort((a, b) =>
+                (a.health / a.maxHealth) - (b.health / b.maxHealth)
+            )
+            .slice(0, maxTargets);
 
+        for (const node of damagedNodes) {
             node.health = Math.min(
                 node.maxHealth,
                 node.health + config.repairAmount
             );
         }
 
-        for (const strut of Building.struts) {
-            if (
-                strut.team !== "enemy" ||
-                strut.removed ||
-                strut.health >= strut.maxHealth
-            ) {
-                continue;
-            }
+        const damagedStruts = Building.struts
+            .filter(strut =>
+                strut.team === "enemy" &&
+                !strut.removed &&
+                strut.health < strut.maxHealth
+            )
+            .sort((a, b) =>
+                (a.health / a.maxHealth) - (b.health / b.maxHealth)
+            )
+            .slice(0, maxTargets);
 
+        for (const strut of damagedStruts) {
             strut.health = Math.min(
                 strut.maxHealth,
                 strut.health + config.repairAmount * 1.3
