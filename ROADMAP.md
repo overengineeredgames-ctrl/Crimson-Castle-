@@ -10,10 +10,10 @@
 The goal of 1.1.0 is to make the core fortress-building and battle loop more reliable and satisfying before expanding the game's scope.
 
 ### Priority 1 — Core stability
-- [ ] Fix fortress movement, floating, and unexpected settling after supports are removed.
-- [ ] Prevent nodes and structures from clipping through or passing below the ground.
-- [ ] Check that connected structures remain stable when beams or supports break.
-- [ ] Fix reproducible crashes, softlocks, and major gameplay bugs reported by testers.
+- [x] Fix fortress movement, floating, and unexpected settling after supports are removed.
+- [x] Prevent nodes and structures from clipping through or passing below the ground.
+- [x] Check that connected structures remain stable when beams or supports break.
+- [ ] Fix reproducible crashes, softlocks, and other major gameplay bugs reported by testers.
 
 ### Priority 2 — Building improvements
 - [ ] Make node-to-node building and snapping feel consistent.
@@ -44,7 +44,7 @@ The goal of 1.1.0 is to make the core fortress-building and battle loop more rel
 Before publishing 1.1.0:
 - [ ] Start a new match and complete a full battle.
 - [ ] Build, extend, and delete sections of a fortress.
-- [ ] Break supports and check that physics and ground collision behave correctly.
+- [x] Break supports and check that physics and ground collision behave correctly.
 - [ ] Place, select, aim, and fire one cannon.
 - [ ] Select multiple cannons and fire them together.
 - [ ] Destroy enemy weapons and confirm AI recovery behavior.
