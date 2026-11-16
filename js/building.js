@@ -111,10 +111,24 @@ const Building = {
         });
     },
 
-    snapPointToGround(point, team = "player", threshold = 30) {
+    snapPointToGround(point, team = "player", threshold = 85) {
         const groundNodeY = this.groundY - this.nodeRadius;
+
+        // Snap the joint center to the floor-node row when the player builds
+        // reasonably close to the ground. A wider tolerance makes this work
+        // even when the grid places the dragged endpoint a little too high.
         if (Math.abs(point.y - groundNodeY) > threshold) return null;
-        return this.getGroundAnchor(point.x, team);
+
+        const anchor = this.getGroundAnchor(point.x, team);
+        return anchor || null;
+    },
+
+    getBuildEndpoint(x, y, team = "player") {
+        const snapped = this.snapPoint(x, y);
+        const groundAnchor = this.snapPointToGround(snapped, team);
+        return groundAnchor
+            ? { x: groundAnchor.body.position.x, y: groundAnchor.body.position.y, node: groundAnchor }
+            : { x: snapped.x, y: snapped.y, node: null };
     },
 
     // Supports both getNearestNode(x, y, radius)
@@ -813,8 +827,15 @@ const Building = {
 
         if (Math.hypot(offset.x, offset.y) < 20) return false;
 
-        const newA = { x: a.x + offset.x, y: a.y + offset.y };
-        const newB = { x: b.x + offset.x, y: b.y + offset.y };
+        const rawA = { x: a.x + offset.x, y: a.y + offset.y };
+        const rawB = { x: b.x + offset.x, y: b.y + offset.y };
+
+        // Resolve each bottom corner against the invisible floor-anchor row
+        // before calculating beam lengths or creating the box.
+        const endpointA = this.getBuildEndpoint(rawA.x, rawA.y, sourceStrut.team);
+        const endpointB = this.getBuildEndpoint(rawB.x, rawB.y, sourceStrut.team);
+        const newA = { x: endpointA.x, y: endpointA.y };
+        const newB = { x: endpointB.x, y: endpointB.y };
 
         // Both side beams, the far beam, and the two X braces must fit.
         const lengths = [
@@ -830,9 +851,9 @@ const Building = {
         const cost = material.cost * 7;
         if (!this.charge(cost)) return false;
 
-        const nodeA = this.snapPointToGround(newA, sourceStrut.team) ||
+        const nodeA = endpointA.node ||
             this.createNode(newA.x, newA.y, { team: sourceStrut.team });
-        const nodeB = this.snapPointToGround(newB, sourceStrut.team) ||
+        const nodeB = endpointB.node ||
             this.createNode(newB.x, newB.y, { team: sourceStrut.team });
         const center = this.createNode(
             (a.x + b.x + newA.x + newB.x) / 4,
