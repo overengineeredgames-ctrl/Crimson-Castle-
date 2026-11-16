@@ -422,3 +422,30 @@ body.cc-theme-light #btn-mega-cannon.active {
     background: #dfc0ef;
     border-color: #9560ad;
 }
+
+
+/* Mega-hard difficulty warning styling */
+.forts-difficulty button[data-difficulty="mega"] {
+    color: #ffb0b0;
+    border-color: #a83b45;
+    background: linear-gradient(145deg, #55232d, #321821);
+    font-weight: 900;
+    letter-spacing: .4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.55);
+}
+.forts-difficulty button[data-difficulty="mega"].active {
+    color: #fff;
+    border-color: #ff727c;
+    background: linear-gradient(145deg, #b52d3d, #751d2d);
+    box-shadow: 0 0 15px rgba(255,55,75,.42), inset 0 0 8px rgba(255,180,180,.12);
+}
+body.cc-theme-light .forts-difficulty button[data-difficulty="mega"] {
+    color: #842331;
+    background: #f4d8dc;
+    border-color: #c77a84;
+}
+body.cc-theme-light .forts-difficulty button[data-difficulty="mega"].active {
+    color: #fff;
+    background: #a72d3d;
+    border-color: #7f1b29;
+}
