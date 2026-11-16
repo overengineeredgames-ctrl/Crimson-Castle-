@@ -811,6 +811,7 @@ const Game = {
                 return;
             }
 
+            if (Building.handleUtilityPointerDown(p.x, p.y)) return;
             if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey)) return;
 
             Building.startDrag(p.x, p.y);
@@ -1045,7 +1046,7 @@ const Game = {
         );
 
         ctx.fillText(
-            "Mine: select Mine, drag onto a joint | 50 metal, +2 energy/sec",
+            "Mine: drag onto a ground joint | Drill: uses power to produce metal | Windmill: needs open air | Battery: stores power",
             14,
             this.canvas.height - 58
         );
@@ -1068,30 +1069,32 @@ const Game = {
     },
 
     updateEconomy(delta) {
+        const seconds = Math.max(0, delta / 1000);
+        const production = Building.getEnergyProduction();
+        const drills = Building.installations.filter(item =>
+            !item.removed && item.type === "drill"
+        );
+        const drillPowerDemand = drills.length * Building.utilityDefinitions.drill.powerUse;
+        const storedEnergy = Math.max(0, Building.resources.energy);
+        const availableEnergy = storedEnergy + production * seconds;
+        const requestedEnergy = drillPowerDemand * seconds;
+        const drillEfficiency = requestedEnergy > 0
+            ? Math.min(1, availableEnergy / requestedEnergy)
+            : 1;
+
+        Building.resources.energy = Math.max(0, Math.min(
+            Building.getEnergyCapacity(),
+            availableEnergy - requestedEnergy * drillEfficiency
+        ));
+
+        Building.resources.metal +=
+            (CONFIG.METAL_GENERATION || 2) * seconds +
+            drills.length * Building.utilityDefinitions.drill.drillRate *
+                drillEfficiency * seconds;
+
         this.resourceTimer += delta;
-
-        const tickRate = CONFIG.RESOURCE_TICK_RATE || 1000;
-
-        while (this.resourceTimer >= tickRate) {
-            this.resourceTimer -= tickRate;
-
-            Building.resources.metal += CONFIG.METAL_GENERATION || 2;
-
-            const activeMines = (Building.mines || []).filter(mine =>
-                mine &&
-                !mine.removed &&
-                mine.node &&
-                !mine.node.removed
-            );
-
-            const energyPerSecond = activeMines.reduce(
-                (total, mine) => total + (mine.energyPerSecond || 2),
-                0
-            );
-
-            Building.resources.energy +=
-                energyPerSecond * (tickRate / 1000);
-
+        if (this.resourceTimer >= 250) {
+            this.resourceTimer %= 250;
             Building.updateHUD();
         }
     },
