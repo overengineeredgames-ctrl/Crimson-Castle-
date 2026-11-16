@@ -982,7 +982,7 @@ const Game = {
         ctx.fillText(
             Building.repairMode
                 ? "REPAIR MODE: click a damaged player beam inside the green circle"
-                : "Double-click cannon to select; move mouse to aim, click to fire",
+                : "Click a cannon to select; aim and click to fire | Hold mouse with Machine Gun for automatic fire",
             14,
             this.canvas.height - 18
         );
