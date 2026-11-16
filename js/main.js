@@ -412,6 +412,11 @@ const Game = {
 
         // Let the studio ident finish, then fade the main menu in from black.
         window.setTimeout(() => {
+            if (window.CCUpdater && typeof window.CCUpdater.finishBoot === "function") {
+                window.CCUpdater.finishBoot();
+                return;
+            }
+
             this.showOnly(this.startScreen);
             this.startScreen.classList.remove("cc-menu-enter");
             void this.startScreen.offsetWidth;
