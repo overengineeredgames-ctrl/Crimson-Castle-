@@ -71,12 +71,12 @@ const AI = {
         const topY = baseY - 150;
 
         const lb = Building.createNode(leftX, baseY, {
-            isStatic: true,
+            isFoundation: true,
             team: "enemy"
         });
 
         const rb = Building.createNode(rightX, baseY, {
-            isStatic: true,
+            isFoundation: true,
             team: "enemy"
         });
 
@@ -94,16 +94,18 @@ const AI = {
             "enemy"
         );
 
-        Building.createStrut(lb, rb, "steel");
-        Building.createStrut(lb, lt, "steel");
-        Building.createStrut(rb, rt, "steel");
-        Building.createStrut(lt, rt, "steel");
+        Building.createStrut(lb, rb, { material: "steel" });
+        Building.createStrut(lb, lt, { material: "steel" });
+        Building.createStrut(rb, rt, { material: "steel" });
+        Building.createStrut(lt, rt, { material: "steel" });
 
-        Building.createStrut(lb, rt, "steel");
-        Building.createStrut(rb, lt, "steel");
+        Building.createStrut(lb, rt, { material: "steel" });
+        Building.createStrut(rb, lt, { material: "steel" });
 
-        Building.createStrut(core, lt, "steel");
-        Building.createStrut(core, rt, "steel");
+        Building.createStrut(core, lt, { material: "steel" });
+        Building.createStrut(core, rt, { material: "steel" });
+
+        Building.checkSupport();
 
         Weapons.addCannon(rt, "enemy", true);
     },
