@@ -1,13 +1,13 @@
 {
   "name": "crimson-castle",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Crimson Castle - a fortress warfare game",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
     "dist:win": "electron-builder --win nsis && electron-builder --win portable --config.directories.output=dist/portable && powershell -NoProfile -ExecutionPolicy Bypass -File .\\make-portable-zip.ps1",
     "dist:portable": "electron-builder --win portable --config.directories.output=dist/portable && powershell -NoProfile -ExecutionPolicy Bypass -File .\\make-portable-zip.ps1",
-    "release:win": "electron-builder --win nsis --publish always"
+    "release:win": "electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
     "electron-updater": "^6.8.11"
