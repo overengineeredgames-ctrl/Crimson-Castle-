@@ -60,6 +60,14 @@ html, body {
     gap: 25px;
     font-size: 17px;
     font-weight: bold;
+    color: #ffffff;
+}
+
+.resources .resource,
+.resources .resource span,
+#metal-count,
+#energy-count {
+    color: #ffffff;
 }
 
 .resource {
