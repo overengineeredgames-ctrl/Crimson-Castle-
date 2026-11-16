@@ -653,9 +653,7 @@ const Building = {
         const lengths = [
             this.distance(a, newA),
             this.distance(b, newB),
-            this.distance(newA, newB),
-            this.distance(a, newB),
-            this.distance(b, newA)
+            this.distance(newA, newB)
         ];
 
         if (lengths.some(length =>
@@ -668,8 +666,8 @@ const Building = {
         const nodeA = this.createNode(newA.x, newA.y, { team: sourceStrut.team });
         const nodeB = this.createNode(newB.x, newB.y, { team: sourceStrut.team });
         const center = this.createNode(
-            (newA.x + newB.x) / 2,
-            (newA.y + newB.y) / 2,
+            (a.x + b.x + newA.x + newB.x) / 4,
+            (a.y + b.y + newA.y + newB.y) / 4,
             { team: sourceStrut.team }
         );
 
