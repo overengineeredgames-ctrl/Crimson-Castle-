@@ -14,6 +14,12 @@ npm.cmd install
 npm.cmd start
 ```
 
+## Install the game on Windows
+
+Download the latest Windows installer from the repository's **Releases** page and run `Crimson-Castle-Setup-<version>.exe`. The installer already contains the Crimson Castle app icon and creates a desktop shortcut with that icon. No separate icon download or setup step is needed.
+
+The icon file (`CrimsonCastle.ico`) is included in this repository and is also added automatically to the portable ZIP.
+
 ## Build the Windows versions
 
 Run this from PowerShell after installing the dependencies:
@@ -30,7 +36,7 @@ This creates:
 
 1. Find `Crimson-Castle-Setup-1.0.0-Desktop.zip` in the `dist` folder. The version number in the filename may be different.
 2. Right-click the ZIP and choose **Extract All...**.
-3. Open the extracted folder. Keep the game EXE, `Create Desktop Shortcut.bat`, and `CrimsonCastle.ico` together in that folder.
+3. Open the extracted folder. Keep the game EXE, `Create Desktop Shortcut.bat`, and `CrimsonCastle.ico` together in that folder. All three files are already included in the ZIP.
 4. Double-click **Create Desktop Shortcut.bat**.
 5. If Windows asks for permission to run the script, approve it only if you trust the ZIP and its source.
 6. A **Crimson Castle** shortcut should appear on your Windows desktop. Double-click it to play.
@@ -39,7 +45,7 @@ This creates:
 
 ### If the shortcut has the default icon
 
-Make sure `CrimsonCastle.ico` is in the same extracted folder as the EXE and the BAT file, then run `Create Desktop Shortcut.bat` again. Windows may cache shortcut icons; if the old icon remains, delete the old desktop shortcut and run the BAT file again.
+Make sure `CrimsonCastle.ico` is in the same extracted folder as the EXE and the BAT file. The ZIP created from this repository includes the icon automatically; if it is missing, download the repository again or rebuild the ZIP. Windows may cache shortcut icons; if the old icon remains, delete the old desktop shortcut and run the BAT file again.
 
 ## Updates
 
