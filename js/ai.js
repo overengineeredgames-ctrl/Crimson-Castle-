@@ -122,7 +122,7 @@ const AI = {
 
     createEnemyFort() {
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
-        const leftX = Math.round(worldWidth * 0.68);
+        const leftX = Math.round(worldWidth * 0.62);
         const baseY = Building.groundY - Building.nodeRadius;
         const preset = this.presetDefinitions[
             Math.floor(Math.random() * this.presetDefinitions.length)
