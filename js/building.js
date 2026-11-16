@@ -7,6 +7,11 @@ const Building = {
     mines: [],
     drag: null,
 
+    repairMode: false,
+    repairTarget: null,
+    repairMouse: { x: 0, y: 0 },
+    repairRate: 45,
+
     material: "wood",
     gridSize: 30,
     gridEnabled: true,
@@ -823,6 +828,84 @@ const Building = {
         }
     },
 
+    setRepairMode(enabled, difficulty = "normal") {
+        this.repairMode = !!enabled;
+        this.repairTarget = null;
+
+        const rates = {
+            easy: 100,
+            normal: 50,
+            hard: 22
+        };
+        this.repairRate = rates[difficulty] || rates.normal;
+    },
+
+    startRepairAt(x, y, difficulty = "normal") {
+        this.repairMouse.x = x;
+        this.repairMouse.y = y;
+
+        if (!this.repairMode) return false;
+
+        // The repair cursor is a 60px-wide (roughly one-inch) targeting circle.
+        const radius = 30;
+        let target = null;
+        let bestDistance = radius;
+
+        for (const strut of this.struts) {
+            if (
+                strut.team !== "player" ||
+                !strut.a || !strut.b ||
+                strut.a.removed || strut.b.removed ||
+                strut.health >= strut.maxHealth
+            ) continue;
+
+            const distance = this.pointToSegmentDistance(
+                x, y,
+                strut.a.body.position,
+                strut.b.body.position
+            );
+
+            if (distance <= bestDistance) {
+                bestDistance = distance;
+                target = strut;
+            }
+        }
+
+        if (!target) {
+            this.repairTarget = null;
+            return true;
+        }
+
+        this.setRepairMode(true, difficulty);
+        this.repairTarget = target;
+        return true;
+    },
+
+    updateRepair(delta = 16.667) {
+        const target = this.repairTarget;
+        if (!this.repairMode || !target) return;
+
+        if (
+            !this.struts.includes(target) ||
+            target.team !== "player" ||
+            !target.a || !target.b ||
+            target.a.removed || target.b.removed
+        ) {
+            this.repairTarget = null;
+            return;
+        }
+
+        target.health = Math.min(
+            target.maxHealth,
+            target.health + this.repairRate * (delta / 1000)
+        );
+
+        if (target.health >= target.maxHealth) {
+            target.health = target.maxHealth;
+            this.repairTarget = null;
+        }
+    },
+
     destroyTeam(team) {
         const nodes = this.nodes.filter(
             node => node.team === team
@@ -846,6 +929,8 @@ const Building = {
     },
 
     update(delta = 16.667) {
+        this.updateRepair(delta);
+
         this.mines = this.mines.filter(mine =>
             this.nodes.includes(mine.node)
         );
@@ -1082,6 +1167,31 @@ const Building = {
         }
 
         this.drawPreview(ctx);
+
+        if (this.repairMode) {
+            const radius = 30;
+            const target = this.repairTarget;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(this.repairMouse.x, this.repairMouse.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(70, 235, 130, 0.10)";
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = target ? "#65ff9a" : "rgba(110,255,160,0.85)";
+            ctx.stroke();
+
+            if (target && this.struts.includes(target)) {
+                const a = target.a.body.position;
+                const b = target.b.body.position;
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.lineWidth = target.width + 5;
+                ctx.strokeStyle = "rgba(80,255,130,0.7)";
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
     },
 
     drawCoreHealthBar(ctx, node) {
