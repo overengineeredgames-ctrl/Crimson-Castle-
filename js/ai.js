@@ -29,7 +29,7 @@ const AI = {
             buildInterval: 11,
             repairAmount: 5,
             extraCannonTime: 16,
-            maxCannons: 2,
+            maxCannons: 5,
             aimError: 0.24
         },
 
@@ -39,7 +39,7 @@ const AI = {
             buildInterval: 6.5,
             repairAmount: 8,
             extraCannonTime: 11,
-            maxCannons: 3,
+            maxCannons: 6,
             aimError: 0.12
         },
 
@@ -49,7 +49,7 @@ const AI = {
             buildInterval: 4.5,
             repairAmount: 12,
             extraCannonTime: 8,
-            maxCannons: 4,
+            maxCannons: 10,
             aimError: 0.06
         },
 
