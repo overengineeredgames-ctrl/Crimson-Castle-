@@ -11,6 +11,9 @@ const AI = {
 
     currentTarget: null,
     extraCannonBuilt: false,
+    cannonRange: 1250,
+    expansionCount: 0,
+    fortifyTimer: 0,
 
     difficulty: "normal",
 
@@ -18,28 +21,28 @@ const AI = {
         easy: {
             targetInterval: 0.65,
             repairInterval: 1.2,
-            buildInterval: 15,
+            buildInterval: 11,
             repairAmount: 5,
             extraCannonTime: Infinity,
-            aimError: 0.3
+            aimError: 0.24
         },
 
         normal: {
             targetInterval: 0.35,
             repairInterval: 0.7,
-            buildInterval: 9,
+            buildInterval: 6.5,
             repairAmount: 9,
-            extraCannonTime: 40,
-            aimError: 0.2
+            extraCannonTime: 18,
+            aimError: 0.12
         },
 
         hard: {
             targetInterval: 0.18,
             repairInterval: 0.4,
-            buildInterval: 5,
+            buildInterval: 4.5,
             repairAmount: 14,
-            extraCannonTime: 22,
-            aimError: 0.1
+            extraCannonTime: 12,
+            aimError: 0.06
         }
     },
 
@@ -184,17 +187,18 @@ const AI = {
                 ? node.health / node.maxHealth
                 : 1;
 
-            let score = 250 - distance * 0.3;
+            // Prefer the closest useful target, especially player weapons.
+            let score = 1200 - distance;
+            const carriesCannon = Weapons.cannons.some(cannon =>
+                cannon.team === "player" && cannon.node === node
+            );
 
-            if (node.isCore) {
-                score += 650;
-            } else if (!node.isFoundation) {
-                score += 110;
-            } else {
-                score -= 180;
-            }
+            if (carriesCannon) score += 650;
+            if (node.isCore) score += 260;
+            else if (!node.isFoundation) score += 90;
+            else score -= 500;
 
-            score += (1 - healthRatio) * 220;
+            score += (1 - healthRatio) * 180;
 
             const target = {
                 type: "node",
@@ -223,9 +227,9 @@ const AI = {
                 ? strut.health / strut.maxHealth
                 : 1;
 
-            let score = 180 - distance * 0.3;
+            let score = 1050 - distance;
 
-            score += (1 - healthRatio) * 320;
+            score += (1 - healthRatio) * 260;
 
             if (
                 strut.a.isCore ||
@@ -384,26 +388,27 @@ const AI = {
                 cannon.team !== "enemy" ||
                 !cannon.node ||
                 cannon.node.removed
-            ) {
-                continue;
-            }
+            ) continue;
 
-            if (!this.currentTarget) continue;
+            // Each cannon independently tracks the nearest valuable object.
+            const target = this.findBestTarget(cannon);
+            if (!target) continue;
 
-            // Calculate a fresh ballistic trajectory.
-            const perfectAngle = this.calculateAim(
-                cannon,
-                this.currentTarget
-            );
+            const from = cannon.node.body.position;
+            const point = this.getTargetPoint(target);
+            const distance = Math.hypot(point.x - from.x, point.y - from.y);
+            cannon.target = target;
+            cannon.targetInRange = distance <= this.cannonRange;
 
-            // Keep the cannon's displayed aim accurate between shots.
+            // Track moving structures continuously, but never waste shots
+            // on targets outside the weapon's effective range.
+            if (!cannon.targetInRange) continue;
+
+            const perfectAngle = this.calculateAim(cannon, target);
             cannon.angle = perfectAngle;
 
             if (cannon.cooldown <= 0) {
-                // Apply random error only once per shot.
-                cannon.angle =
-                    perfectAngle + this.getRandomAimError();
-
+                cannon.angle = perfectAngle + this.getRandomAimError();
                 Weapons.fire(cannon);
             }
         }
@@ -533,36 +538,88 @@ const AI = {
     },
 
     buildExtraCannon() {
-        if (this.extraCannonBuilt) return;
+        // Expand only when no enemy cannon currently has a target in range.
+        const enemyCannons = Weapons.cannons.filter(cannon =>
+            cannon.team === "enemy" && cannon.node && !cannon.node.removed
+        );
+        if (!enemyCannons.length) return;
 
-        if (this.extraCannonTimer < this.config.extraCannonTime) {
-            return;
+        const hasShot = enemyCannons.some(cannon => {
+            const target = this.findBestTarget(cannon);
+            if (!target) return false;
+            const from = cannon.node.body.position;
+            const point = this.getTargetPoint(target);
+            return Math.hypot(point.x - from.x, point.y - from.y) <= this.cannonRange;
+        });
+
+        if (hasShot) return;
+        if (this.extraCannonTimer < this.config.extraCannonTime) return;
+
+        this.buildForwardCannon();
+    },
+
+    buildForwardCannon() {
+        const enemyNodes = Building.nodes.filter(node =>
+            node.team === "enemy" && !node.removed && !node.isCore
+        );
+        if (!enemyNodes.length) return false;
+
+        // Pick the forward-most structural joint, then build toward the player.
+        const anchors = enemyNodes.filter(node => !node.isFoundation);
+        if (!anchors.length) return false;
+        anchors.sort((a, b) => a.body.position.x - b.body.position.x);
+        const anchor = anchors[0];
+        const baseY = Building.groundY - Building.nodeRadius;
+        const x = anchor.body.position.x - 150;
+
+        if (x < 80) return false;
+
+        const mount = Building.createNode(x, baseY - 100, {
+            team: "enemy",
+            material: "steel"
+        });
+        const upper = Building.createNode(x, baseY - 245, {
+            team: "enemy",
+            material: "steel"
+        });
+
+        // A braced forward tower: cannon mount, vertical armor and diagonals.
+        const foundation = enemyNodes
+            .filter(node => node.isFoundation)
+            .sort((a, b) =>
+                Math.abs(a.body.position.x - anchor.body.position.x) -
+                Math.abs(b.body.position.x - anchor.body.position.x)
+            )[0];
+
+        const beams = [
+            Building.createStrut(anchor, mount, { material: "steel" }),
+            Building.createStrut(anchor, upper, { material: "steel" }),
+            Building.createStrut(mount, upper, { material: "steel" })
+        ];
+
+        if (foundation) {
+            const distance = Building.distance(
+                foundation.body.position,
+                mount.body.position
+            );
+            if (distance <= Building.settings("steel").maxLength) {
+                beams.push(Building.createStrut(foundation, mount, {
+                    material: "steel"
+                }));
+            }
         }
 
-        const enemyNodes = Building.nodes.filter(node =>
-            node.team === "enemy" &&
-            !node.removed &&
-            !node.isCore &&
-            !node.isFoundation
-        );
+        if (beams.some(beam => !beam)) {
+            Building.removeNode(mount);
+            Building.removeNode(upper);
+            return false;
+        }
 
-        if (enemyNodes.length < 2) return;
-
-        enemyNodes.sort((a, b) =>
-            a.body.position.y - b.body.position.y
-        );
-
-        const mount = enemyNodes.find(node =>
-            !Weapons.cannons.some(cannon =>
-                cannon.node === node &&
-                cannon.team === "enemy"
-            )
-        );
-
-        if (!mount) return;
-
+        Building.checkSupport();
         Weapons.addCannon(mount, "enemy", true);
-        this.extraCannonBuilt = true;
+        this.expansionCount++;
+        this.extraCannonTimer = 0;
+        return true;
     },
 
     update(delta = 16.667) {
