@@ -1573,6 +1573,10 @@ const Building = {
         }
 
         for (const mine of this.mines) {
+            ctx.save();
+            if (mine.node.debrisGroup) {
+                ctx.globalAlpha *= mine.node.debrisGroup.alpha;
+            }
             const p = mine.node.body.position;
 
             ctx.fillStyle = "#32ff9c";
@@ -1583,6 +1587,7 @@ const Building = {
             ctx.strokeStyle = "#174d38";
             ctx.lineWidth = 2;
             ctx.stroke();
+            ctx.restore();
         }
 
         this.drawPreview(ctx);
