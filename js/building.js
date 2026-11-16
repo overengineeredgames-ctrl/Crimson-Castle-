@@ -1531,23 +1531,76 @@ const Building = {
         if (updateSupport) this.checkSupport();
     },
 
-    deleteAt(x, y) {
-        // Utility buildings can be removed directly without deleting their
-        // supporting fort joints.
-        let closestInstallation = null;
-        let installationDistance = 34;
-        for (const item of this.installations) {
-            if (item.removed) continue;
-            const distance = Math.hypot(item.x - x, item.y - y);
-            if (distance < installationDistance) {
-                installationDistance = distance;
-                closestInstallation = item;
-            }
+    installationHitTest(item, x, y) {
+        const px = x - item.x;
+        const py = y - item.y;
+        const inRect = (left, top, right, bottom) =>
+            px >= left && px <= right && py >= top && py <= bottom;
+        const inCircle = (cx, cy, radius) =>
+            Math.hypot(px - cx, py - cy) <= radius;
+
+        if (item.type === "drill") {
+            return inRect(-19, -17, 19, 31);
         }
-        if (closestInstallation) {
-            closestInstallation.removed = true;
-            this.installations = this.installations.filter(item => item !== closestInstallation);
+        if (item.type === "treeMine") {
+            return inRect(-20, -15, 20, 25);
+        }
+        if (item.type === "battery") {
+            return inRect(-19, -27, 19, 22);
+        }
+        if (item.type === "windmill") {
+            // Match the mast and hub, then test the three rotating blades
+            // against the same local rectangles used by the renderer.
+            if (inRect(-3, -29, 3, 20) || inCircle(0, -29, 5)) return true;
+            const dx = px;
+            const dy = py + 29;
+            const angle = -(item.angle || 0);
+            const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
+            const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
+            const bladePoint = { x: rx, y: ry };
+            for (let blade = 0; blade < 3; blade++) {
+                const a = blade * Math.PI * 2 / 3;
+                const polygon = [
+                    {x:-3,y:-4},{x:3,y:-4},{x:7,y:-48},{x:-7,y:-48}
+                ].map(point => ({
+                    x: point.x * Math.cos(a) - point.y * Math.sin(a),
+                    y: point.x * Math.sin(a) + point.y * Math.cos(a)
+                }));
+                if (this.pointInPolygon(bladePoint, polygon)) return true;
+            }
+            return false;
+        }
+        return false;
+    },
+
+    mineHitTest(mine, x, y) {
+        if (!mine || mine.removed || !mine.node || mine.node.removed) return false;
+        const p = mine.node.body.position;
+        // Mines are drawn as a 7px marker centered 15px above their joint.
+        return Math.hypot(x - p.x, y - (p.y - 15)) <= 9;
+    },
+
+    deleteAt(x, y) {
+        // Test the actual rendered footprint of each utility, rather than a
+        // generic radius around its anchor point.
+        const hitInstallation = [...this.installations].reverse().find(item =>
+            !item.removed && this.installationHitTest(item, x, y)
+        );
+        if (hitInstallation) {
+            hitInstallation.removed = true;
+            this.installations = this.installations.filter(item => item !== hitInstallation);
             this.resources.energy = Math.min(this.resources.energy, this.getEnergyCapacity());
+            this.updateHUD();
+            return true;
+        }
+
+        // Mines have their own small marker hitbox; clicking the supporting
+        // node is not required to remove the mine.
+        const hitMine = [...this.mines].reverse().find(mine =>
+            this.mineHitTest(mine, x, y)
+        );
+        if (hitMine) {
+            this.mines = this.mines.filter(mine => mine !== hitMine);
             this.updateHUD();
             return true;
         }
