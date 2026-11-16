@@ -1,15 +1,59 @@
 {
-  "name": "forts-remake",
+  "name": "crimson-castle",
   "version": "1.0.0",
-  "description": "2D Forts game",
-  "main": "main.js",
+  "description": "Crimson Castle - a fortress warfare game",
+  "main": "electron-main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
-    "electron": "^39.8.10"
+    "electron": "^39.8.10",
+    "electron-builder": "^26.18.0"
   },
-  "allowScripts": {
-    "electron@39.8.10": true
+  "build": {
+    "appId": "com.overengineeredgames.crimsoncastle",
+    "productName": "Crimson Castle",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "index.html",
+      "style.css",
+      "js/**/*"
+    ],
+    "artifactName": "Crimson-Castle-Setup-${version}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "overengineeredgames-ctrl",
+        "repo": "Forts",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Crimson Castle"
+    }
   }
 }
