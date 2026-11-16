@@ -262,15 +262,23 @@ const Weapons = {
         });
 
         if (clickedCannon) {
-            if (ctrlKey) {
-                const selectedIndex = this.selectedCannons.indexOf(clickedCannon);
+            const selectedIndex = this.selectedCannons.indexOf(clickedCannon);
 
+            if (ctrlKey) {
+                // Ctrl-click toggles this cannon in or out of the group.
                 if (selectedIndex >= 0) {
                     this.selectedCannons.splice(selectedIndex, 1);
                 } else if (this.selectedCannons.length < 3) {
                     this.selectedCannons.push(clickedCannon);
                 }
+            } else if (
+                selectedIndex >= 0 &&
+                this.selectedCannons.length === 1
+            ) {
+                // Clicking the only selected cannon again deselects it.
+                this.selectedCannons = [];
             } else {
+                // A normal click selects just this cannon, replacing any group.
                 this.selectedCannons = [clickedCannon];
             }
 
