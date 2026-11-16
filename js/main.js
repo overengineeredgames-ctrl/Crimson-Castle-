@@ -118,7 +118,7 @@ const Game = {
             tab.title = tab.textContent.trim() + " (Q / E to switch tabs)";
         });
 
-        selectToolTab("build");
+        this.selectToolTab("build");
     },
 
     resizeCanvas() {
