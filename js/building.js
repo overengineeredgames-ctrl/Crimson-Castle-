@@ -27,6 +27,7 @@ const Building = {
 
     resources: {
         metal: CONFIG.STARTING_METAL || 500,
+        wood: 250,
         energy: CONFIG.STARTING_ENERGY || 100
     },
 
@@ -69,6 +70,7 @@ const Building = {
 
         this.resources = {
             metal: CONFIG.STARTING_METAL || 500,
+            wood: 250,
             energy: CONFIG.STARTING_ENERGY || 100
         };
 
@@ -758,6 +760,7 @@ const Building = {
 
     utilityDefinitions: {
         drill: { name: "Metal Drill", metalCost: 130, energyCost: 0, drillRate: 5.5, powerUse: 3.5 },
+        treeMine: { name: "Tree Mine", metalCost: 105, woodRate: 4 },
         windmill: { name: "Windmill", metalCost: 115, energyCost: 0 },
         battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 }
     },
@@ -767,7 +770,8 @@ const Building = {
         if (!toolbar) return;
 
         const definitions = [
-            ["drill", "Metal Drill", "130 metal • uses 3.5 power/sec"],
+            ["drill", "Metal Drill", "130 metal • ground only • uses power"],
+            ["treeMine", "Tree Mine", "105 metal • produces 4 wood/sec"],
             ["windmill", "Windmill", "115 metal • variable power"],
             ["battery", "Battery", "90 metal • +300 storage"]
         ];
@@ -894,14 +898,38 @@ const Building = {
         if (!this.utilityTool) return false;
         const type = this.utilityTool;
         const definition = this.utilityDefinitions[type];
-
         let anchorNodes = [];
         let mountX = x;
         let mountY = y;
         let windmillMountFound = false;
 
-        // Windmills mount directly on a joint, or at the exact midpoint of a beam.
-        if (type === "windmill") {
+        if (type === "drill") {
+            // Metal drills must sit on a genuine ground joint, just like mines.
+            const groundJoint = this.nodes
+                .filter(node => node.team === "player" && !node.removed &&
+                    node.isGroundJoint && node.canHoldMine)
+                .map(node => ({ node, distance: this.distance(node.body.position, {x,y}) }))
+                .filter(item => item.distance <= 38)
+                .sort((a,b) => a.distance - b.distance)[0];
+            if (!groundJoint) {
+                this.showPlacementMessage("Metal Drills can only be placed on a ground joint");
+                return true;
+            }
+            anchorNodes = [groundJoint.node];
+            mountX = groundJoint.node.body.position.x;
+            mountY = groundJoint.node.body.position.y - 19;
+        } else if (type === "treeMine") {
+            // Tree mines are indoor installations and must be placed inside a
+            // fully enclosed four-joint cell, not on a loose node.
+            const cell = this.getEnclosedCells("player").find(item =>
+                this.pointInPolygon({x,y}, item.polygon)
+            );
+            if (!cell) {
+                this.showPlacementMessage("Tree Mines must be placed inside an enclosed box");
+                return true;
+            }
+            anchorNodes = cell.nodes;
+        } else if (type === "windmill") {
             const nearestNode = this.nodes
                 .filter(node => node.team === "player" && !node.removed && !node.isCore)
                 .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
@@ -920,89 +948,79 @@ const Building = {
                     .map(beam => {
                         const a = beam.a.body.position;
                         const b = beam.b.body.position;
-                        const dx = b.x - a.x;
-                        const dy = b.y - a.y;
-                        const lengthSquared = dx * dx + dy * dy;
-                        const t = lengthSquared
-                            ? ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared
-                            : 0;
-                        const clampedT = Math.max(0, Math.min(1, t));
-                        const px = a.x + dx * clampedT;
-                        const py = a.y + dy * clampedT;
-                        return {
-                            beam,
-                            t,
-                            x: px,
-                            y: py,
-                            distance: Math.hypot(x - px, y - py)
-                        };
+                        const dx = b.x-a.x, dy = b.y-a.y;
+                        const lengthSquared = dx*dx+dy*dy;
+                        const t = lengthSquared ? ((x-a.x)*dx+(y-a.y)*dy)/lengthSquared : 0;
+                        const clampedT = Math.max(0,Math.min(1,t));
+                        const px=a.x+dx*clampedT, py=a.y+dy*clampedT;
+                        return {beam,t,distance:Math.hypot(x-px,y-py)};
                     })
-                    .filter(item => item.t >= 0.35 && item.t <= 0.65 && item.distance <= 32)
-                    .sort((a,b) => a.distance-b.distance)[0];
-
+                    .filter(item => item.t>=0.35 && item.t<=0.65 && item.distance<=32)
+                    .sort((a,b)=>a.distance-b.distance)[0];
                 if (nearestBeam) {
-                    anchorNodes = [nearestBeam.beam.a, nearestBeam.beam.b];
-                    mountX = (anchorNodes[0].body.position.x + anchorNodes[1].body.position.x) / 2;
-                    mountY = (anchorNodes[0].body.position.y + anchorNodes[1].body.position.y) / 2;
-                    windmillMountFound = true;
+                    anchorNodes=[nearestBeam.beam.a,nearestBeam.beam.b];
+                    mountX=(anchorNodes[0].body.position.x+anchorNodes[1].body.position.x)/2;
+                    mountY=(anchorNodes[0].body.position.y+anchorNodes[1].body.position.y)/2;
+                    windmillMountFound=true;
                 }
             }
-        }
-
-        const cell = this.getEnclosedCells("player").find(item =>
-            this.pointInPolygon({x,y}, item.polygon)
-        );
-
-        if (type !== "windmill") {
-            anchorNodes = cell ? cell.nodes : [];
             if (!anchorNodes.length) {
-                const nearest = this.nodes
-                    .filter(node => node.team === "player" && !node.removed && !node.isCore)
-                    .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
-                    .filter(item => item.distance < 115)
-                    .sort((a,b) => a.distance-b.distance)[0];
-                if (nearest) anchorNodes = [nearest.node];
-            }
-        }
-
-        if (!anchorNodes.length) {
-            if (type === "windmill") {
                 this.showPlacementMessage("Place a windmill on a node or near the middle of a beam");
+                return true;
             }
-            return true;
-        }
-
-        if (type === "windmill") {
-            // Check the air around the rotor, above the mounting point.
-            const rotorX = mountX;
-            const rotorY = mountY - 48;
-            if (!windmillMountFound || !this.hasOpenAir(rotorX, rotorY, anchorNodes)) {
+            if (!this.hasOpenAir(mountX,mountY-48,anchorNodes)) {
                 this.showPlacementMessage("Windmills need clear open air above the mount");
                 return true;
             }
+        } else {
+            const cell = this.getEnclosedCells("player").find(item =>
+                this.pointInPolygon({x,y}, item.polygon)
+            );
+            anchorNodes = cell ? cell.nodes : [];
+            if (!anchorNodes.length) {
+                const nearest = this.nodes
+                    .filter(node => node.team==="player" && !node.removed && !node.isCore)
+                    .map(node=>({node,distance:this.distance(node.body.position,{x,y})}))
+                    .filter(item=>item.distance<115)
+                    .sort((a,b)=>a.distance-b.distance)[0];
+                if (nearest) anchorNodes=[nearest.node];
+            }
+            if (!anchorNodes.length) return true;
+        }
+
+        // All utilities occupy physical space. Keep a generous gap so they
+        // cannot stack on top of one another inside a box or on the ground.
+        const footprint = type === "windmill" ? 42 : 34;
+        const overlapping = this.installations.some(item =>
+            !item.removed && Math.hypot(item.x-mountX,item.y-mountY) < footprint + 30
+        );
+        if (overlapping) {
+            this.showPlacementMessage("There isn't enough room — utilities cannot overlap");
+            return true;
         }
 
         if (!this.charge(definition.metalCost)) return true;
 
         const anchorCenter = {
-            x: anchorNodes.reduce((sum,node) => sum + node.body.position.x,0) / anchorNodes.length,
-            y: anchorNodes.reduce((sum,node) => sum + node.body.position.y,0) / anchorNodes.length
+            x: anchorNodes.reduce((sum,node)=>sum+node.body.position.x,0)/anchorNodes.length,
+            y: anchorNodes.reduce((sum,node)=>sum+node.body.position.y,0)/anchorNodes.length
         };
-        const installation = {
+        const installX = type === "drill" || type === "windmill" ? mountX : x;
+        const installY = type === "drill" || type === "windmill" ? mountY : y;
+        this.installations.push({
             type,
-            x: type === "windmill" ? mountX : x,
-            y: type === "windmill" ? mountY : y,
-            offsetX: (type === "windmill" ? mountX : x) - anchorCenter.x,
-            offsetY: (type === "windmill" ? mountY : y) - anchorCenter.y,
+            x: installX,
+            y: installY,
+            offsetX: installX-anchorCenter.x,
+            offsetY: installY-anchorCenter.y,
             anchorNodes: [...anchorNodes],
             removed: false,
             angle: 0,
-            phase: Math.random() * Math.PI * 2,
+            phase: Math.random()*Math.PI*2,
             windSpeed: 0.5,
             output: 0
-        };
-        this.installations.push(installation);
-        this.utilityTool = null;
+        });
+        this.utilityTool=null;
         this.updateToolbar();
         this.updateHUD();
         return true;
@@ -1158,13 +1176,17 @@ const Building = {
         return this.resources.metal >= amount;
     },
 
-    charge(amount) {
-        if (!this.canAfford(amount)) return false;
+    charge(amount, resource = "metal") {
+        const balance = Number(this.resources[resource] || 0);
+        if (balance < amount) return false;
 
-        this.resources.metal -= amount;
+        this.resources[resource] = balance - amount;
         this.updateHUD();
-
         return true;
+    },
+
+    buildingResource() {
+        return this.material === "wood" ? "wood" : "metal";
     },
 
     getStrutAtPoint(x, y, maxDistance = 26) {
@@ -1304,12 +1326,13 @@ const Building = {
         );
 
         if (length > material.maxLength) return false;
-        if (!this.charge(material.cost)) return false;
+        const resource = this.buildingResource();
+        if (!this.charge(material.cost, resource)) return false;
 
         const strut = this.createStrut(nodeA, nodeB);
 
         if (!strut) {
-            this.resources.metal += material.cost;
+            this.resources[resource] += material.cost;
             this.updateHUD();
             return false;
         }
@@ -1332,7 +1355,8 @@ const Building = {
         }
 
         const cost = material.cost * 3;
-        if (!this.charge(cost)) return false;
+        const resource = this.buildingResource();
+        if (!this.charge(cost, resource)) return false;
 
         const middle = {
             x: (start.x + end.x) / 2,
@@ -1350,7 +1374,7 @@ const Building = {
         if (!first || !second || !third) {
             this.removeNode(newNode);
             this.removeNode(diagonalNode);
-            this.resources.metal += cost;
+            this.resources[resource] += cost;
             this.updateHUD();
             return false;
         }
@@ -1399,7 +1423,8 @@ const Building = {
         )) return false;
 
         const cost = material.cost * 7;
-        if (!this.charge(cost)) return false;
+        const resource = this.buildingResource();
+        if (!this.charge(cost, resource)) return false;
 
         const nodeA = endpointA.node ||
             this.createNode(newA.x, newA.y, { team: sourceStrut.team });
@@ -1418,7 +1443,7 @@ const Building = {
             for (const node of createdNodes) {
                 if (node && !node.isGroundJoint) this.removeNode(node, false);
             }
-            this.resources.metal += cost;
+            this.resources[resource] += cost;
             this.updateHUD();
         };
 
@@ -1797,10 +1822,15 @@ const Building = {
 
     updateHUD() {
         const metalElement = document.getElementById("metal-count");
+        const woodElement = document.getElementById("wood-count");
         const energyElement = document.getElementById("energy-count");
 
         if (metalElement) {
             metalElement.textContent = Math.floor(this.resources.metal);
+        }
+
+        if (woodElement) {
+            woodElement.textContent = Math.floor(this.resources.wood || 0);
         }
 
         if (energyElement) {
@@ -2098,6 +2128,22 @@ const Building = {
                 ctx.font = "bold 10px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText(Math.round(item.output) + "⚡",0,34);
+            } else if (item.type === "treeMine") {
+                ctx.translate(x,y);
+                ctx.fillStyle = "#4a3423";
+                ctx.fillRect(-20,-15,40,30);
+                ctx.fillStyle = "#8b6a3e";
+                ctx.fillRect(-16,-11,32,22);
+                ctx.fillStyle = "#314c35";
+                ctx.beginPath();
+                ctx.arc(-7,-2,7,0,Math.PI*2);
+                ctx.arc(5,-4,8,0,Math.PI*2);
+                ctx.arc(0,5,7,0,Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = "#b8e08a";
+                ctx.font = "bold 9px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("+WOOD",0,25);
             } else if (item.type === "battery") {
                 ctx.translate(x,y);
                 ctx.fillStyle = "#263b4b";
