@@ -48,7 +48,6 @@
           ]
         }
       ],
-      "icon": null
     },
     "nsis": {
       "oneClick": false,
