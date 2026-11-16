@@ -1383,21 +1383,16 @@ const Building = {
 
         const rawA = { x: a.x + offset.x, y: a.y + offset.y };
         const rawB = { x: b.x + offset.x, y: b.y + offset.y };
-
-        // Resolve each bottom corner against the invisible floor-anchor row
-        // before calculating beam lengths or creating the box.
         const endpointA = this.getBuildEndpoint(rawA.x, rawA.y, sourceStrut.team);
         const endpointB = this.getBuildEndpoint(rawB.x, rawB.y, sourceStrut.team);
         const newA = { x: endpointA.x, y: endpointA.y };
         const newB = { x: endpointB.x, y: endpointB.y };
 
-        // Both side beams, the far beam, and the two X braces must fit.
         const lengths = [
             this.distance(a, newA),
             this.distance(b, newB),
             this.distance(newA, newB)
         ];
-
         if (lengths.some(length =>
             length < 5 || length > material.maxLength
         )) return false;
@@ -1415,24 +1410,50 @@ const Building = {
             { team: sourceStrut.team }
         );
 
-        // Split the X at its crossing so every brace stays within beam length limits.
-        const created = [
-            this.createStrut(sourceStrut.a, nodeA),
-            this.createStrut(sourceStrut.b, nodeB),
-            this.createStrut(nodeA, nodeB),
-            this.createStrut(sourceStrut.a, center),
-            this.createStrut(center, nodeB),
-            this.createStrut(sourceStrut.b, center),
-            this.createStrut(center, nodeA)
-        ];
-
-        if (created.some(strut => !strut)) {
-            this.removeNode(nodeA);
-            this.removeNode(nodeB);
-            this.removeNode(center);
+        const createdNodes = [nodeA, nodeB, center].filter(Boolean);
+        const createdBeams = [];
+        const rollback = () => {
+            for (const beam of createdBeams) this.removeStrut(beam, false);
+            for (const node of createdNodes) {
+                if (node && !node.isGroundJoint) this.removeNode(node, false);
+            }
             this.resources.metal += cost;
             this.updateHUD();
+        };
+
+        if (!nodeA || !nodeB || !center) {
+            rollback();
             return false;
+        }
+
+        // The three outer beams make the actual box. They are required;
+        // internal X braces are added afterward and cannot cancel the box
+        // if a brace intersects another nearby structure.
+        const framePairs = [
+            [sourceStrut.a, nodeA],
+            [sourceStrut.b, nodeB],
+            [nodeA, nodeB]
+        ];
+        for (const [from, to] of framePairs) {
+            const beam = this.createStrut(from, to, { material: materialName });
+            if (!beam) {
+                rollback();
+                return false;
+            }
+            createdBeams.push(beam);
+        }
+
+        // Add split X braces where valid, but preserve the completed frame
+        // if nearby joints or beams prevent one of the diagonals.
+        const bracePairs = [
+            [sourceStrut.a, center],
+            [center, nodeB],
+            [sourceStrut.b, center],
+            [center, nodeA]
+        ];
+        for (const [from, to] of bracePairs) {
+            const brace = this.createStrut(from, to, { material: materialName });
+            if (brace) createdBeams.push(brace);
         }
 
         this.checkSupport();
