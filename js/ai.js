@@ -61,12 +61,52 @@ const AI = {
     },
 
     createEnemyFort() {
-        // Build the enemy using the exact same fort template as the player.
-        const fort = Building.createStartingFort("enemy");
+        // Build the AI fort independently; do not modify the player's template.
+        const worldWidth = Physics.worldWidth || window.innerWidth * 1.5;
+        const leftX = Math.round(worldWidth * 0.65);
+        const rightX = leftX + 120;
+        const baseY = Building.groundY - Building.nodeRadius;
 
-        if (fort && fort.topRight) {
-            Weapons.addCannon(fort.topRight, "enemy", true);
-        }
+        const bottomLeft = Building.createNode(leftX, baseY, {
+            isFoundation: true,
+            team: "enemy"
+        });
+        const bottomRight = Building.createNode(rightX, baseY, {
+            isFoundation: true,
+            team: "enemy"
+        });
+
+        const topLeft = Building.createNode(leftX, baseY - 140, {
+            team: "enemy"
+        });
+        const topRight = Building.createNode(rightX, baseY - 140, {
+            team: "enemy"
+        });
+
+        const core = Building.createCore(
+            (leftX + rightX) / 2,
+            baseY - 90,
+            "enemy"
+        );
+
+        // Outer frame and crossing braces.
+        Building.createStrut(bottomLeft, bottomRight);
+        Building.createStrut(bottomLeft, topLeft);
+        Building.createStrut(bottomRight, topRight);
+        Building.createStrut(topLeft, topRight);
+        Building.createStrut(bottomLeft, topRight);
+        Building.createStrut(bottomRight, topLeft);
+
+        // The two lower supports meet at the centered core, forming an / shape.
+        Building.createStrut(bottomLeft, core);
+        Building.createStrut(bottomRight, core);
+
+        // Support the core from the upper frame as well.
+        Building.createStrut(topLeft, core);
+        Building.createStrut(topRight, core);
+
+        Building.checkSupport();
+        Weapons.addCannon(topRight, "enemy", true);
     },
     getPlayerNodes() {
         return Building.nodes.filter(node =>
