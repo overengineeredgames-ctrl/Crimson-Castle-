@@ -30,6 +30,9 @@ const Weapons = {
 
         if (cannonButton) {
             cannonButton.onclick = () => {
+                if (typeof Building !== "undefined" && Building.deleteMode) {
+                    Building.setDeleteMode(false);
+                }
                 this.selectedTool = this.selectedTool === "cannon" ? null : "cannon";
                 this.updateToolButtons();
             };
@@ -51,6 +54,9 @@ const Weapons = {
         }
 
         mineButton.onclick = () => {
+            if (typeof Building !== "undefined" && Building.deleteMode) {
+                Building.setDeleteMode(false);
+            }
             this.selectedTool = this.selectedTool === "mine" ? null : "mine";
             this.mineDragging = false;
             this.updateToolButtons();
