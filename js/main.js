@@ -74,7 +74,12 @@ const Game = {
 
         if (!tabs.length || !toolbar) return;
 
-        const selectTab = category => {
+        this.activeToolTab = "build";
+
+        this.selectToolTab = category => {
+            if (!tabs.some(tab => tab.dataset.toolTab === category)) return;
+
+            this.activeToolTab = category;
             tabs.forEach(tab => {
                 const selected = tab.dataset.toolTab === category;
                 tab.classList.toggle("active", selected);
@@ -88,11 +93,32 @@ const Game = {
             if (scrollArea) scrollArea.scrollLeft = 0;
         };
 
+        this.cycleToolTab = direction => {
+            const currentIndex = tabs.findIndex(tab =>
+                tab.dataset.toolTab === this.activeToolTab
+            );
+            const nextIndex = (currentIndex + direction + tabs.length) % tabs.length;
+            this.selectToolTab(tabs[nextIndex].dataset.toolTab);
+        };
+
+        this.selectToolbarItem = number => {
+            const items = Array.from(toolbar.querySelectorAll(
+                '.tool[data-tool-category="' + this.activeToolTab + '"]:not([hidden])'
+            ));
+            const item = items[number - 1];
+            if (!item) return false;
+
+            item.click();
+            item.focus({ preventScroll: true });
+            return true;
+        };
+
         tabs.forEach(tab => {
-            tab.addEventListener("click", () => selectTab(tab.dataset.toolTab));
+            tab.addEventListener("click", () => this.selectToolTab(tab.dataset.toolTab));
+            tab.title = tab.textContent.trim() + " (Q / E to switch tabs)";
         });
 
-        selectTab("build");
+        selectToolTab("build");
     },
 
     resizeCanvas() {
@@ -810,6 +836,25 @@ const Game = {
                 return;
             }
 
+            if (event.key.toLowerCase() === "q") {
+                event.preventDefault();
+                this.cycleToolTab(-1);
+                return;
+            }
+
+            if (event.key.toLowerCase() === "e") {
+                event.preventDefault();
+                this.cycleToolTab(1);
+                return;
+            }
+
+            if (event.key >= "1" && event.key <= "9") {
+                if (this.selectToolbarItem(Number(event.key))) {
+                    event.preventDefault();
+                    return;
+                }
+            }
+
             if (event.key.toLowerCase() === "g") {
                 Building.gridEnabled = !Building.gridEnabled;
             }
@@ -821,13 +866,6 @@ const Game = {
                 Weapons.clearSelectedTool();
             }
 
-            if (event.key === "1") {
-                Building.setMaterial("wood");
-            }
-
-            if (event.key === "2") {
-                Building.setMaterial("steel");
-            }
         }, true);
 
         window.addEventListener("resize", () => this.resizeCanvas());
