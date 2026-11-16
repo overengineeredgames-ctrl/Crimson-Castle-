@@ -907,7 +907,7 @@ const Building = {
             // Metal drills must sit on a genuine ground joint, just like mines.
             const groundJoint = this.nodes
                 .filter(node => node.team === "player" && !node.removed &&
-                    node.isGroundJoint && node.canHoldMine)
+                    node.canHoldMine)
                 .map(node => ({ node, distance: this.distance(node.body.position, {x,y}) }))
                 .filter(item => item.distance <= 38)
                 .sort((a,b) => a.distance - b.distance)[0];
