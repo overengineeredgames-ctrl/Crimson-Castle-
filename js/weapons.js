@@ -319,13 +319,27 @@ const Weapons = {
             return true;
         }
 
-        const clickedCannon = this.cannons.find(c => {
+        const clickedCannon = [...this.cannons].reverse().find(c => {
             if (c.team !== "player" || !c.node || c.node.removed) {
                 return false;
             }
 
+            // Match the cannon's rendered body and barrel. The barrel is
+            // rotated with the cannon, so test the pointer in local space.
             const pos = c.node.body.position;
-            return Math.hypot(pos.x - x, pos.y - y) < 28;
+            const dx = x - pos.x;
+            const dy = y - pos.y;
+            const type = c.weaponType || "cannon";
+            const bodyRadius = type === "megaCannon" ? 14 : 11;
+            if (Math.hypot(dx, dy) <= bodyRadius + 2) return true;
+
+            const angle = c.angle || 0;
+            const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
+            const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
+            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
+            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
+            return localX >= -2 && localX <= barrelLength + 4 &&
+                Math.abs(localY) <= barrelHeight / 2 + 2;
         });
 
         if (clickedCannon) {
@@ -379,7 +393,7 @@ const Weapons = {
         this.mouse.x = x;
         this.mouse.y = y;
 
-        const node = Building.getNearestNode(x, y, 25);
+        const node = Building.getNearestNode(x, y, (Building.nodeRadius || 6) + 7);
 
         if (
             !node ||
@@ -599,7 +613,7 @@ const Weapons = {
             const node = Building.getNearestNode(
                 this.mouse.x,
                 this.mouse.y,
-                25
+                (Building.nodeRadius || 6) + 7
             );
 
             const valid = !!(
