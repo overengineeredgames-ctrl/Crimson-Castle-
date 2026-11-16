@@ -191,18 +191,25 @@ const AI = {
                 ? node.health / node.maxHealth
                 : 1;
 
-            // Prefer the closest useful target, especially player weapons.
-            let score = 1200 - distance;
-            const carriesCannon = Weapons.cannons.some(cannon =>
-                cannon.team === "player" && cannon.node === node
+            // Spread fire across the fort instead of tunnelling one turret.
+            // Distance matters, but ordinary structural joints remain valuable.
+            let score = 1000 - distance * 0.65;
+            const carriesCannon = Weapons.cannons.some(item =>
+                item.team === "player" && item.node === node
             );
 
-            if (carriesCannon) score += 650;
-            if (node.isCore) score += 260;
-            else if (!node.isFoundation) score += 90;
-            else score -= 500;
+            if (node.isCore) score += 220;
+            else score += 140;
 
-            score += (1 - healthRatio) * 180;
+            // Turrets are important, but should not dominate every other target.
+            if (carriesCannon) score += 120;
+
+            // Damaged parts are attractive finishing targets.
+            score += (1 - healthRatio) * 220;
+
+            // Small deterministic variation prevents every cannon selecting
+            // exactly the same structural joint when scores are close.
+            score += ((node.body.id * 37) % 41);
 
             const target = {
                 type: "node",
@@ -234,23 +241,17 @@ const AI = {
                 ? strut.health / strut.maxHealth
                 : 1;
 
-            let score = 1050 - distance;
+            // Beams should compete fairly with joints as targets.
+            let score = 1010 - distance * 0.65;
 
-            score += (1 - healthRatio) * 260;
+            score += (1 - healthRatio) * 280;
 
-            if (
-                strut.a.isCore ||
-                strut.b.isCore
-            ) {
-                score += 240;
+            if (strut.a.isCore || strut.b.isCore) {
+                score += 100;
             }
 
-            if (
-                strut.a.isFoundation ||
-                strut.b.isFoundation
-            ) {
-                score += 45;
-            }
+            // A little stable variation helps distribute shots along the wall.
+            score += ((strut.body.id * 19) % 37);
 
             const target = {
                 type: "strut",
