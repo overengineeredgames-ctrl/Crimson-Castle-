@@ -45,6 +45,7 @@ const Game = {
 
         this.createMenus();
         this.setupInput();
+        this.setupToolbarTabs();
 
         this.state = "menu";
 
@@ -64,6 +65,34 @@ const Game = {
         this.lastFrame = performance.now();
 
         requestAnimationFrame(t => this.loop(t));
+    },
+
+    setupToolbarTabs() {
+        const tabs = Array.from(document.querySelectorAll("[data-tool-tab]"));
+        const toolbar = document.querySelector(".toolbar");
+        const scrollArea = document.querySelector(".toolbar-scroll");
+
+        if (!tabs.length || !toolbar) return;
+
+        const selectTab = category => {
+            tabs.forEach(tab => {
+                const selected = tab.dataset.toolTab === category;
+                tab.classList.toggle("active", selected);
+                tab.setAttribute("aria-selected", String(selected));
+            });
+
+            toolbar.querySelectorAll(".tool").forEach(tool => {
+                tool.hidden = tool.dataset.toolCategory !== category;
+            });
+
+            if (scrollArea) scrollArea.scrollLeft = 0;
+        };
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => selectTab(tab.dataset.toolTab));
+        });
+
+        selectTab("build");
     },
 
     resizeCanvas() {
