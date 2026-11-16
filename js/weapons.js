@@ -6,6 +6,7 @@ const Weapons = {
     projectiles: [],
     selectedTool: null,
     selectedCannon: null,
+    selectedCannons: [],
     mouse: { x: 0, y: 0 },
     mineDragging: false,
     mineMetalCost: 50,
@@ -21,6 +22,7 @@ const Weapons = {
         this.cannons = [];
         this.projectiles = [];
         this.selectedCannon = null;
+        this.selectedCannons = [];
         this.selectedTool = null;
         this.mineDragging = false;
         this.lastCannonClick = 0;
@@ -118,17 +120,18 @@ const Weapons = {
         this.mouse.x = x;
         this.mouse.y = y;
 
-        if (!this.selectedCannon) return;
+        const selected = this.selectedCannons.length
+            ? this.selectedCannons
+            : (this.selectedCannon ? [this.selectedCannon] : []);
 
-        const cannon = this.selectedCannon;
-
-        if (!cannon.node || cannon.node.removed) return;
-
-        const pos = cannon.node.body.position;
-        cannon.angle = Math.atan2(y - pos.y, x - pos.x);
+        for (const cannon of selected) {
+            if (!cannon.node || cannon.node.removed) continue;
+            const pos = cannon.node.body.position;
+            cannon.angle = Math.atan2(y - pos.y, x - pos.x);
+        }
     },
 
-    handlePointerDown(x, y) {
+    handlePointerDown(x, y, ctrlKey = false) {
         if (this.selectedTool === "mine") {
             if (Building.resources.metal < this.mineMetalCost) {
                 return true;
@@ -255,32 +258,32 @@ const Weapons = {
         });
 
         if (clickedCannon) {
-            const now = performance.now();
+            if (ctrlKey) {
+                const selectedIndex = this.selectedCannons.indexOf(clickedCannon);
 
-            const isDoubleClick =
-                this.lastClickedCannon === clickedCannon &&
-                now - this.lastCannonClick < this.doubleClickTime;
-
-            this.lastCannonClick = now;
-            this.lastClickedCannon = clickedCannon;
-
-            if (isDoubleClick) {
-                this.selectedCannon =
-                    this.selectedCannon === clickedCannon ? null : clickedCannon;
-
-                if (this.selectedCannon) {
-                    this.handlePointerMove(x, y);
+                if (selectedIndex >= 0) {
+                    this.selectedCannons.splice(selectedIndex, 1);
+                } else if (this.selectedCannons.length < 3) {
+                    this.selectedCannons.push(clickedCannon);
                 }
-
-                this.lastCannonClick = 0;
-                this.lastClickedCannon = null;
+            } else {
+                this.selectedCannons = [clickedCannon];
             }
 
+            this.selectedCannon = this.selectedCannons[0] || null;
+            this.handlePointerMove(x, y);
+            this.lastCannonClick = 0;
+            this.lastClickedCannon = null;
             return true;
         }
 
-        if (this.selectedCannon) {
-            this.fire(this.selectedCannon);
+        const selected = this.selectedCannons.length
+            ? this.selectedCannons
+            : (this.selectedCannon ? [this.selectedCannon] : []);
+
+        if (selected.length) {
+            this.handlePointerMove(x, y);
+            for (const cannon of selected) this.fire(cannon);
             return true;
         }
 
@@ -397,12 +400,10 @@ const Weapons = {
             c => c.node && !c.node.removed
         );
 
-        if (
-            this.selectedCannon &&
-            !this.cannons.includes(this.selectedCannon)
-        ) {
-            this.selectedCannon = null;
-        }
+        this.selectedCannons = this.selectedCannons.filter(cannon =>
+            this.cannons.includes(cannon) && cannon.team === "player"
+        ).slice(0, 3);
+        this.selectedCannon = this.selectedCannons[0] || null;
     },
 
     draw(ctx) {
@@ -428,7 +429,8 @@ const Weapons = {
 
             ctx.restore();
 
-            if (cannon === this.selectedCannon) {
+            if (this.selectedCannons.includes(cannon) ||
+                (this.selectedCannons.length === 0 && cannon === this.selectedCannon)) {
                 ctx.beginPath();
                 ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
                 ctx.strokeStyle = "#ffe66d";
