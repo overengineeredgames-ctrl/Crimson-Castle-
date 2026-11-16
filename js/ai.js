@@ -405,6 +405,7 @@ const AI = {
         for (const cannon of Weapons.cannons) {
             if (
                 cannon.team !== "enemy" ||
+                cannon.detached ||
                 !cannon.node ||
                 cannon.node.removed
             ) continue;
