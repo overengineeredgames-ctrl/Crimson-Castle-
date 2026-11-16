@@ -65,7 +65,8 @@ const AI = {
             Physics.worldWidth || window.innerWidth * 1.5;
 
         const leftX = Math.round(worldWidth * 0.65);
-        const rightX = Math.round(worldWidth * 0.75);
+        // Keep every diagonal brace within the 220px strut limit.
+        const rightX = leftX + 140;
 
         const baseY = Building.groundY - Building.nodeRadius;
         const topY = baseY - 150;
