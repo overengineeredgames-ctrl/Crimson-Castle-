@@ -267,6 +267,14 @@ const Game = {
                 text-transform:uppercase;
             }
 
+            .cc-version-label {
+                margin-top:10px;
+                color:#8fa2b4;
+                font-size:11px;
+                letter-spacing:2px;
+                text-align:center;
+            }
+
             .cc-gear-arrival {
                 animation:cc-gear-roll-in 1.55s cubic-bezier(.18,.82,.25,1) 2.55s both;
                 will-change:transform,opacity;
@@ -343,6 +351,7 @@ const Game = {
                 <p class="forts-menu-subtitle">
                     Build your fortress. Protect your core. Destroy the enemy.
                 </p>
+                <div class="cc-version-label" id="cc-menu-version">Loading version...</div>
 
                 <div style="text-align:left;font-size:13px;color:#c4d2df">
                     <strong>Difficulty</strong>
@@ -506,6 +515,7 @@ const Game = {
             <div class="cc-boot-scene cc-boot-game">
                 <h1 class="cc-boot-title">Crimson Castle</h1>
                 <div class="cc-boot-subtitle">A fortress warfare game</div>
+                <div class="cc-version-label" id="cc-boot-version">Loading version...</div>
             </div>
 
             <div class="cc-boot-scene cc-boot-studio">
@@ -523,6 +533,22 @@ const Game = {
         `);
 
         this.showOnly(this.startScreen);
+        this.loadVersionLabel();
+    },
+
+    async loadVersionLabel() {
+        let version = "Development";
+        try {
+            if (window.ccUpdater && typeof window.ccUpdater.getVersion === "function") {
+                version = await window.ccUpdater.getVersion();
+            }
+        } catch (error) {
+            console.warn("Could not read game version:", error);
+        }
+
+        document.querySelectorAll(".cc-version-label").forEach(label => {
+            label.textContent = "VERSION " + version;
+        });
     },
 
     playBootSequence() {
