@@ -100,7 +100,7 @@ const Building = {
         const anchorY = this.groundY - this.nodeRadius;
         const existing = this.nodes.find(node =>
             !node.removed &&
-            node.hidden &&
+            node.isGroundJoint &&
             node.isFoundation &&
             node.team === team &&
             Math.abs(node.body.position.x - anchorX) < 1
