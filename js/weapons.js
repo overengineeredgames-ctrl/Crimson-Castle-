@@ -419,6 +419,9 @@ const Weapons = {
             const pos = cannon.node.body.position;
 
             ctx.save();
+            if (cannon.node.debrisGroup) {
+                ctx.globalAlpha *= cannon.node.debrisGroup.alpha;
+            }
             ctx.translate(pos.x, pos.y);
             ctx.rotate(cannon.angle);
 
