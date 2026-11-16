@@ -47,8 +47,7 @@
             "x64"
           ]
         }
-      ],
-      "icon": "CrimsonCastle.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,
