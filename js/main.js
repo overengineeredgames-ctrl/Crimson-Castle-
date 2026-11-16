@@ -19,10 +19,35 @@ const Game = {
     settingsScreen: null,
     settingsReturnScreen: null,
     preferences: { theme: "dark", fastBoot: false },
+    cameraOffsetX: 0,
+    cameraZoom: 1,
+    panDrag: null,
 
     get cameraX() {
         const worldWidth = Physics.worldWidth || this.canvas.width;
-        return Math.max(0, (worldWidth - this.canvas.width) / 2);
+        const visibleWidth = this.canvas.width / this.cameraZoom;
+        return Math.max(0, Math.min(
+            worldWidth - visibleWidth,
+            this.cameraOffsetX
+        ));
+    },
+
+    clampCamera() {
+        const worldWidth = Physics.worldWidth || this.canvas.width;
+        const visibleWidth = this.canvas.width / this.cameraZoom;
+        this.cameraOffsetX = Math.max(0, Math.min(
+            Math.max(0, worldWidth - visibleWidth),
+            this.cameraOffsetX
+        ));
+    },
+
+    setCameraZoomAt(clientX, nextZoom) {
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = clientX - rect.left;
+        const worldAnchorX = this.cameraX + screenX / this.cameraZoom;
+        this.cameraZoom = Math.max(0.55, Math.min(2.25, nextZoom));
+        this.cameraOffsetX = worldAnchorX - screenX / this.cameraZoom;
+        this.clampCamera();
     },
 
     init() {
@@ -39,6 +64,8 @@ const Game = {
         this.resizeCanvas();
 
         Physics.init();
+        this.cameraZoom = 1;
+        this.cameraOffsetX = Math.max(0, (Physics.worldWidth - this.canvas.width) / 2);
         Building.init();
         Weapons.init();
         AI.init();
@@ -131,9 +158,9 @@ const Game = {
 
         return {
             x: (event.clientX - rect.left) *
-                (this.canvas.width / rect.width) + this.cameraX,
+                (this.canvas.width / rect.width) / this.cameraZoom + this.cameraX,
             y: (event.clientY - rect.top) *
-                (this.canvas.height / rect.height)
+                (this.canvas.height / rect.height) / this.cameraZoom
         };
     },
 
@@ -416,6 +443,7 @@ const Game = {
                     <button data-difficulty="easy">Easy</button>
                     <button data-difficulty="normal" class="active">Normal</button>
                     <button data-difficulty="hard">Hard</button>
+                    <button data-difficulty="mega">MEGA HARD</button>
                 </div>
 
                 <button class="forts-menu-button primary" id="forts-start-button">
@@ -756,6 +784,13 @@ const Game = {
         this.canvas.addEventListener("pointerdown", event => {
             if (this.state !== "playing") return;
 
+            if (event.button === 1) {
+                this.panDrag = { clientX: event.clientX };
+                this.canvas.setPointerCapture(event.pointerId);
+                event.preventDefault();
+                return;
+            }
+
             const p = this.mousePosition(event);
 
             // Right-click no longer deletes anything. Deletion requires
@@ -780,10 +815,17 @@ const Game = {
         });
 
         this.canvas.addEventListener("pointermove", event => {
-            const p = this.mousePosition(event);
-
             if (this.state !== "playing") return;
 
+            if (this.panDrag) {
+                const movement = event.clientX - this.panDrag.clientX;
+                this.panDrag.clientX = event.clientX;
+                this.cameraOffsetX -= movement / this.cameraZoom;
+                this.clampCamera();
+                return;
+            }
+
+            const p = this.mousePosition(event);
             Building.setMousePosition(p.x, p.y);
             if (Building.repairMode) {
                 Building.repairMouse.x = p.x;
@@ -794,6 +836,10 @@ const Game = {
 
         // Mine placement gets first chance to handle pointer release.
         this.canvas.addEventListener("pointerup", event => {
+            if (this.panDrag) {
+                this.panDrag = null;
+                return;
+            }
             if (this.state !== "playing") return;
 
             const p = this.mousePosition(event);
@@ -805,9 +851,26 @@ const Game = {
         });
 
         this.canvas.addEventListener("pointercancel", () => {
+            this.panDrag = null;
             Building.drag = null;
             Weapons.cancelMineDrag();
         });
+
+        // Mouse wheel zooms the battlefield only; the DOM HUD stays at 100%.
+        // Shift + wheel and horizontal trackpads move the camera sideways.
+        this.canvas.addEventListener("wheel", event => {
+            if (this.state !== "playing") return;
+            event.preventDefault();
+
+            if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+                this.cameraOffsetX += (event.deltaX || event.deltaY) / this.cameraZoom;
+                this.clampCamera();
+                return;
+            }
+
+            const factor = event.deltaY > 0 ? 0.9 : 1.1;
+            this.setCameraZoomAt(event.clientX, this.cameraZoom * factor);
+        }, { passive: false });
 
         this.canvas.addEventListener("contextmenu", event => {
             event.preventDefault();
@@ -835,6 +898,13 @@ const Game = {
             if (event.code === "KeyD" || event.key.toLowerCase() === "d") {
                 event.preventDefault();
                 Building.setDeleteMode(!Building.deleteMode);
+                return;
+            }
+
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault();
+                this.cameraOffsetX += (event.key === "ArrowRight" ? 90 : -90) / this.cameraZoom;
+                this.clampCamera();
                 return;
             }
 
@@ -870,7 +940,10 @@ const Game = {
 
         }, true);
 
-        window.addEventListener("resize", () => this.resizeCanvas());
+        window.addEventListener("resize", () => {
+            this.resizeCanvas();
+            this.clampCamera();
+        });
     },
 
     checkGameEnd() {
@@ -976,7 +1049,7 @@ const Game = {
         );
 
         ctx.fillText(
-            "Select DELETE tool before removing pieces | G: grid | R: repair mode | 1: wood | 2: steel | ESC: pause",
+            "Wheel: zoom map | Shift+wheel / ← →: scroll map | Middle-drag: pan | G: grid | R: repair | ESC: pause",
             14,
             this.canvas.height - 38
         );
@@ -1026,7 +1099,8 @@ const Game = {
 
         ctx.save();
 
-        ctx.translate(-this.cameraX, 0);
+        ctx.translate(-this.cameraX * this.cameraZoom, 0);
+        ctx.scale(this.cameraZoom, this.cameraZoom);
 
         this.drawBackground();
         Building.draw(ctx);
