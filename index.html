@@ -9,46 +9,54 @@
 <body>
 
     <div id="hud">
-        <div class="game-brand">
-            <div class="game-title">CRIMSON CASTLE</div>
-            <div class="cc-battle-version cc-version-label">Loading version...</div>
-        </div>
-
-        <div class="resources">
-            <div class="resource metal">
-                <span class="resource-icon">◆</span>
-                Metal: <span id="metal-count">500</span>
+        <div class="hud-topline">
+            <div class="game-brand">
+                <div class="game-title">CRIMSON CASTLE</div>
+                <div class="cc-battle-version cc-version-label">Loading version...</div>
             </div>
 
-            <div class="resource energy">
-                <span class="resource-icon">⚡</span>
-                Energy: <span id="energy-count">100</span>
+            <div class="resources">
+                <div class="resource metal">
+                    <span class="resource-icon">◆</span>
+                    Metal: <span id="metal-count">500</span>
+                </div>
+                <div class="resource energy">
+                    <span class="resource-icon">⚡</span>
+                    Energy: <span id="energy-count">100</span>
+                </div>
             </div>
         </div>
 
-        <div class="toolbar">
-            <button id="btn-wood" class="tool active">
-                Wood
-                <small>Build</small>
-            </button>
+        <div class="tool-shelf">
+            <div class="tool-tabs" role="tablist" aria-label="Tool categories">
+                <button class="tool-tab active" type="button" role="tab" aria-selected="true" data-tool-tab="build">Build</button>
+                <button class="tool-tab" type="button" role="tab" aria-selected="false" data-tool-tab="weapons">Weapons</button>
+                <button class="tool-tab" type="button" role="tab" aria-selected="false" data-tool-tab="utilities">Utilities</button>
+                <button class="tool-tab" type="button" role="tab" aria-selected="false" data-tool-tab="tools">Tools</button>
+            </div>
 
-            <button id="btn-steel" class="tool">
-                Steel
-                <small>Build</small>
-            </button>
-
-            <button id="btn-delete" class="tool" aria-pressed="false">
-                Delete
-                <small>Remove pieces</small>
-            </button>
-
-            <button id="btn-cannon" class="tool">
-                Cannon
-                <small>Weapons</small>
-            </button>
+            <div class="toolbar-scroll">
+                <div class="toolbar" aria-label="Available tools">
+                    <button id="btn-wood" class="tool active" data-tool-category="build">
+                        Wood
+                        <small>Build</small>
+                    </button>
+                    <button id="btn-steel" class="tool" data-tool-category="build">
+                        Steel
+                        <small>Build</small>
+                    </button>
+                    <button id="btn-cannon" class="tool" data-tool-category="weapons">
+                        Cannon
+                        <small>Weapons</small>
+                    </button>
+                    <button id="btn-delete" class="tool" aria-pressed="false" data-tool-category="tools">
+                        Delete
+                        <small>Remove pieces</small>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 
     <!-- Matter.js physics engine -->
