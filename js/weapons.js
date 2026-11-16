@@ -46,13 +46,17 @@ const Weapons = {
             mineButton = document.createElement("button");
             mineButton.id = "btn-mine";
             mineButton.type = "button";
-            mineButton.textContent = "Mine (50)";
+            mineButton.className = "tool";
+            mineButton.dataset.toolCategory = "utilities";
+            mineButton.innerHTML = 'Mine<small>50 Metal</small>';
 
-            const toolbar = cannonButton?.parentElement ||
-                document.querySelector(".toolbar") ||
-                document.body;
+            const toolbar = document.querySelector(".toolbar") ||
+                cannonButton?.parentElement || document.body;
 
             toolbar.appendChild(mineButton);
+        } else {
+            mineButton.classList.add("tool");
+            mineButton.dataset.toolCategory = "utilities";
         }
 
         mineButton.onclick = () => {
