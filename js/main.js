@@ -42,6 +42,7 @@ const Game = {
         this.setupInput();
 
         this.state = "menu";
+        this.playBootSequence();
         this.running = true;
         this.lastFrame = performance.now();
 
@@ -171,6 +172,105 @@ const Game = {
                 letter-spacing:3px;
                 font-weight:bold;
             }
+
+            .cc-boot-screen {
+                position:fixed;
+                inset:0;
+                z-index:20000;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                overflow:hidden;
+                background:#050505;
+                color:#f3f3f3;
+                font-family:Arial,sans-serif;
+                text-align:center;
+                opacity:1;
+            }
+
+            .cc-boot-scene {
+                position:absolute;
+                inset:0;
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+                justify-content:center;
+                opacity:0;
+                pointer-events:none;
+            }
+
+            .cc-boot-game {
+                animation:cc-title-sequence 2.3s ease-in-out both;
+            }
+
+            .cc-boot-studio {
+                animation:cc-studio-sequence 2.7s ease-in-out 2.35s both;
+            }
+
+            .cc-boot-title {
+                margin:0;
+                color:#f1f1f1;
+                font-size:clamp(42px,9vw,86px);
+                font-weight:800;
+                letter-spacing:clamp(5px,1.5vw,15px);
+                text-transform:uppercase;
+                text-shadow:0 0 28px rgba(190,25,35,.22);
+            }
+
+            .cc-boot-subtitle {
+                margin-top:14px;
+                color:#a7a7a7;
+                font-size:12px;
+                letter-spacing:5px;
+                text-transform:uppercase;
+            }
+
+            .cc-gear {
+                width:clamp(76px,12vw,112px);
+                height:clamp(76px,12vw,112px);
+                margin-bottom:22px;
+                filter:drop-shadow(0 0 18px rgba(255,255,255,.08));
+            }
+
+            .cc-studio-name {
+                margin:0;
+                color:#d2d2d2;
+                font-size:clamp(24px,5vw,42px);
+                font-weight:700;
+                letter-spacing:clamp(3px,.8vw,8px);
+                text-transform:uppercase;
+            }
+
+            .cc-studio-caption {
+                margin-top:12px;
+                color:#777;
+                font-size:11px;
+                letter-spacing:4px;
+                text-transform:uppercase;
+            }
+
+            .cc-menu-enter {
+                animation:cc-menu-fade-in .9s ease both;
+            }
+
+            @keyframes cc-title-sequence {
+                0% { opacity:0; transform:translateY(12px); }
+                22% { opacity:1; transform:translateY(0); }
+                72% { opacity:1; transform:translateY(0); }
+                100% { opacity:0; transform:translateY(-8px); }
+            }
+
+            @keyframes cc-studio-sequence {
+                0% { opacity:0; transform:scale(.97); }
+                22% { opacity:1; transform:scale(1); }
+                78% { opacity:1; transform:scale(1); }
+                100% { opacity:0; transform:scale(1.02); }
+            }
+
+            @keyframes cc-menu-fade-in {
+                from { opacity:0; }
+                to { opacity:1; }
+            }
         `;
 
         document.head.appendChild(style);
@@ -178,7 +278,7 @@ const Game = {
         this.startScreen = this.createOverlay("forts-start-screen", `
             <div class="forts-menu-card">
                 <div class="forts-pause-label">REAL-TIME FORTRESS WARFARE</div>
-                <h1 class="forts-menu-title">FORTS</h1>
+                <h1 class="forts-menu-title">CRIMSON CASTLE</h1>
                 <p class="forts-menu-subtitle">
                     Build your fortress. Protect your core. Destroy the enemy.
                 </p>
@@ -283,7 +383,40 @@ const Game = {
             .addEventListener("click", () => this.showMainMenu());
 
         AI.setDifficulty(this.difficulty);
+
+        this.bootScreen = this.createOverlay("cc-boot-screen", `
+            <div class="cc-boot-scene cc-boot-game">
+                <h1 class="cc-boot-title">Crimson Castle</h1>
+                <div class="cc-boot-subtitle">A fortress warfare game</div>
+            </div>
+
+            <div class="cc-boot-scene cc-boot-studio">
+                <svg class="cc-gear" viewBox="0 0 100 100" aria-label="Over Engineered Games gear logo">
+                    <path fill="#292929" stroke="#555" stroke-width="2"
+                        d="M43 3h14l3 10a38 38 0 0 1 8 3l9-6 10 10-6 9a38 38 0 0 1 3 8l10 3v14l-10 3a38 38 0 0 1-3 8l6 9-10 10-9-6a38 38 0 0 1-8 3l-3 10H43l-3-10a38 38 0 0 1-8-3l-9 6-10-10 6-9a38 38 0 0 1-3-8L6 53V39l10-3a38 38 0 0 1 3-8l-6-9 10-10 9 6a38 38 0 0 1 8-3z"/>
+                    <circle cx="50" cy="46" r="19" fill="#080808" stroke="#555" stroke-width="3"/>
+                    <circle cx="50" cy="46" r="8" fill="#292929"/>
+                </svg>
+                <h2 class="cc-studio-name">Over Engineered Games</h2>
+                <div class="cc-studio-caption">Independent Game Development</div>
+            </div>
+        `);
+
         this.showOnly(this.startScreen);
+    },
+
+    playBootSequence() {
+        if (!this.bootScreen) return;
+
+        this.showOnly(this.bootScreen);
+
+        // Let the studio ident finish, then fade the main menu in from black.
+        window.setTimeout(() => {
+            this.showOnly(this.startScreen);
+            this.startScreen.classList.remove("cc-menu-enter");
+            void this.startScreen.offsetWidth;
+            this.startScreen.classList.add("cc-menu-enter");
+        }, 5350);
     },
 
     createOverlay(id, html) {
@@ -300,7 +433,8 @@ const Game = {
         for (const item of [
             this.startScreen,
             this.pauseScreen,
-            this.endScreen
+            this.endScreen,
+            this.bootScreen
         ]) {
             if (item) item.style.display = "none";
         }
