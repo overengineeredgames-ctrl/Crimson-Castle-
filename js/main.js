@@ -459,6 +459,8 @@ const Game = {
                     Machine Gun: hold fire for rapid, light damage<br>
                     Mega Cannon: 220 damage with a 15-second reload<br>
                     Click a cannon to select; aim and click to fire<br>
+                    Mouse wheel zooms the battlefield; Shift + wheel or arrow keys scroll sideways<br>
+                    Middle mouse drag also pans the map<br>
                     Press ESC to pause
                 </div>
             </div>
