@@ -482,9 +482,33 @@ const Building = {
             return false;
         }
 
-        const endNode = this.getNearestNode(x, y);
+        // Give the player a little extra room to snap onto an existing
+        // node. Only consider nodes belonging to the same team.
+        const snapRadius = Math.max(CONFIG.NODE_SNAP_RADIUS || 25, 35);
+        let endNode = null;
+        let bestDistance = snapRadius;
 
-        if (endNode && endNode !== drag.startNode) {
+        for (const node of this.nodes) {
+            if (
+                node.removed ||
+                node.team !== drag.startNode.team ||
+                node === drag.startNode
+            ) {
+                continue;
+            }
+
+            const distance = this.distance(
+                node.body.position,
+                { x, y }
+            );
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                endNode = node;
+            }
+        }
+
+        if (endNode) {
             return this.finishBeam(drag.startNode, endNode);
         }
 
