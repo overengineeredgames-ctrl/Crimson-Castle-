@@ -400,12 +400,12 @@ const AI = {
             cannon.target = target;
             cannon.targetInRange = distance <= this.cannonRange;
 
-            // Track moving structures continuously, but never waste shots
-            // on targets outside the weapon's effective range.
-            if (!cannon.targetInRange) continue;
-
+            // Keep tracking the target even while it is out of range.
+            // The cannon may aim at it, but only fires when a shot is possible.
             const perfectAngle = this.calculateAim(cannon, target);
             cannon.angle = perfectAngle;
+
+            if (!cannon.targetInRange) continue;
 
             if (cannon.cooldown <= 0) {
                 cannon.angle = perfectAngle + this.getRandomAimError();
