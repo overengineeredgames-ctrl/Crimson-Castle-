@@ -908,7 +908,10 @@ const Building = {
         }
 
         if (!anchorNodes.length) return true;
-        if (type === "windmill" && !this.hasOpenAir(x,y,anchorNodes)) {
+        // A windmill cannot be installed inside a sealed fort cell.
+        // It also needs a clear radius around the rotor in the open world.
+        if (type === "windmill" &&
+            (cell || !this.hasOpenAir(x,y,anchorNodes))) {
             this.showPlacementMessage("Windmills need clear open air around them");
             return true;
         }
@@ -1396,6 +1399,26 @@ const Building = {
     },
 
     deleteAt(x, y) {
+        // Utility buildings can be removed directly without deleting their
+        // supporting fort joints.
+        let closestInstallation = null;
+        let installationDistance = 34;
+        for (const item of this.installations) {
+            if (item.removed) continue;
+            const distance = Math.hypot(item.x - x, item.y - y);
+            if (distance < installationDistance) {
+                installationDistance = distance;
+                closestInstallation = item;
+            }
+        }
+        if (closestInstallation) {
+            closestInstallation.removed = true;
+            this.installations = this.installations.filter(item => item !== closestInstallation);
+            this.resources.energy = Math.min(this.resources.energy, this.getEnergyCapacity());
+            this.updateHUD();
+            return true;
+        }
+
         // Player deletion is intentionally limited to player-owned structures.
         // Enemy AI nodes, beams, and cannons must never be removable by the player.
         let closestNode = null;
