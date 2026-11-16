@@ -51,6 +51,8 @@ function createWindow() {
     mainWindow.on("closed", () => { mainWindow = null; });
 }
 
+ipcMain.handle("cc:get-version", () => app.getVersion());
+
 ipcMain.handle("cc:check-updates", async () => {
     const response = await fetch(MANIFEST_URL, {
         cache: "no-store",
