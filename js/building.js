@@ -812,10 +812,32 @@ const Building = {
     },
 
     deleteAt(x, y) {
-        const node = this.getNearestNode(x, y, 18);
+        // Player deletion is intentionally limited to player-owned structures.
+        // Enemy AI nodes, beams, and cannons must never be removable by the player.
+        let closestNode = null;
+        let nodeDistance = 18;
 
-        if (node && !node.isFoundation && !node.isCore) {
-            this.removeNode(node);
+        for (const node of this.nodes) {
+            if (
+                node.removed ||
+                node.team !== "player" ||
+                node.isFoundation ||
+                node.isCore
+            ) continue;
+
+            const distance = Math.hypot(
+                node.body.position.x - x,
+                node.body.position.y - y
+            );
+
+            if (distance < nodeDistance) {
+                nodeDistance = distance;
+                closestNode = node;
+            }
+        }
+
+        if (closestNode) {
+            this.removeNode(closestNode);
             return true;
         }
 
@@ -823,6 +845,8 @@ const Building = {
         let bestDistance = 15;
 
         for (const strut of this.struts) {
+            if (strut.team !== "player") continue;
+
             const distance = this.pointToSegmentDistance(
                 x,
                 y,
