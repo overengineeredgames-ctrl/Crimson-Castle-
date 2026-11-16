@@ -757,7 +757,7 @@ const AI = {
             },
             {
                 name: "Rising Rampart",
-                points: { foot: [-105, -48], mount: [-205, -125], peak: [-115, -215] },
+                points: { foot: [-105, -48], mount: [-205, -125], peak: [-105, -190] },
                 edges: [["anchor","foot"],["foot","mount"],["mount","peak"],["peak","foot"],["anchor","peak"]],
                 mount: "mount"
             },
@@ -769,7 +769,7 @@ const AI = {
             },
             {
                 name: "Zigzag Advance",
-                points: { lower: [-100, -55], left: [-205, -130], far: [-305, -55], high: [-205, -220] },
+                points: { lower: [-100, -55], left: [-205, -130], far: [-290, -55], high: [-205, -220] },
                 edges: [["anchor","lower"],["lower","left"],["left","far"],["far","high"],["high","left"],["lower","high"]],
                 mount: "far"
             },
