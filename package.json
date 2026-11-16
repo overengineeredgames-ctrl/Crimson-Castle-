@@ -25,7 +25,7 @@
       "electron-main.js",
       "preload.js",
       "index.html",
-      "style.css",
+      "styles.css",
       "js/**/*"
     ],
     "artifactName": "Crimson-Castle-Setup-${version}.${ext}",
