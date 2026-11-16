@@ -913,11 +913,14 @@ const Building = {
             const healthRatio = Math.max(0, strut.health / strut.maxHealth);
             const damage = 1 - healthRatio;
 
+            // Damaged beams visibly char and redden as soon as they are hit.
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
-            ctx.lineWidth = strut.width;
-            ctx.strokeStyle = damage > 0.05 ? "#493b36" : material.dark;
+            ctx.lineWidth = strut.width + (damage > 0.05 ? 1.5 : 0);
+            ctx.strokeStyle = damage > 0.05
+                ? (damage > 0.65 ? "#321c1c" : "#63352f")
+                : material.dark;
             ctx.lineCap = "round";
             ctx.stroke();
 
@@ -926,11 +929,26 @@ const Building = {
             ctx.lineTo(b.x, b.y);
             ctx.lineWidth = Math.max(2, strut.width - 3);
             ctx.strokeStyle = damage > 0.65
-                ? "#563b37"
+                ? "#a33e38"
                 : damage > 0.2
-                    ? "#9a5845"
+                    ? "#c16a50"
                     : material.color;
             ctx.stroke();
+
+            // A red damage seam makes enemy and player beam damage easy to spot.
+            if (damage > 0.05) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(0.9, 0.25 + damage * 0.75);
+                ctx.strokeStyle = "#ff493d";
+                ctx.lineWidth = Math.max(1.5, strut.width * 0.24);
+                ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
 
             // Cracks become more visible as a beam loses health.
             if (damage > 0.2) {
@@ -1021,10 +1039,31 @@ const Building = {
             }
 
             ctx.lineWidth = 2;
-            ctx.strokeStyle = "#263746";
+            ctx.strokeStyle = node.isCore ? "#a7f5ff" : "#263746";
             ctx.stroke();
 
             if (node.isCore) {
+                // Restore the classic glowing red reactor/core center.
+                const coreHealth = Math.max(0, node.health / node.maxHealth);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, this.coreRadius * 0.62, 0, Math.PI * 2);
+                ctx.fillStyle = coreHealth > 0.3 ? "#e73535" : "#8f2020";
+                ctx.shadowColor = "#ff2929";
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#ff9b8e";
+                ctx.stroke();
+
+                // Small bright reactor slit gives the core a hot, powered center.
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, this.coreRadius * 0.22, 0, Math.PI * 2);
+                ctx.fillStyle = "#ffb2a6";
+                ctx.fill();
+                ctx.restore();
+
                 this.drawCoreHealthBar(ctx, node);
             }
         }
