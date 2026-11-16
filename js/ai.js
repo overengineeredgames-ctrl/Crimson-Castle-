@@ -556,6 +556,62 @@ const AI = {
         }
     },
 
+    ensureAtLeastOneCannon() {
+        const livingCannons = Weapons.cannons.filter(cannon =>
+            cannon.team === "enemy" &&
+            cannon.node &&
+            !cannon.node.removed
+        );
+
+        if (livingCannons.length > 0) return;
+
+        // If the AI loses every turret, remount one on a surviving structural
+        // joint so it never remains completely unable to fight.
+        const mount = Building.nodes.find(node =>
+            node.team === "enemy" &&
+            !node.removed &&
+            !node.isFoundation &&
+            !node.isCore &&
+            node.body
+        );
+
+        if (mount) {
+            Weapons.addCannon(mount, "enemy", true);
+            return;
+        }
+
+        // Last-resort recovery if only the foundations remain.
+        const foundation = Building.nodes.find(node =>
+            node.team === "enemy" &&
+            !node.removed &&
+            node.isFoundation &&
+            node.body
+        );
+
+        if (!foundation) return;
+
+        const position = foundation.body.position;
+        const recoveryNode = Building.createNode(
+            position.x,
+            Math.max(80, position.y - 110),
+            { team: "enemy", material: "steel" }
+        );
+
+        if (!recoveryNode) return;
+
+        const support = Building.createStrut(foundation, recoveryNode, {
+            material: "steel"
+        });
+
+        if (!support) {
+            Building.removeNode(recoveryNode);
+            return;
+        }
+
+        Building.checkSupport();
+        Weapons.addCannon(recoveryNode, "enemy", true);
+    },
+
     buildExtraCannon() {
         const enemyCannons = Weapons.cannons.filter(cannon =>
             cannon.team === "enemy" &&
@@ -748,6 +804,7 @@ const AI = {
             this.reinforceFort();
         }
 
+        this.ensureAtLeastOneCannon();
         this.buildExtraCannon();
         this.updateCannons();
     }
