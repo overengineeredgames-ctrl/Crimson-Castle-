@@ -1194,15 +1194,21 @@ const Building = {
     },
 
     startDrag(x, y, mode = "beam") {
-        const node = this.getNearestNode(x, y, 10);
-
-        // Joints take priority near beam endpoints; beam middles extrude boxes.
-        if (!node) {
-            const selectedStrut = this.getStrutAtPoint(x, y);
-
-            if (selectedStrut) {
+        // Prefer the middle of a beam for box extrusion, even when an
+        // existing brace/joint happens to sit close to the click.
+        const beam = this.getStrutAtPoint(x, y, 30);
+        if (beam && beam.team === "player" && beam.a && beam.b) {
+            const a = beam.a.body.position;
+            const b = beam.b.body.position;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const lengthSquared = dx * dx + dy * dy;
+            const t = lengthSquared
+                ? ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared
+                : 0;
+            if (t >= 0.18 && t <= 0.82) {
                 this.drag = {
-                    sourceStrut: selectedStrut,
+                    sourceStrut: beam,
                     x,
                     y,
                     mode: "extrude"
@@ -1211,9 +1217,9 @@ const Building = {
             }
         }
 
-        if (!node || node.team !== "player") {
-            return false;
-        }
+        // Near endpoints, select the joint for ordinary beam building.
+        const node = this.getNearestNode(x, y, 14);
+        if (!node || node.team !== "player") return false;
 
         this.drag = {
             startNode: node,
@@ -1221,7 +1227,6 @@ const Building = {
             y,
             mode
         };
-
         return true;
     },
 
@@ -2149,9 +2154,15 @@ const Building = {
 
         const material = this.settings(this.material);
         ctx.save();
-        ctx.strokeStyle = material.color;
-        ctx.lineWidth = material.width;
-        ctx.setLineDash([8, 6]);
+        // High-contrast construction preview remains visible over both
+        // darkened fort interiors and bright backgrounds.
+        ctx.strokeStyle = "#63e6ff";
+        ctx.lineWidth = Math.max(4, material.width + 2);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "rgba(30, 210, 255, 0.9)";
+        ctx.shadowBlur = 9;
+        ctx.setLineDash([9, 5]);
 
         if (this.drag.sourceStrut) {
             const a = this.drag.sourceStrut.a.body.position;
@@ -2177,7 +2188,8 @@ const Building = {
             }
 
             ctx.setLineDash([]);
-            ctx.fillStyle = "rgba(255,255,255,0.55)";
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "rgba(99,230,255,0.85)";
             for (const point of [newA, newB]) {
                 ctx.beginPath();
                 ctx.arc(point.x, point.y, this.nodeRadius, 0, Math.PI * 2);
@@ -2193,9 +2205,10 @@ const Building = {
             ctx.stroke();
 
             ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.arc(end.x, end.y, this.nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            ctx.arc(end.x, end.y, this.nodeRadius + 2, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(99,230,255,0.85)";
             ctx.fill();
         }
 
