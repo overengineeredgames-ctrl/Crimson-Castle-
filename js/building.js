@@ -917,9 +917,15 @@ const Building = {
         }
         if (!this.charge(definition.metalCost)) return true;
 
+        const anchorCenter = {
+            x: anchorNodes.reduce((sum,node) => sum + node.body.position.x,0) / anchorNodes.length,
+            y: anchorNodes.reduce((sum,node) => sum + node.body.position.y,0) / anchorNodes.length
+        };
         const installation = {
             type,
             x, y,
+            offsetX: x - anchorCenter.x,
+            offsetY: y - anchorCenter.y,
             anchorNodes: [...anchorNodes],
             removed: false,
             angle: 0,
@@ -950,6 +956,13 @@ const Building = {
                 item.removed = true;
                 this.installations.splice(this.installations.indexOf(item),1);
                 continue;
+            }
+            const liveAnchors = item.anchorNodes.filter(node => node && !node.removed);
+            if (liveAnchors.length) {
+                const centerX = liveAnchors.reduce((sum,node) => sum + node.body.position.x,0) / liveAnchors.length;
+                const centerY = liveAnchors.reduce((sum,node) => sum + node.body.position.y,0) / liveAnchors.length;
+                item.x = centerX + item.offsetX;
+                item.y = centerY + item.offsetY;
             }
             if (item.type === "windmill") {
                 item.phase += seconds * 0.72;
