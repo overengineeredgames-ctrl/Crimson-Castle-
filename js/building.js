@@ -5,6 +5,7 @@ const Building = {
     nodes: [],
     struts: [],
     mines: [],
+    debris: [],
     drag: null,
 
     repairMode: false,
@@ -59,6 +60,7 @@ const Building = {
         this.nodes = [];
         this.struts = [];
         this.mines = [];
+        this.debris = [];
         this.drag = null;
 
         this.resources = {
@@ -581,7 +583,123 @@ const Building = {
                     Matter.Body.setStatic(node.body, false);
                 }
             }
+
+            // Turn every newly disconnected section into one falling debris group.
+            const detachedVisited = new Set();
+            for (const start of this.nodes) {
+                if (
+                    start.team !== team ||
+                    start.removed ||
+                    start.supported ||
+                    start.debrisGroup ||
+                    detachedVisited.has(start)
+                ) continue;
+
+                const componentNodes = [];
+                const queue = [start];
+                detachedVisited.add(start);
+
+                while (queue.length) {
+                    const current = queue.shift();
+                    componentNodes.push(current);
+
+                    for (const strut of this.struts) {
+                        if (strut.team !== team) continue;
+                        const next = strut.a === current ? strut.b :
+                            strut.b === current ? strut.a : null;
+
+                        if (
+                            next &&
+                            !next.removed &&
+                            !next.supported &&
+                            !next.debrisGroup &&
+                            !detachedVisited.has(next)
+                        ) {
+                            detachedVisited.add(next);
+                            queue.push(next);
+                        }
+                    }
+                }
+
+                if (!componentNodes.length) continue;
+
+                const componentSet = new Set(componentNodes);
+                const componentStruts = this.struts.filter(strut =>
+                    componentSet.has(strut.a) && componentSet.has(strut.b)
+                );
+                const group = {
+                    nodes: componentNodes,
+                    struts: componentStruts,
+                    grounded: false,
+                    groundedTime: 0,
+                    alpha: 1,
+                    removed: false
+                };
+
+                for (const node of componentNodes) {
+                    node.debrisGroup = group;
+                    node.detached = true;
+                    if (node.body.isStatic && !node.isFoundation) {
+                        Matter.Body.setStatic(node.body, false);
+                    }
+                }
+
+                for (const strut of componentStruts) {
+                    strut.debrisGroup = group;
+                }
+
+                // Detached cannons travel with the falling section but can no
+                // longer aim, fire, or be selected.
+                if (typeof Weapons !== "undefined") {
+                    for (const cannon of Weapons.cannons) {
+                        if (componentSet.has(cannon.node)) {
+                            cannon.detached = true;
+                            Weapons.selectedCannons =
+                                Weapons.selectedCannons.filter(item => item !== cannon);
+                            if (Weapons.selectedCannon === cannon) {
+                                Weapons.selectedCannon = null;
+                            }
+                        }
+                    }
+                }
+
+                this.debris.push(group);
+            }
         }
+    },
+
+    updateDebris(delta = 16.667) {
+        let removedAny = false;
+
+        for (const group of [...this.debris]) {
+            if (group.removed) continue;
+
+            const touchingGround = group.nodes.some(node => {
+                if (node.removed) return false;
+                const radius = node.isCore ? this.coreRadius : this.nodeRadius;
+                return node.body.position.y + radius >= this.groundY - 2;
+            });
+
+            if (touchingGround) group.grounded = true;
+            if (!group.grounded) continue;
+
+            group.groundedTime += delta;
+
+            // Let the wreck settle briefly, then fade it away.
+            const fadeProgress = Math.max(0, (group.groundedTime - 900) / 1800);
+            group.alpha = Math.max(0, 1 - fadeProgress);
+
+            if (group.groundedTime < 2700) continue;
+
+            group.removed = true;
+            for (const node of group.nodes) {
+                if (this.nodes.includes(node)) this.removeNode(node, false);
+            }
+            this.debris = this.debris.filter(item => item !== group);
+            removedAny = true;
+        }
+
+        if (removedAny) this.checkSupport();
     },
 
     addMine(node) {
@@ -967,7 +1085,7 @@ const Building = {
         }
     },
 
-    removeNode(node) {
+    removeNode(node, updateSupport = true) {
         if (!node) return;
 
         node.removed = true;
@@ -992,7 +1110,7 @@ const Building = {
             this.nodes.splice(index, 1);
         }
 
-        this.checkSupport();
+        if (updateSupport) this.checkSupport();
     },
 
     deleteAt(x, y) {
@@ -1204,6 +1322,7 @@ const Building = {
 
     update(delta = 16.667) {
         this.updateRepair(delta);
+        this.updateDebris(delta);
 
         this.mines = this.mines.filter(mine =>
             this.nodes.includes(mine.node)
@@ -1281,6 +1400,8 @@ const Building = {
         this.drawGrid(ctx);
 
         for (const strut of this.struts) {
+            ctx.save();
+            if (strut.debrisGroup) ctx.globalAlpha *= strut.debrisGroup.alpha;
             const a = strut.a.body.position;
             const b = strut.b.body.position;
             const material = this.settings(strut.material);
@@ -1362,10 +1483,16 @@ const Building = {
                 ctx.stroke();
                 ctx.restore();
             }
+            ctx.restore();
         }
 
         for (const node of this.nodes) {
-            if (node.hidden) continue;
+            ctx.save();
+            if (node.debrisGroup) ctx.globalAlpha *= node.debrisGroup.alpha;
+            if (node.hidden) {
+                ctx.restore();
+                continue;
+            }
 
             const p = node.body.position;
 
@@ -1442,6 +1569,7 @@ const Building = {
 
                 this.drawCoreHealthBar(ctx, node);
             }
+            ctx.restore();
         }
 
         for (const mine of this.mines) {
