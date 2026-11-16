@@ -537,17 +537,20 @@ const Game = {
     },
 
     async loadVersionLabel() {
-        let version = "Development";
+        // Use the packaged app version when Electron is available.
+        // Keep the current project version as a useful fallback in development.
+        let version = "1.0.0";
         try {
             if (window.ccUpdater && typeof window.ccUpdater.getVersion === "function") {
-                version = await window.ccUpdater.getVersion();
+                const appVersion = await window.ccUpdater.getVersion();
+                if (appVersion) version = String(appVersion);
             }
         } catch (error) {
             console.warn("Could not read game version:", error);
         }
 
         document.querySelectorAll(".cc-version-label").forEach(label => {
-            label.textContent = "VERSION " + version;
+            label.textContent = "v" + version;
         });
     },
 
