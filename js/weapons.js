@@ -41,6 +41,10 @@ const Weapons = {
 
         if (cannonButton) {
             cannonButton.onclick = () => {
+                if (typeof Building !== "undefined") {
+                    Building.utilityTool = null;
+                    Building.updateToolbar();
+                }
                 if (typeof Building !== "undefined" && Building.deleteMode) {
                     Building.setDeleteMode(false);
                 }
@@ -75,6 +79,10 @@ const Weapons = {
         }
 
         mineButton.onclick = () => {
+            if (typeof Building !== "undefined") {
+                Building.utilityTool = null;
+                Building.updateToolbar();
+            }
             if (typeof Building !== "undefined" && Building.deleteMode) {
                 Building.setDeleteMode(false);
             }
@@ -120,6 +128,10 @@ const Weapons = {
             }
         }
         button.onclick = () => {
+            if (typeof Building !== "undefined") {
+                Building.utilityTool = null;
+                Building.updateToolbar();
+            }
             if (typeof Building !== "undefined" && Building.deleteMode) {
                 Building.setDeleteMode(false);
             }
