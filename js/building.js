@@ -267,6 +267,7 @@ const Building = {
             team: options.team || "player",
             material: materialName,
             isFoundation,
+            isBaseAnchor: !!options.isBaseAnchor,
             isCore,
             hidden: !!options.hidden,
             canHoldMine: !isCore &&
@@ -473,11 +474,13 @@ const Building = {
         const baseY = this.groundY - this.nodeRadius;
 
         const bottomLeft = this.createNode(leftX, baseY, {
-            isFoundation: true
+            isFoundation: true,
+            isBaseAnchor: true
         });
 
         const bottomRight = this.createNode(rightX, baseY, {
-            isFoundation: true
+            isFoundation: true,
+            isBaseAnchor: true
         });
 
         const topLeft = this.createNode(leftX, baseY - 140);
@@ -535,46 +538,80 @@ const Building = {
         return false;
     },
 
+    // Trace a joint's connections backwards through every beam endpoint.
+    // A piece is supported only if this reverse path reaches an original
+    // prebuilt base anchor (or a visible foundation), not merely a hidden
+    // construction snap-point created later.
+    traceJointPathToBase(startNode, adjacency) {
+        if (!startNode || startNode.removed) return [];
+
+        const queue = [startNode];
+        const previous = new Map([[startNode, null]]);
+        let baseNode = null;
+
+        while (queue.length) {
+            const current = queue.shift();
+
+            if (current.isBaseAnchor || (current.isFoundation && !current.hidden)) {
+                baseNode = current;
+                break;
+            }
+
+            for (const next of adjacency.get(current) || []) {
+                if (!next || next.removed || previous.has(next)) continue;
+                previous.set(next, current);
+                queue.push(next);
+            }
+        }
+
+        if (!baseNode) return [];
+
+        const path = [];
+        let cursor = baseNode;
+        while (cursor) {
+            path.push(cursor);
+            cursor = previous.get(cursor) || null;
+        }
+        return path;
+    },
+
     checkSupport() {
         const teams = [...new Set(this.nodes.map(node => node.team))];
 
         for (const team of teams) {
-            const visited = new Set();
-
-            const queue = this.nodes.filter(node =>
-                node.team === team &&
-                node.isFoundation &&
-                !node.removed
-            );
-
-            for (const node of queue) {
-                visited.add(node);
+            // Build a two-way joint map. A beam connects A to B and B to A;
+            // tracing from a loose piece therefore works in either direction.
+            const adjacency = new Map();
+            for (const node of this.nodes) {
+                if (node.team === team && !node.removed) adjacency.set(node, []);
             }
 
-            while (queue.length) {
-                const current = queue.shift();
+            for (const beam of this.struts) {
+                if (
+                    beam.team !== team ||
+                    !beam.a || !beam.b ||
+                    beam.a.removed || beam.b.removed
+                ) continue;
 
-                for (const strut of this.struts) {
-                    if (strut.team !== team) continue;
+                if (!adjacency.has(beam.a)) adjacency.set(beam.a, []);
+                if (!adjacency.has(beam.b)) adjacency.set(beam.b, []);
+                adjacency.get(beam.a).push(beam.b);
+                adjacency.get(beam.b).push(beam.a);
+            }
 
-                    let next = null;
-
-                    if (strut.a === current) next = strut.b;
-                    if (strut.b === current) next = strut.a;
-
-                    if (next && !next.removed && !visited.has(next)) {
-                        visited.add(next);
-                        queue.push(next);
-                    }
+            // Reverse-search from every joint. If its beam/joint path can
+            // reach a prebuilt base anchor, it belongs to the supported fort.
+            const supported = new Set();
+            for (const node of adjacency.keys()) {
+                if (this.traceJointPathToBase(node, adjacency).length) {
+                    supported.add(node);
                 }
             }
 
             for (const node of this.nodes) {
-                if (node.team !== team) continue;
+                if (node.team !== team || node.removed) continue;
+                node.supported = supported.has(node);
 
-                node.supported = visited.has(node);
-
-                // Foundations are deliberately kept static.
                 if (
                     !node.supported &&
                     node.body.isStatic &&
@@ -584,49 +621,59 @@ const Building = {
                 }
             }
 
-            // Turn every newly disconnected section into one falling debris group.
+            // Gather each unsupported, movable section. Hidden ground anchors
+            // are fixed world attachment points, not falling debris pieces.
             const detachedVisited = new Set();
-            for (const start of this.nodes) {
+            for (const startNode of this.nodes) {
                 if (
-                    start.team !== team ||
-                    start.removed ||
-                    start.supported ||
-                    start.debrisGroup ||
-                    detachedVisited.has(start)
+                    startNode.team !== team ||
+                    startNode.removed ||
+                    startNode.supported ||
+                    startNode.isFoundation ||
+                    startNode.debrisGroup ||
+                    detachedVisited.has(startNode)
                 ) continue;
 
                 const componentNodes = [];
-                const queue = [start];
-                detachedVisited.add(start);
+                const queue = [startNode];
+                detachedVisited.add(startNode);
 
                 while (queue.length) {
                     const current = queue.shift();
                     componentNodes.push(current);
 
-                    for (const strut of this.struts) {
-                        if (strut.team !== team) continue;
-                        const next = strut.a === current ? strut.b :
-                            strut.b === current ? strut.a : null;
-
+                    for (const next of adjacency.get(current) || []) {
                         if (
-                            next &&
-                            !next.removed &&
-                            !next.supported &&
-                            !next.debrisGroup &&
-                            !detachedVisited.has(next)
-                        ) {
-                            detachedVisited.add(next);
-                            queue.push(next);
-                        }
+                            next.removed ||
+                            next.supported ||
+                            next.isFoundation ||
+                            next.debrisGroup ||
+                            detachedVisited.has(next)
+                        ) continue;
+
+                        detachedVisited.add(next);
+                        queue.push(next);
                     }
                 }
 
                 if (!componentNodes.length) continue;
 
                 const componentSet = new Set(componentNodes);
-                const componentStruts = this.struts.filter(strut =>
-                    componentSet.has(strut.a) && componentSet.has(strut.b)
+
+                // Sever beams from this falling section to fixed hidden
+                // anchors. Otherwise their constraints would hold the wreck up.
+                const boundaryBeams = this.struts.filter(beam =>
+                    beam.team === team &&
+                    (componentSet.has(beam.a) !== componentSet.has(beam.b))
                 );
+                for (const beam of boundaryBeams) {
+                    this.removeStrut(beam, false);
+                }
+
+                const componentStruts = this.struts.filter(beam =>
+                    componentSet.has(beam.a) && componentSet.has(beam.b)
+                );
+
                 const group = {
                     nodes: componentNodes,
                     struts: componentStruts,
@@ -639,26 +686,19 @@ const Building = {
                 for (const node of componentNodes) {
                     node.debrisGroup = group;
                     node.detached = true;
-                    if (node.body.isStatic && !node.isFoundation) {
-                        Matter.Body.setStatic(node.body, false);
-                    }
+                    if (node.body.isStatic) Matter.Body.setStatic(node.body, false);
                 }
 
-                for (const strut of componentStruts) {
-                    strut.debrisGroup = group;
-                }
+                for (const beam of componentStruts) beam.debrisGroup = group;
 
-                // Detached cannons travel with the falling section but can no
-                // longer aim, fire, or be selected.
                 if (typeof Weapons !== "undefined") {
                     for (const cannon of Weapons.cannons) {
-                        if (componentSet.has(cannon.node)) {
-                            cannon.detached = true;
-                            Weapons.selectedCannons =
-                                Weapons.selectedCannons.filter(item => item !== cannon);
-                            if (Weapons.selectedCannon === cannon) {
-                                Weapons.selectedCannon = null;
-                            }
+                        if (!componentSet.has(cannon.node)) continue;
+                        cannon.detached = true;
+                        Weapons.selectedCannons =
+                            Weapons.selectedCannons.filter(item => item !== cannon);
+                        if (Weapons.selectedCannon === cannon) {
+                            Weapons.selectedCannon = null;
                         }
                     }
                 }
