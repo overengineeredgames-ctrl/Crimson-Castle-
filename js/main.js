@@ -454,9 +454,11 @@ const Game = {
                 return;
             }
             const info = await window.CCUpdater.checkNow();
-            status.textContent = info && info.updateAvailable
-                ? "An update is available. Follow the update window to install it."
-                : "You're up to date!";
+            status.textContent = !info
+                ? "Could not check for updates. Check your internet connection."
+                : info.updateAvailable
+                    ? "An update is available. Follow the update window to install it."
+                    : "You're up to date!";
         });
 
         this.startScreen.querySelector("#forts-open-settings")
