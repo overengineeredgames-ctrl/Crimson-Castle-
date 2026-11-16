@@ -465,20 +465,22 @@ const Building = {
     },
 
     startDrag(x, y, mode = "beam") {
-        // Clicking the middle of an existing beam selects it for box extrusion.
-        const selectedStrut = this.getStrutAtPoint(x, y);
+        const node = this.getNearestNode(x, y, 12);
 
-        if (selectedStrut) {
-            this.drag = {
-                sourceStrut: selectedStrut,
-                x,
-                y,
-                mode: "extrude"
-            };
-            return true;
+        // Joints take priority near beam endpoints; beam middles extrude boxes.
+        if (!node) {
+            const selectedStrut = this.getStrutAtPoint(x, y);
+
+            if (selectedStrut) {
+                this.drag = {
+                    sourceStrut: selectedStrut,
+                    x,
+                    y,
+                    mode: "extrude"
+                };
+                return true;
+            }
         }
-
-        const node = this.getNearestNode(x, y);
 
         if (!node || node.team !== "player") {
             return false;
