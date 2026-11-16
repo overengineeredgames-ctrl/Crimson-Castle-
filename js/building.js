@@ -276,7 +276,7 @@ const Building = {
         const topRight = this.createNode(rightX, baseY - 140, { team });
 
         const core = this.createCore(
-            leftX + 80,
+            (leftX + rightX) / 2,
             baseY - 90,
             team
         );
@@ -292,6 +292,10 @@ const Building = {
 
         this.createStrut(topLeft, core);
         this.createStrut(topRight, core);
+
+        // Lower diagonal supports rise from both foundations to the centered core.
+        this.createStrut(bottomLeft, core);
+        this.createStrut(bottomRight, core);
 
         this.checkSupport();
 
