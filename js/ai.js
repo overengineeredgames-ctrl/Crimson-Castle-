@@ -574,11 +574,12 @@ const AI = {
 
         if (x < 80) return false;
 
-        const mount = Building.createNode(x, baseY - 100, {
+        const mountY = anchor.body.position.y;
+        const mount = Building.createNode(x, mountY, {
             team: "enemy",
             material: "steel"
         });
-        const upper = Building.createNode(x, baseY - 245, {
+        const upper = Building.createNode(x, mountY - 100, {
             team: "enemy",
             material: "steel"
         });
