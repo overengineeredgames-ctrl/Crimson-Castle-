@@ -204,7 +204,7 @@ const Game = {
             }
 
             .cc-boot-studio {
-                animation:cc-studio-sequence 2.7s ease-in-out 2.35s both;
+                animation:cc-studio-sequence 3.8s ease-in-out 2.35s both;
             }
 
             .cc-boot-title {
@@ -225,11 +225,18 @@ const Game = {
                 text-transform:uppercase;
             }
 
+            .cc-gear-arrival {
+                animation:cc-gear-roll-in 1.55s cubic-bezier(.18,.82,.25,1) 2.55s both;
+                will-change:transform,opacity;
+            }
+
             .cc-gear {
                 width:clamp(76px,12vw,112px);
                 height:clamp(76px,12vw,112px);
                 margin-bottom:22px;
                 filter:drop-shadow(0 0 18px rgba(255,255,255,.08));
+                transform-origin:50% 46%;
+                animation:cc-gear-spin 2.4s linear 4.1s infinite;
             }
 
             .cc-studio-name {
@@ -265,6 +272,18 @@ const Game = {
                 22% { opacity:1; transform:scale(1); }
                 78% { opacity:1; transform:scale(1); }
                 100% { opacity:0; transform:scale(1.02); }
+            }
+
+            @keyframes cc-gear-roll-in {
+                0% { opacity:0; transform:translateX(-65vw) rotate(-540deg) scale(.72); }
+                12% { opacity:1; }
+                78% { transform:translateX(8px) rotate(330deg) scale(1.04); }
+                100% { opacity:1; transform:translateX(0) rotate(360deg) scale(1); }
+            }
+
+            @keyframes cc-gear-spin {
+                from { transform:rotate(0deg); }
+                to { transform:rotate(360deg); }
             }
 
             @keyframes cc-menu-fade-in {
@@ -391,12 +410,14 @@ const Game = {
             </div>
 
             <div class="cc-boot-scene cc-boot-studio">
-                <svg class="cc-gear" viewBox="0 0 100 100" aria-label="Over Engineered Games gear logo">
-                    <path fill="#292929" stroke="#555" stroke-width="2"
-                        d="M43 3h14l3 10a38 38 0 0 1 8 3l9-6 10 10-6 9a38 38 0 0 1 3 8l10 3v14l-10 3a38 38 0 0 1-3 8l6 9-10 10-9-6a38 38 0 0 1-8 3l-3 10H43l-3-10a38 38 0 0 1-8-3l-9 6-10-10 6-9a38 38 0 0 1-3-8L6 53V39l10-3a38 38 0 0 1 3-8l-6-9 10-10 9 6a38 38 0 0 1 8-3z"/>
-                    <circle cx="50" cy="46" r="19" fill="#080808" stroke="#555" stroke-width="3"/>
-                    <circle cx="50" cy="46" r="8" fill="#292929"/>
-                </svg>
+                <div class="cc-gear-arrival">
+                    <svg class="cc-gear" viewBox="0 0 100 100" aria-label="Over Engineered Games gear logo">
+                        <path fill="#292929" stroke="#555" stroke-width="2"
+                            d="M43 3h14l3 10a38 38 0 0 1 8 3l9-6 10 10-6 9a38 38 0 0 1 3 8l10 3v14l-10 3a38 38 0 0 1-3 8l6 9-10 10-9-6a38 38 0 0 1-8 3l-3 10H43l-3-10a38 38 0 0 1-8-3l-9 6-10-10 6-9a38 38 0 0 1-3-8L6 53V39l10-3a38 38 0 0 1 3-8l-6-9 10-10 9 6a38 38 0 0 1 8-3z"/>
+                        <circle cx="50" cy="46" r="19" fill="#080808" stroke="#555" stroke-width="3"/>
+                        <circle cx="50" cy="46" r="8" fill="#292929"/>
+                    </svg>
+                </div>
                 <h2 class="cc-studio-name">Over Engineered Games</h2>
                 <div class="cc-studio-caption">Independent Game Development</div>
             </div>
@@ -421,7 +442,7 @@ const Game = {
             this.startScreen.classList.remove("cc-menu-enter");
             void this.startScreen.offsetWidth;
             this.startScreen.classList.add("cc-menu-enter");
-        }, 5350);
+        }, 6450);
     },
 
     createOverlay(id, html) {
