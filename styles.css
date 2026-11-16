@@ -449,3 +449,31 @@ body.cc-theme-light .forts-difficulty button[data-difficulty="mega"].active {
     background: #a72d3d;
     border-color: #7f1b29;
 }
+
+
+/* Utility building buttons */
+#btn-drill.active { background:#76502b; border-color:#e5b56b; }
+#btn-windmill.active { background:#35647b; border-color:#8ce5ff; }
+#btn-battery.active { background:#315f69; border-color:#70e4ed; }
+body.cc-theme-light #btn-drill.active { background:#ecd2a9; border-color:#a9793d; }
+body.cc-theme-light #btn-windmill.active { background:#c5e7f2; border-color:#5c9ab2; }
+body.cc-theme-light #btn-battery.active { background:#c3e7e9; border-color:#4a9ca5; }
+
+#placement-message {
+    position:fixed;
+    left:50%;
+    bottom:105px;
+    transform:translateX(-50%) translateY(8px);
+    padding:10px 16px;
+    border:1px solid #8ce5ff;
+    border-radius:7px;
+    background:rgba(8,18,29,.94);
+    color:#effaff;
+    font-size:13px;
+    font-weight:700;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s, transform .15s;
+    z-index:30;
+}
+#placement-message.visible { opacity:1; transform:translateX(-50%) translateY(0); }
