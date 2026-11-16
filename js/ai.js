@@ -11,7 +11,12 @@ const AI = {
 
     currentTarget: null,
     extraCannonBuilt: false,
-    cannonRange: 430,
+    // Scale range to the full battlefield so the AI can attack the fort
+    // itself, even before the player builds a forward cannon.
+    get cannonRange() {
+        const worldWidth = Physics.worldWidth || window.innerWidth * 1.5;
+        return Math.max(430, worldWidth * 0.85);
+    },
     expansionCount: 0,
     fortifyTimer: 0,
 
