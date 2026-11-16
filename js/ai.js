@@ -23,13 +23,13 @@ const AI = {
 
     settings: {
         easy: {
-            targetInterval: 0.65,
-            repairInterval: 6,
-            buildInterval: 11,
-            repairAmount: 5,
-            extraCannonTime: 16,
-            maxCannons: 5,
-            aimError: 0.24
+            targetInterval: 1.1,
+            repairInterval: 12,
+            buildInterval: 20,
+            repairAmount: 2,
+            extraCannonTime: 32,
+            maxCannons: 2,
+            aimError: 0.52
         },
 
         normal: {
@@ -124,8 +124,11 @@ const AI = {
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
         const leftX = Math.round(worldWidth * 0.62);
         const baseY = Building.groundY - Building.nodeRadius;
-        const preset = this.presetDefinitions[
-            Math.floor(Math.random() * this.presetDefinitions.length)
+        const availablePresets = this.difficulty === "easy"
+            ? this.presetDefinitions.filter(item => item.weapon === "cannon")
+            : this.presetDefinitions;
+        const preset = availablePresets[
+            Math.floor(Math.random() * availablePresets.length)
         ];
         this.activePreset = preset;
 
@@ -660,6 +663,9 @@ const AI = {
     },
 
     chooseAIWeaponType() {
+        // Easy mode uses standard cannons only; no rapid-fire or mega weapons.
+        if (this.difficulty === "easy") return "cannon";
+
         const roll = Math.random();
         if (roll < 0.38) return "machineGun";
         if (roll < 0.53) return "megaCannon";
