@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dist:win": "electron-builder --win nsis && electron-builder --win portable --config.directories.output=dist/portable && powershell -NoProfile -ExecutionPolicy Bypass -File .\\make-portable-zip.ps1",
-    "dist:portable": "electron-builder --win portable --config.directories.output=dist/portable && powershell -NoProfile -ExecutionPolicy Bypass -File .\\make-portable-zip.ps1",
+    "dist:portable": "electron-builder --win portable --publish never --config.directories.output=dist/portable && powershell -NoProfile -ExecutionPolicy Bypass -File .\\make-portable-zip.ps1",
     "release:win": "electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
