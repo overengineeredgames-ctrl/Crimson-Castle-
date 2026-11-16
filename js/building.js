@@ -244,47 +244,56 @@ const Building = {
         return strut;
     },
 
-    createStartingFort() {
+    createStartingFort(team = "player") {
         const cameraOffset = Math.max(
             0,
             (Physics.worldWidth - window.innerWidth) / 2
         );
 
+        const worldWidth = Physics.worldWidth || window.innerWidth * 1.5;
         const baseY = this.groundY - this.nodeRadius;
-        const leftX = cameraOffset + 100;
+
+        // Keep the player's fort on the left and mirror the same design
+        // onto the right side for the enemy.
+        const leftX = team === "enemy"
+            ? Math.round(worldWidth * 0.65)
+            : cameraOffset + 100;
         const rightX = leftX + 160;
 
         const bottomLeft = this.createNode(leftX, baseY, {
-            isFoundation: true
+            isFoundation: true,
+            team
         });
 
         const bottomRight = this.createNode(rightX, baseY, {
-            isFoundation: true
+            isFoundation: true,
+            team
         });
 
-        const topLeft = this.createNode(leftX, baseY - 140);
-        const topRight = this.createNode(rightX, baseY - 140);
+        const topLeft = this.createNode(leftX, baseY - 140, { team });
+        const topRight = this.createNode(rightX, baseY - 140, { team });
 
         const core = this.createCore(
             leftX + 80,
-            baseY - 90
+            baseY - 90,
+            team
         );
 
-        // Main frame.
+        // Use the exact same frame, braces, and core supports for both teams.
         this.createStrut(bottomLeft, bottomRight);
         this.createStrut(bottomLeft, topLeft);
         this.createStrut(bottomRight, topRight);
         this.createStrut(topLeft, topRight);
 
-        // Cross-bracing.
         this.createStrut(bottomLeft, topRight);
         this.createStrut(bottomRight, topLeft);
 
-        // Core supports.
         this.createStrut(topLeft, core);
         this.createStrut(topRight, core);
 
         this.checkSupport();
+
+        return { bottomLeft, bottomRight, topLeft, topRight, core };
     },
 
     isGroundConnected(node) {
