@@ -674,22 +674,30 @@ const Building = {
         for (const group of [...this.debris]) {
             if (group.removed) continue;
 
+            // Use Matter's actual collision bounds as well as the node radius.
+            // This is more reliable when the physics solver leaves a tiny gap
+            // between a falling wreck and the floor.
             const touchingGround = group.nodes.some(node => {
-                if (node.removed) return false;
+                if (node.removed || !node.body) return false;
                 const radius = node.isCore ? this.coreRadius : this.nodeRadius;
-                return node.body.position.y + radius >= this.groundY - 2;
+                const bottom = node.body.bounds?.max?.y ??
+                    (node.body.position.y + radius);
+                return bottom >= this.groundY - 8;
             });
 
-            if (touchingGround) group.grounded = true;
+            if (touchingGround && !group.grounded) {
+                group.grounded = true;
+                group.groundedTime = 0;
+            }
             if (!group.grounded) continue;
 
             group.groundedTime += delta;
 
-            // Let the wreck settle briefly, then fade it away.
-            const fadeProgress = Math.max(0, (group.groundedTime - 900) / 1800);
+            // Briefly settle, then fade the whole wreck over about 1.2 seconds.
+            const fadeProgress = Math.max(0, (group.groundedTime - 350) / 1200);
             group.alpha = Math.max(0, 1 - fadeProgress);
 
-            if (group.groundedTime < 2700) continue;
+            if (group.groundedTime < 1550) continue;
 
             group.removed = true;
             for (const node of group.nodes) {
