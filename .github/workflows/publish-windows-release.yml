@@ -29,11 +29,13 @@ jobs:
           $version = node -p "require('./package.json').version"
           $tag = "v$version"
           git fetch --tags
-          if (git tag --list $tag) {
-            git tag -d $tag
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
+          if ($LASTEXITCODE -ne 0) {
+            git tag $tag
+            git push origin "refs/tags/$tag"
+          } else {
+            Write-Host "Tag $tag already exists; using it."
           }
-          git tag $tag
-          git push origin "refs/tags/$tag"
 
       - name: Build and publish Windows installer
         run: npm run release:win
