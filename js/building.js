@@ -89,6 +89,34 @@ const Building = {
         return Math.hypot(a.x - b.x, a.y - b.y);
     },
 
+    // Create invisible, team-specific anchor joints along the floor only
+    // when construction needs one. This keeps the floor aligned without
+    // filling the physics world with thousands of unused bodies.
+    getGroundAnchor(x, team = "player") {
+        const anchorX = this.snap(x);
+        const anchorY = this.groundY - this.nodeRadius;
+        const existing = this.nodes.find(node =>
+            !node.removed &&
+            node.hidden &&
+            node.isFoundation &&
+            node.team === team &&
+            Math.abs(node.body.position.x - anchorX) < 1
+        );
+        if (existing) return existing;
+
+        return this.createNode(anchorX, anchorY, {
+            team,
+            isFoundation: true,
+            hidden: true
+        });
+    },
+
+    snapPointToGround(point, team = "player", threshold = 30) {
+        const groundNodeY = this.groundY - this.nodeRadius;
+        if (Math.abs(point.y - groundNodeY) > threshold) return null;
+        return this.getGroundAnchor(point.x, team);
+    },
+
     // Supports both getNearestNode(x, y, radius)
     // and the older getNearestNode({x, y}, radius) format.
     getNearestNode(x, y, radius = CONFIG.NODE_SNAP_RADIUS || 25) {
@@ -106,7 +134,7 @@ const Building = {
         let bestDistance = radius;
 
         for (const node of this.nodes) {
-            if (node.removed) continue;
+            if (node.removed || node.hidden) continue;
 
             const d = this.distance(node.body.position, { x, y });
 
@@ -187,6 +215,7 @@ const Building = {
             material: materialName,
             isFoundation,
             isCore,
+            hidden: !!options.hidden,
             canHoldMine: !isCore &&
                 Math.abs(y + (isCore ? this.coreRadius : this.nodeRadius) - this.groundY) <= 8,
             health: isCore ? this.coreHealth : material.maxHealth,
@@ -742,7 +771,8 @@ const Building = {
             y: (start.y + end.y) / 2 - 35
         };
 
-        const newNode = this.createNode(end.x, end.y);
+        const groundNode = this.snapPointToGround(end, startNode.team);
+        const newNode = groundNode || this.createNode(end.x, end.y);
         const diagonalNode = this.createNode(middle.x, middle.y);
 
         const first = this.createStrut(startNode, diagonalNode);
@@ -800,8 +830,10 @@ const Building = {
         const cost = material.cost * 7;
         if (!this.charge(cost)) return false;
 
-        const nodeA = this.createNode(newA.x, newA.y, { team: sourceStrut.team });
-        const nodeB = this.createNode(newB.x, newB.y, { team: sourceStrut.team });
+        const nodeA = this.snapPointToGround(newA, sourceStrut.team) ||
+            this.createNode(newA.x, newA.y, { team: sourceStrut.team });
+        const nodeB = this.snapPointToGround(newB, sourceStrut.team) ||
+            this.createNode(newB.x, newB.y, { team: sourceStrut.team });
         const center = this.createNode(
             (a.x + b.x + newA.x + newB.x) / 4,
             (a.y + b.y + newA.y + newB.y) / 4,
@@ -1247,6 +1279,8 @@ const Building = {
         }
 
         for (const node of this.nodes) {
+            if (node.hidden) continue;
+
             const p = node.body.position;
 
             ctx.beginPath();
