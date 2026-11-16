@@ -20,7 +20,7 @@ const AI = {
     settings: {
         easy: {
             targetInterval: 0.65,
-            repairInterval: 1.2,
+            repairInterval: 6,
             buildInterval: 11,
             repairAmount: 5,
             extraCannonTime: 9,
@@ -29,18 +29,18 @@ const AI = {
 
         normal: {
             targetInterval: 0.35,
-            repairInterval: 0.7,
+            repairInterval: 4,
             buildInterval: 6.5,
-            repairAmount: 9,
+            repairAmount: 8,
             extraCannonTime: 5,
             aimError: 0.12
         },
 
         hard: {
             targetInterval: 0.18,
-            repairInterval: 0.4,
+            repairInterval: 2.5,
             buildInterval: 4.5,
-            repairAmount: 14,
+            repairAmount: 12,
             extraCannonTime: 3.5,
             aimError: 0.06
         }
@@ -568,6 +568,65 @@ const AI = {
         this.buildForwardCannon();
     },
 
+    // Prevent an AI expansion from overlapping or cutting through player defenses.
+    segmentDistance(a1, a2, b1, b2) {
+        const orient = (p, q, r) =>
+            (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+        const onSegment = (p, q, r) =>
+            Math.min(p.x, r.x) - 0.001 <= q.x &&
+            q.x <= Math.max(p.x, r.x) + 0.001 &&
+            Math.min(p.y, r.y) - 0.001 <= q.y &&
+            q.y <= Math.max(p.y, r.y) + 0.001;
+        const o1 = orient(a1, a2, b1);
+        const o2 = orient(a1, a2, b2);
+        const o3 = orient(b1, b2, a1);
+        const o4 = orient(b1, b2, a2);
+        if (
+            ((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) &&
+            ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))
+        ) return 0;
+        if (o1 === 0 && onSegment(a1, b1, a2)) return 0;
+        if (o2 === 0 && onSegment(a1, b2, a2)) return 0;
+        if (o3 === 0 && onSegment(b1, a1, b2)) return 0;
+        if (o4 === 0 && onSegment(b1, a2, b2)) return 0;
+        return Math.min(
+            Building.pointToSegmentDistance(a1.x, a1.y, b1, b2),
+            Building.pointToSegmentDistance(a2.x, a2.y, b1, b2),
+            Building.pointToSegmentDistance(b1.x, b1.y, a1, a2),
+            Building.pointToSegmentDistance(b2.x, b2.y, a1, a2)
+        );
+    },
+
+    wouldCrossPlayerDefense(points, plannedSegments) {
+        const playerNodes = this.getPlayerNodes();
+        const playerStruts = this.getPlayerStruts();
+        const clearance = 30;
+
+        for (const point of points) {
+            for (const node of playerNodes) {
+                if (Building.distance(point, node.body.position) < clearance + Building.nodeRadius) {
+                    return true;
+                }
+            }
+            for (const strut of playerStruts) {
+                if (Building.pointToSegmentDistance(
+                    point.x, point.y,
+                    strut.a.body.position, strut.b.body.position
+                ) < clearance) return true;
+            }
+        }
+
+        for (const [start, end] of plannedSegments) {
+            for (const strut of playerStruts) {
+                if (this.segmentDistance(
+                    start, end,
+                    strut.a.body.position, strut.b.body.position
+                ) < clearance) return true;
+            }
+        }
+        return false;
+    },
+
     buildForwardCannon() {
         const enemyNodes = Building.nodes.filter(node =>
             node.team === "enemy" && !node.removed && !node.isCore
@@ -585,6 +644,23 @@ const AI = {
         if (x < 80) return false;
 
         const mountY = anchor.body.position.y;
+        const plannedMount = { x, y: mountY };
+        const plannedUpper = { x, y: mountY - 100 };
+        const plannedSegments = [
+            [anchor.body.position, plannedMount],
+            [anchor.body.position, plannedUpper],
+            [plannedMount, plannedUpper]
+        ];
+
+        // Stop at the player's actual wall instead of spawning AI beams through it.
+        if (this.wouldCrossPlayerDefense(
+            [plannedMount, plannedUpper],
+            plannedSegments
+        )) {
+            this.extraCannonTimer = 0;
+            return false;
+        }
+
         const mount = Building.createNode(x, mountY, {
             team: "enemy",
             material: "steel"
