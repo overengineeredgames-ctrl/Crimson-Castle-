@@ -478,7 +478,7 @@ const Weapons = {
                 !node.isCore &&
                 node.team === "player" &&
                 Building.resources.metal >= this.mineMetalCost &&
-                (node.canHoldMine || Building.isGroundConnected(node)) &&
+                node.canHoldMine &&
                 !Building.mines.some(mine => mine.node === node)
             );
 
