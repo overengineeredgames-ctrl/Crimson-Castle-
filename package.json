@@ -1,6 +1,6 @@
 {
   "name": "crimson-castle",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Crimson Castle - a fortress warfare game",
   "main": "electron-main.js",
   "scripts": {
