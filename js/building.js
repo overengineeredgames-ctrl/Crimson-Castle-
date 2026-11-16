@@ -166,8 +166,13 @@ const Building = {
                 // can pull a structure into a compressed, unstable shape.
                 // Different teams use different groups, so enemy structures
                 // can still collide with one another.
+                // Structural joints are never physically colliding.
+                // Their constraints provide the fort's structural behavior;
+                // avoiding joint contacts prevents self-collision impulses.
                 collisionFilter: {
-                    group: team === "enemy" ? -2 : -1
+                    category: team === "enemy" ? 0x0004 : 0x0002,
+                    mask: 0x0001,
+                    group: 0
                 },
 
                 label: isCore ? "fort-core" : "fort-node"
@@ -329,6 +334,13 @@ const Building = {
             {
                 isStatic: true,
                 isSensor: true,
+                // Beam sensors detect projectile hits but never collide
+                // physically with joints, beams, or the opposing fort.
+                collisionFilter: {
+                    category: nodeA.team === "enemy" ? 0x0008 : 0x0004,
+                    mask: 0x0001,
+                    group: 0
+                },
                 friction: 0,
                 restitution: 0,
                 angle: Math.atan2(b.y - a.y, b.x - a.x),
