@@ -1422,10 +1422,20 @@ const Building = {
             length < 5 || length > material.maxLength
         )) return false;
 
-        const cost = material.cost * 7;
+        // A box adds three outer beams. Braces are optional, so do not
+        // make the whole build fail just because its center joint is blocked.
+        const cost = material.cost * 3;
         const resource = this.buildingResource();
-        if (!this.charge(cost, resource)) return false;
+        if (!this.charge(cost, resource)) {
+            this.showPlacementMessage(
+                "Not enough " + (resource === "wood" ? "wood" : "metal") +
+                " to build this box."
+            );
+            return false;
+        }
 
+        const nodeAWasExisting = !!endpointA.node;
+        const nodeBWasExisting = !!endpointB.node;
         const nodeA = endpointA.node ||
             this.createNode(newA.x, newA.y, { team: sourceStrut.team });
         const nodeB = endpointB.node ||
@@ -1436,7 +1446,11 @@ const Building = {
             { team: sourceStrut.team }
         );
 
-        const createdNodes = [nodeA, nodeB, center].filter(Boolean);
+        const createdNodes = [];
+        if (nodeA && !nodeAWasExisting) createdNodes.push(nodeA);
+        if (nodeB && !nodeBWasExisting) createdNodes.push(nodeB);
+        if (center) createdNodes.push(center);
+
         const createdBeams = [];
         const rollback = () => {
             for (const beam of createdBeams) this.removeStrut(beam, false);
@@ -1447,8 +1461,9 @@ const Building = {
             this.updateHUD();
         };
 
-        if (!nodeA || !nodeB || !center) {
+        if (!nodeA || !nodeB) {
             rollback();
+            this.showPlacementMessage("Couldn't place the box joints there. Try a little more space.");
             return false;
         }
 
@@ -1471,18 +1486,21 @@ const Building = {
 
         // Add split X braces where valid, but preserve the completed frame
         // if nearby joints or beams prevent one of the diagonals.
-        const bracePairs = [
-            [sourceStrut.a, center],
-            [center, nodeB],
-            [sourceStrut.b, center],
-            [center, nodeA]
-        ];
-        for (const [from, to] of bracePairs) {
-            const brace = this.createStrut(from, to, { material: materialName });
-            if (brace) createdBeams.push(brace);
+        if (center) {
+            const bracePairs = [
+                [sourceStrut.a, center],
+                [center, nodeB],
+                [sourceStrut.b, center],
+                [center, nodeA]
+            ];
+            for (const [from, to] of bracePairs) {
+                const brace = this.createStrut(from, to, { material: materialName });
+                if (brace) createdBeams.push(brace);
+            }
         }
 
         this.checkSupport();
+        this.showPlacementMessage("Box built!");
         return true;
     },
 
