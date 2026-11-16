@@ -6,6 +6,8 @@ const Building = {
     struts: [],
     mines: [],
     debris: [],
+    installations: [],
+    utilityTool: null,
     drag: null,
 
     repairMode: false,
@@ -61,6 +63,8 @@ const Building = {
         this.struts = [];
         this.mines = [];
         this.debris = [];
+        this.installations = [];
+        this.utilityTool = null;
         this.drag = null;
 
         this.resources = {
@@ -752,6 +756,226 @@ const Building = {
         if (removedAny) this.checkSupport();
     },
 
+    utilityDefinitions: {
+        drill: { name: "Metal Drill", metalCost: 130, energyCost: 0, drillRate: 5.5, powerUse: 3.5 },
+        windmill: { name: "Windmill", metalCost: 115, energyCost: 0 },
+        battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 }
+    },
+
+    createUtilityButtons() {
+        const toolbar = document.querySelector(".toolbar");
+        if (!toolbar) return;
+
+        const definitions = [
+            ["drill", "Metal Drill", "130 metal • uses 3.5 power/sec"],
+            ["windmill", "Windmill", "115 metal • variable power"],
+            ["battery", "Battery", "90 metal • +300 storage"]
+        ];
+
+        for (const [type, label, detail] of definitions) {
+            const id = "btn-" + type;
+            let button = document.getElementById(id);
+            if (!button) {
+                button = document.createElement("button");
+                button.id = id;
+                button.type = "button";
+                button.className = "tool";
+                button.dataset.toolCategory = "utilities";
+                button.innerHTML = label + "<small>" + detail + "</small>";
+                toolbar.appendChild(button);
+            }
+            button.onclick = () => this.setUtilityTool(
+                this.utilityTool === type ? null : type
+            );
+        }
+    },
+
+    setUtilityTool(type) {
+        if (type && !this.utilityDefinitions[type]) return;
+        this.utilityTool = type;
+        this.deleteMode = false;
+        this.repairMode = false;
+        this.repairTarget = null;
+        if (typeof Weapons !== "undefined" && Weapons.clearSelectedTool) {
+            Weapons.clearSelectedTool();
+        }
+        this.updateToolbar();
+    },
+
+    getEnclosedCells(team = "player") {
+        const adjacency = new Map();
+        const edgeSet = new Set();
+        const addEdge = (a, b) => {
+            if (!adjacency.has(a)) adjacency.set(a, new Set());
+            adjacency.get(a).add(b);
+            edgeSet.add(a.body.id + ":" + b.body.id);
+            edgeSet.add(b.body.id + ":" + a.body.id);
+        };
+
+        for (const strut of this.struts) {
+            if (strut.removed || strut.team !== team ||
+                !strut.a || !strut.b || strut.a.removed || strut.b.removed) continue;
+            addEdge(strut.a, strut.b);
+        }
+
+        const cells = [];
+        const seen = new Set();
+        for (const [a, neighbors] of adjacency) {
+            const list = [...neighbors];
+            for (let i = 0; i < list.length; i++) {
+                for (let j = i + 1; j < list.length; j++) {
+                    const b = list[i];
+                    const d = list[j];
+                    if (b === d) continue;
+                    const shared = [...(adjacency.get(b) || [])].filter(c =>
+                        c !== a && c !== d && adjacency.get(d)?.has(c)
+                    );
+                    for (const c of shared) {
+                        const ids = [a, b, c, d].map(n => n.body.id).sort((x,y) => x-y);
+                        const key = ids.join("-");
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        const nodes = [a, b, c, d];
+                        const center = {
+                            x: nodes.reduce((sum,n) => sum+n.body.position.x,0)/4,
+                            y: nodes.reduce((sum,n) => sum+n.body.position.y,0)/4
+                        };
+                        nodes.sort((n1,n2) =>
+                            Math.atan2(n1.body.position.y-center.y,n1.body.position.x-center.x) -
+                            Math.atan2(n2.body.position.y-center.y,n2.body.position.x-center.x)
+                        );
+                        const area = Math.abs(nodes.reduce((sum,n,k) => {
+                            const p=n.body.position, q=nodes[(k+1)%nodes.length].body.position;
+                            return sum + p.x*q.y-q.x*p.y;
+                        },0))/2;
+                        if (area < 900) continue;
+                        cells.push({
+                            nodes,
+                            center,
+                            polygon: nodes.map(n => ({x:n.body.position.x,y:n.body.position.y}))
+                        });
+                    }
+                }
+            }
+        }
+        return cells;
+    },
+
+    pointInPolygon(point, polygon) {
+        let inside = false;
+        for (let i=0,j=polygon.length-1;i<polygon.length;j=i++) {
+            const a=polygon[i], b=polygon[j];
+            const crosses=((a.y>point.y)!==(b.y>point.y)) &&
+                (point.x < (b.x-a.x)*(point.y-a.y)/(b.y-a.y+0.00001)+a.x);
+            if (crosses) inside=!inside;
+        }
+        return inside;
+    },
+
+    hasOpenAir(x, y, anchorNodes = []) {
+        const anchors = new Set(anchorNodes);
+        const clearance = 62;
+        for (const node of this.nodes) {
+            if (node.removed || node.team !== "player" || anchors.has(node)) continue;
+            if (this.distance({x,y}, node.body.position) < clearance) return false;
+        }
+        for (const strut of this.struts) {
+            if (strut.removed || strut.team !== "player") continue;
+            if (anchors.has(strut.a) && anchors.has(strut.b)) continue;
+            if (this.pointToSegmentDistance(
+                x,y,strut.a.body.position,strut.b.body.position
+            ) < clearance * 0.72) return false;
+        }
+        return true;
+    },
+
+    handleUtilityPointerDown(x, y) {
+        if (!this.utilityTool) return false;
+        const type = this.utilityTool;
+        const definition = this.utilityDefinitions[type];
+        const cell = this.getEnclosedCells("player").find(item =>
+            this.pointInPolygon({x,y}, item.polygon)
+        );
+
+        let anchorNodes = cell ? cell.nodes : [];
+        if (!anchorNodes.length) {
+            const nearest = this.nodes
+                .filter(node => node.team === "player" && !node.removed && !node.isCore)
+                .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
+                .filter(item => item.distance < 115)
+                .sort((a,b) => a.distance-b.distance)[0];
+            if (nearest) anchorNodes = [nearest.node];
+        }
+
+        if (!anchorNodes.length) return true;
+        if (type === "windmill" && !this.hasOpenAir(x,y,anchorNodes)) {
+            this.showPlacementMessage("Windmills need clear open air around them");
+            return true;
+        }
+        if (!this.charge(definition.metalCost)) return true;
+
+        const installation = {
+            type,
+            x, y,
+            anchorNodes: [...anchorNodes],
+            removed: false,
+            angle: 0,
+            phase: Math.random() * Math.PI * 2,
+            windSpeed: 0.5,
+            output: 0
+        };
+        this.installations.push(installation);
+        this.utilityTool = null;
+        this.updateToolbar();
+        this.updateHUD();
+        return true;
+    },
+
+    showPlacementMessage(message) {
+        const element = document.getElementById("placement-message");
+        if (!element) return;
+        element.textContent = message;
+        element.classList.add("visible");
+        clearTimeout(this.placementMessageTimer);
+        this.placementMessageTimer = setTimeout(() => element.classList.remove("visible"), 1800);
+    },
+
+    updateUtilities(delta = 16.667) {
+        const seconds = delta / 1000;
+        for (const item of [...this.installations]) {
+            if (!item.anchorNodes.some(node => node && !node.removed)) {
+                item.removed = true;
+                this.installations.splice(this.installations.indexOf(item),1);
+                continue;
+            }
+            if (item.type === "windmill") {
+                item.phase += seconds * 0.72;
+                item.windSpeed = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(item.phase));
+                item.output = 2 + item.windSpeed * 7;
+                item.angle += seconds * (1.2 + item.windSpeed * 5.5);
+            }
+            if (item.type === "drill") {
+                item.angle += seconds * 7;
+            }
+        }
+    },
+
+    getEnergyCapacity() {
+        return 100 + this.installations.filter(item =>
+            !item.removed && item.type === "battery"
+        ).length * this.utilityDefinitions.battery.capacity;
+    },
+
+    getEnergyProduction() {
+        const minePower = this.mines.filter(mine =>
+            mine && !mine.removed && mine.node && !mine.node.removed
+        ).reduce((sum,mine) => sum + (mine.energyPerSecond || 2),0);
+        const windPower = this.installations.filter(item =>
+            !item.removed && item.type === "windmill"
+        ).reduce((sum,item) => sum + item.output,0);
+        return minePower + windPower;
+    },
+
     addMine(node) {
         if (!node || node.team !== "player") return false;
         if (node.isCore || !node.canHoldMine) return false;
@@ -779,6 +1003,7 @@ const Building = {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
+        this.createUtilityButtons();
 
         if (woodButton) {
             woodButton.onclick = () => this.setMaterial("wood");
@@ -799,6 +1024,7 @@ const Building = {
         if (material !== "wood" && material !== "steel") return;
 
         this.material = material;
+        this.utilityTool = null;
         this.setDeleteMode(false);
         this.updateToolbar();
     },
@@ -806,6 +1032,7 @@ const Building = {
     setDeleteMode(enabled) {
         this.deleteMode = !!enabled;
         if (this.deleteMode) {
+            this.utilityTool = null;
             this.repairMode = false;
             this.repairTarget = null;
             if (typeof Weapons !== "undefined" && Weapons.clearSelectedTool) {
@@ -819,6 +1046,11 @@ const Building = {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
+
+        for (const type of Object.keys(this.utilityDefinitions)) {
+            const button = document.getElementById("btn-" + type);
+            if (button) button.classList.toggle("active", this.utilityTool === type);
+        }
 
         if (woodButton) {
             woodButton.classList.toggle("active", this.material === "wood");
@@ -1373,6 +1605,7 @@ const Building = {
     update(delta = 16.667) {
         this.updateRepair(delta);
         this.updateDebris(delta);
+        this.updateUtilities(delta);
 
         this.mines = this.mines.filter(mine =>
             this.nodes.includes(mine.node)
@@ -1448,6 +1681,7 @@ const Building = {
         if (!ctx) return;
 
         this.drawGrid(ctx);
+        this.drawEnclosedCells(ctx);
 
         for (const strut of this.struts) {
             ctx.save();
@@ -1622,6 +1856,8 @@ const Building = {
             ctx.restore();
         }
 
+        this.drawInstallations(ctx);
+
         for (const mine of this.mines) {
             ctx.save();
             if (mine.node.debrisGroup) {
@@ -1663,6 +1899,86 @@ const Building = {
                 ctx.lineWidth = target.width + 5;
                 ctx.strokeStyle = "rgba(80,255,130,0.7)";
                 ctx.stroke();
+            }
+            ctx.restore();
+        }
+    },
+
+    drawEnclosedCells(ctx) {
+        for (const cell of this.getEnclosedCells("player")) {
+            const points = cell.nodes.map(node => node.body.position);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x,points[0].y);
+            for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x,points[i].y);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(5, 9, 16, 0.48)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(8, 13, 22, 0.35)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+    },
+
+    drawInstallations(ctx) {
+        for (const item of this.installations) {
+            if (item.removed) continue;
+            const {x,y} = item;
+            ctx.save();
+            if (item.type === "drill") {
+                ctx.translate(x,y);
+                ctx.fillStyle = "#263746";
+                ctx.fillRect(-19,-12,38,25);
+                ctx.fillStyle = "#9aa9b5";
+                ctx.fillRect(-14,-17,28,8);
+                ctx.fillStyle = "#d5a94f";
+                ctx.fillRect(-5,-9,10,19);
+                ctx.save();
+                ctx.translate(0,12);
+                ctx.rotate(item.angle);
+                ctx.fillStyle = "#b9c7d2";
+                ctx.beginPath();
+                ctx.moveTo(-5,0); ctx.lineTo(5,0); ctx.lineTo(0,19);
+                ctx.closePath(); ctx.fill();
+                ctx.restore();
+                ctx.fillStyle = "#65dfff";
+                ctx.beginPath(); ctx.arc(0,-2,3,0,Math.PI*2); ctx.fill();
+            } else if (item.type === "windmill") {
+                ctx.translate(x,y);
+                ctx.strokeStyle = "#b8c9d7";
+                ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(0,-29); ctx.stroke();
+                ctx.fillStyle = "#d8e4ec";
+                ctx.beginPath(); ctx.arc(0,-29,5,0,Math.PI*2); ctx.fill();
+                ctx.save();
+                ctx.translate(0,-29);
+                ctx.rotate(item.angle);
+                ctx.fillStyle = "#e5edf4";
+                for (let i=0;i<3;i++) {
+                    ctx.rotate(Math.PI*2/3);
+                    ctx.beginPath();
+                    ctx.moveTo(-3,-4); ctx.lineTo(3,-4);
+                    ctx.lineTo(7,-48); ctx.lineTo(-7,-48);
+                    ctx.closePath(); ctx.fill();
+                }
+                ctx.restore();
+                ctx.fillStyle = "#68d7ff";
+                ctx.font = "bold 10px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(Math.round(item.output) + "⚡",0,34);
+            } else if (item.type === "battery") {
+                ctx.translate(x,y);
+                ctx.fillStyle = "#263b4b";
+                ctx.fillRect(-19,-22,38,44);
+                ctx.fillStyle = "#90a8ba";
+                ctx.fillRect(-8,-27,16,5);
+                ctx.strokeStyle = "#55d9ff";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-13,-16,26,32);
+                ctx.fillStyle = "#55d9ff";
+                ctx.fillRect(-4,-10,8,20);
+                ctx.fillRect(-9,-4,18,8);
             }
             ctx.restore();
         }
