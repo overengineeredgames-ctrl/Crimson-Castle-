@@ -788,6 +788,7 @@ const Game = {
             if (event.key.toLowerCase() === "r") {
                 Building.setRepairMode(!Building.repairMode, this.difficulty);
                 Weapons.selectedCannon = null;
+                Weapons.selectedCannons = [];
                 Weapons.clearSelectedTool();
             }
 
