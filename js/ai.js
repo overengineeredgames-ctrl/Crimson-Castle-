@@ -28,7 +28,8 @@ const AI = {
             repairInterval: 6,
             buildInterval: 11,
             repairAmount: 5,
-            extraCannonTime: 9,
+            extraCannonTime: 16,
+            maxCannons: 2,
             aimError: 0.24
         },
 
@@ -37,7 +38,8 @@ const AI = {
             repairInterval: 4,
             buildInterval: 6.5,
             repairAmount: 8,
-            extraCannonTime: 5,
+            extraCannonTime: 11,
+            maxCannons: 3,
             aimError: 0.12
         },
 
@@ -46,7 +48,8 @@ const AI = {
             repairInterval: 2.5,
             buildInterval: 4.5,
             repairAmount: 12,
-            extraCannonTime: 3.5,
+            extraCannonTime: 8,
+            maxCannons: 4,
             aimError: 0.06
         }
     },
@@ -554,21 +557,17 @@ const AI = {
     },
 
     buildExtraCannon() {
-        // Expand only when no enemy cannon currently has a target in range.
         const enemyCannons = Weapons.cannons.filter(cannon =>
-            cannon.team === "enemy" && cannon.node && !cannon.node.removed
+            cannon.team === "enemy" &&
+            cannon.node &&
+            !cannon.node.removed
         );
-        if (!enemyCannons.length) return;
 
-        const hasShot = enemyCannons.some(cannon => {
-            const target = this.findBestTarget(cannon);
-            if (!target) return false;
-            const from = cannon.node.body.position;
-            const point = this.getTargetPoint(target);
-            return Math.hypot(point.x - from.x, point.y - from.y) <= this.cannonRange;
-        });
-
-        if (hasShot) return;
+        // The old logic only expanded when the player was outside cannon
+        // range. Since cannonRange covers most of the battlefield, the AI
+        // almost never built anything after its starting turret.
+        // Build according to a deliberate expansion schedule instead.
+        if (enemyCannons.length >= this.config.maxCannons) return;
         if (this.extraCannonTimer < this.config.extraCannonTime) return;
 
         this.buildForwardCannon();
