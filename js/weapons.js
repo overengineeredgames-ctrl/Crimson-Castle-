@@ -294,7 +294,6 @@ const Weapons = {
         if (
             !node ||
             node.removed ||
-            node.isFoundation ||
             node.isCore ||
             node.team !== "player"
         ) {
@@ -474,7 +473,6 @@ const Weapons = {
             const valid = !!(
                 node &&
                 !node.removed &&
-                !node.isFoundation &&
                 !node.isCore &&
                 node.team === "player" &&
                 Building.resources.metal >= this.mineMetalCost &&
