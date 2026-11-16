@@ -48,7 +48,7 @@
           ]
         }
       ],
-      "icon": "CrimsonCastle.ico"
+      "icon": null
     },
     "nsis": {
       "oneClick": false,
