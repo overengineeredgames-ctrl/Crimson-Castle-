@@ -71,55 +71,81 @@ const AI = {
         this.createEnemyFort();
     },
 
+    presetDefinitions: [
+        {
+            name: "Classic Bastion",
+            weapon: "cannon",
+            points: { left: [0, -140], right: [160, -140] },
+            edges: [["bl","br"],["bl","left"],["br","right"],["left","right"],["bl","right"],["br","left"],["left","core"],["right","core"]],
+            mount: "right"
+        },
+        {
+            name: "Watchtower",
+            weapon: "machineGun",
+            points: { foot: [80, -100], mid: [80, -190], top: [80, -270], left: [20, -165], right: [140, -165] },
+            edges: [["bl","br"],["bl","foot"],["br","foot"],["foot","left"],["foot","right"],["left","mid"],["right","mid"],["mid","top"],["left","right"],["foot","core"],["mid","core"]],
+            mount: "top"
+        },
+        {
+            name: "Armored Bunker",
+            weapon: "megaCannon",
+            points: { outerLeft: [0, -110], outerRight: [160, -110], roofLeft: [0, -190], roofRight: [160, -190], turret: [80, -190] },
+            edges: [["bl","br"],["bl","outerLeft"],["br","outerRight"],["outerLeft","roofLeft"],["outerRight","roofRight"],["roofLeft","roofRight"],["outerLeft","outerRight"],["roofLeft","turret"],["roofRight","turret"],["outerLeft","core"],["outerRight","core"],["turret","core"]],
+            mount: "turret"
+        },
+        {
+            name: "Sloped Rampart",
+            weapon: "cannon",
+            points: { lowLeft: [30, -100], midLeft: [60, -170], high: [120, -220], midRight: [170, -160], lowRight: [140, -90] },
+            edges: [["bl","br"],["bl","lowLeft"],["br","lowRight"],["lowLeft","midLeft"],["midLeft","high"],["high","midRight"],["midRight","lowRight"],["lowLeft","lowRight"],["lowLeft","high"],["lowRight","high"],["lowLeft","core"],["lowRight","core"],["high","core"]],
+            mount: "high"
+        },
+        {
+            name: "Diamond Citadel",
+            weapon: "machineGun",
+            points: { left: [20, -110], upperLeft: [50, -200], top: [110, -230], upperRight: [170, -180], right: [150, -90] },
+            edges: [["bl","br"],["bl","left"],["br","right"],["left","upperLeft"],["upperLeft","top"],["top","upperRight"],["upperRight","right"],["left","right"],["left","upperRight"],["right","upperLeft"],["left","core"],["right","core"],["top","core"]],
+            mount: "top"
+        }
+    ],
+    activePreset: null,
+
     createEnemyFort() {
-        // Build the AI fort independently; do not modify the player's template.
-        const worldWidth = Physics.worldWidth || window.innerWidth * 1.5;
-        const leftX = Math.round(worldWidth * 0.65);
-        const rightX = leftX + 120;
+        const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
+        const leftX = Math.round(worldWidth * 0.68);
         const baseY = Building.groundY - Building.nodeRadius;
+        const preset = this.presetDefinitions[
+            Math.floor(Math.random() * this.presetDefinitions.length)
+        ];
+        this.activePreset = preset;
 
-        const bottomLeft = Building.createNode(leftX, baseY, {
-            isFoundation: true,
-            isBaseAnchor: true,
-            team: "enemy"
-        });
-        const bottomRight = Building.createNode(rightX, baseY, {
-            isFoundation: true,
-            isBaseAnchor: true,
-            team: "enemy"
-        });
+        const nodes = {
+            bl: Building.createNode(leftX, baseY, {
+                isFoundation: true, isBaseAnchor: true, team: "enemy"
+            }),
+            br: Building.createNode(leftX + 160, baseY, {
+                isFoundation: true, isBaseAnchor: true, team: "enemy"
+            })
+        };
 
-        const topLeft = Building.createNode(leftX, baseY - 140, {
-            team: "enemy"
-        });
-        const topRight = Building.createNode(rightX, baseY - 140, {
-            team: "enemy"
-        });
+        for (const [key, offset] of Object.entries(preset.points)) {
+            nodes[key] = Building.createNode(
+                leftX + offset[0],
+                baseY + offset[1],
+                { team: "enemy", material: "steel" }
+            );
+        }
 
-        const core = Building.createCore(
-            (leftX + rightX) / 2,
-            baseY - 90,
-            "enemy"
-        );
+        nodes.core = Building.createCore(leftX + 80, baseY - 90, "enemy");
 
-        // Outer frame and crossing braces.
-        Building.createStrut(bottomLeft, bottomRight);
-        Building.createStrut(bottomLeft, topLeft);
-        Building.createStrut(bottomRight, topRight);
-        Building.createStrut(topLeft, topRight);
-        Building.createStrut(bottomLeft, topRight);
-        Building.createStrut(bottomRight, topLeft);
-
-        // The two lower supports meet at the centered core, forming an / shape.
-        Building.createStrut(bottomLeft, core);
-        Building.createStrut(bottomRight, core);
-
-        // Support the core from the upper frame as well.
-        Building.createStrut(topLeft, core);
-        Building.createStrut(topRight, core);
+        for (const [a, b] of preset.edges) {
+            if (nodes[a] && nodes[b]) {
+                Building.createStrut(nodes[a], nodes[b], { material: "steel" });
+            }
+        }
 
         Building.checkSupport();
-        Weapons.addCannon(topRight, "enemy", true);
+        Weapons.addCannon(nodes[preset.mount] || nodes.right || nodes.left, "enemy", true, preset.weapon);
     },
     getPlayerNodes() {
         return Building.nodes.filter(node =>
@@ -352,7 +378,8 @@ const AI = {
         const originalPoint = this.getTargetPoint(target);
         const velocity = this.getTargetVelocity(target);
 
-        const speed = Weapons.projectileSpeed || 12;
+        const weaponStats = Weapons.weaponStats[cannon.weaponType] || Weapons.weaponStats.cannon;
+        const speed = weaponStats.speed || Weapons.projectileSpeed || 12;
 
         let predictedPoint = {
             x: originalPoint.x,
@@ -579,7 +606,7 @@ const AI = {
         );
 
         if (mount) {
-            Weapons.addCannon(mount, "enemy", true);
+            Weapons.addCannon(mount, "enemy", true, this.chooseAIWeaponType());
             return;
         }
 
@@ -612,7 +639,14 @@ const AI = {
         }
 
         Building.checkSupport();
-        Weapons.addCannon(recoveryNode, "enemy", true);
+        Weapons.addCannon(recoveryNode, "enemy", true, this.chooseAIWeaponType());
+    },
+
+    chooseAIWeaponType() {
+        const roll = Math.random();
+        if (roll < 0.38) return "machineGun";
+        if (roll < 0.53) return "megaCannon";
+        return "cannon";
     },
 
     buildExtraCannon() {
@@ -767,7 +801,7 @@ const AI = {
         }
 
         Building.checkSupport();
-        Weapons.addCannon(mount, "enemy", true);
+        Weapons.addCannon(mount, "enemy", true, this.chooseAIWeaponType());
         this.expansionCount++;
         this.extraCannonTimer = 0;
         return true;
