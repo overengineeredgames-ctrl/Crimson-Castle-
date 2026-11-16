@@ -401,3 +401,24 @@ body.cc-theme-light .toolbar-scroll {
 }
 body.cc-theme-light .toolbar-scroll::-webkit-scrollbar-track { background: #dce7f0; }
 body.cc-theme-light .toolbar-scroll::-webkit-scrollbar-thumb { background: #8ca8bf; }
+
+
+/* Distinct weapon selection colors */
+#btn-machine-gun.active {
+    background: #8a6b25;
+    border-color: #f3cf62;
+    box-shadow: 0 0 12px rgba(243, 207, 98, .35);
+}
+#btn-mega-cannon.active {
+    background: #713b89;
+    border-color: #d98aff;
+    box-shadow: 0 0 12px rgba(217, 138, 255, .4);
+}
+body.cc-theme-light #btn-machine-gun.active {
+    background: #f0d98e;
+    border-color: #a9801f;
+}
+body.cc-theme-light #btn-mega-cannon.active {
+    background: #dfc0ef;
+    border-color: #9560ad;
+}
