@@ -161,6 +161,15 @@ const Building = {
                 // Foundations remain anchored to the ground.
                 isStatic: isFoundation,
 
+                // Connected joints in one fortress must not collide with
+                // each other: those contacts fight the beam constraints and
+                // can pull a structure into a compressed, unstable shape.
+                // Different teams use different groups, so enemy structures
+                // can still collide with one another.
+                collisionFilter: {
+                    group: team === "enemy" ? -2 : -1
+                },
+
                 label: isCore ? "fort-core" : "fort-node"
             }
         );
