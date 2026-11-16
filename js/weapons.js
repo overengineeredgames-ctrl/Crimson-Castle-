@@ -52,8 +52,8 @@ const Weapons = {
             };
         }
 
-        this.createWeaponButton("machine-gun", "Machine Gun", "machineGun", "140 Metal");
-        this.createWeaponButton("mega-cannon", "Mega Cannon", "megaCannon", "260 Metal");
+        this.createWeaponButton("machine-gun", "Machine Gun", "machineGun", "140 Metal / 70 Energy");
+        this.createWeaponButton("mega-cannon", "Mega Cannon", "megaCannon", "260 Metal / 130 Energy");
 
         let mineButton = document.getElementById("btn-mine");
 
@@ -106,6 +106,9 @@ const Weapons = {
             button.className = "tool";
             button.dataset.toolCategory = "weapons";
             button.innerHTML = label + "<small>" + costLabel + "</small>";
+            button.title = weaponType === "machineGun"
+                ? "7 damage per shot • 0.12 second reload • hold to fire"
+                : "220 damage • 15 second reload • visible cooldown";
             const cannonButton = document.getElementById("btn-cannon");
             const previousButton = weaponType === "megaCannon"
                 ? document.getElementById("btn-machine-gun") || cannonButton
