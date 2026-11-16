@@ -206,6 +206,7 @@ const Game = {
             .cc-fast-boot .cc-boot-studio { animation-duration:1.1s; animation-delay:.65s; }
             .cc-fast-boot .cc-gear-arrival { animation-duration:.65s; animation-delay:.7s; }
             .cc-fast-boot .cc-gear { animation-duration:1.5s; animation-delay:1.35s; }
+            .cc-boot-screen { background:#050505 !important; color:#f3f3f3 !important; }
 
             .forts-pause-label {
                 color:#f0c45b;
@@ -838,7 +839,9 @@ const Game = {
         ctx.save();
 
         ctx.font = "13px Arial";
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.fillStyle = this.preferences.theme === "light"
+            ? "rgba(20,35,48,0.92)"
+            : "rgba(255,255,255,0.95)";
         ctx.textAlign = "left";
 
         ctx.fillText(
