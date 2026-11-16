@@ -164,3 +164,73 @@ html, body {
         padding: 7px;
     }
 }
+
+
+/* Saved light-theme preference */
+body.cc-theme-light {
+    background: #e9f0f6;
+}
+body.cc-theme-light #hud {
+    background: rgba(235, 242, 248, 0.97);
+    border-bottom-color: #aabaca;
+    color: #172536;
+}
+body.cc-theme-light .game-title {
+    color: #17334d;
+    text-shadow: none;
+}
+body.cc-theme-light .resources,
+body.cc-theme-light .resources .resource,
+body.cc-theme-light .resources .resource span,
+body.cc-theme-light #metal-count,
+body.cc-theme-light #energy-count {
+    color: #172536;
+}
+body.cc-theme-light .resource {
+    background: #dce7f0;
+    border-color: #a9bac9;
+}
+body.cc-theme-light .tool {
+    background: #d7e2ec;
+    color: #172536;
+    border-color: #9aafc1;
+}
+body.cc-theme-light .tool small {
+    color: #526a80;
+}
+body.cc-theme-light .tool:hover {
+    background: #c2d4e3;
+}
+body.cc-theme-light .tool.active {
+    background: #8fc4ef;
+    border-color: #347db6;
+}
+body.cc-theme-light #btn-steel.active {
+    background: #b7c8d5;
+    border-color: #627b8e;
+}
+body.cc-theme-light .forts-overlay {
+    background: radial-gradient(circle at center, rgba(232, 241, 248, .96), rgba(204, 219, 232, .98)) !important;
+    color: #172536 !important;
+}
+body.cc-theme-light .forts-menu-card {
+    background: linear-gradient(145deg, #f8fbfd, #dce7f0) !important;
+    border-color: #9fb2c3 !important;
+    box-shadow: 0 20px 65px rgba(30, 55, 75, .2) !important;
+}
+body.cc-theme-light .forts-menu-subtitle,
+body.cc-theme-light .forts-settings-row small {
+    color: #52677a !important;
+}
+body.cc-theme-light .forts-difficulty button {
+    background: #e5edf4;
+    color: #263d51;
+    border-color: #a6b8c8;
+}
+body.cc-theme-light .forts-menu-help {
+    color: #60768a;
+}
+body.cc-theme-light .forts-settings-row {
+    background: rgba(255,255,255,.55);
+    border-color: #b2c2d0;
+}
