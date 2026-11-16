@@ -244,44 +244,32 @@ const Building = {
         return strut;
     },
 
-    createStartingFort(team = "player") {
+    createStartingFort() {
         const cameraOffset = Math.max(
             0,
             (Physics.worldWidth - window.innerWidth) / 2
         );
 
-        const worldWidth = Physics.worldWidth || window.innerWidth * 1.5;
+        const leftX = cameraOffset + 100;
+        const rightX = leftX + 160;
         const baseY = this.groundY - this.nodeRadius;
 
-        // Keep the player's fort on the left and mirror the same design
-        // onto the right side for the enemy.
-        const leftX = team === "enemy"
-            ? Math.round(worldWidth * 0.65)
-            : cameraOffset + 100;
-        // The enemy uses a slightly narrower span so both crossing
-        // braces are comfortably below the maximum strut length.
-        const rightX = leftX + (team === "enemy" ? 120 : 160);
-
         const bottomLeft = this.createNode(leftX, baseY, {
-            isFoundation: true,
-            team
+            isFoundation: true
         });
 
         const bottomRight = this.createNode(rightX, baseY, {
-            isFoundation: true,
-            team
+            isFoundation: true
         });
 
-        const topLeft = this.createNode(leftX, baseY - 140, { team });
-        const topRight = this.createNode(rightX, baseY - 140, { team });
+        const topLeft = this.createNode(leftX, baseY - 140);
+        const topRight = this.createNode(rightX, baseY - 140);
 
         const core = this.createCore(
-            (leftX + rightX) / 2,
-            baseY - 90,
-            team
+            leftX + 80,
+            baseY - 90
         );
 
-        // Use the exact same frame, braces, and core supports for both teams.
         this.createStrut(bottomLeft, bottomRight);
         this.createStrut(bottomLeft, topLeft);
         this.createStrut(bottomRight, topRight);
@@ -293,13 +281,7 @@ const Building = {
         this.createStrut(topLeft, core);
         this.createStrut(topRight, core);
 
-        // Lower diagonal supports rise from both foundations to the centered core.
-        this.createStrut(bottomLeft, core);
-        this.createStrut(bottomRight, core);
-
         this.checkSupport();
-
-        return { bottomLeft, bottomRight, topLeft, topRight, core };
     },
 
     isGroundConnected(node) {
