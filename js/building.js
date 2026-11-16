@@ -438,7 +438,7 @@ const Building = {
         return true;
     },
 
-    getStrutAtPoint(x, y, maxDistance = 16) {
+    getStrutAtPoint(x, y, maxDistance = 26) {
         let closest = null;
         let bestDistance = maxDistance;
 
@@ -465,7 +465,7 @@ const Building = {
     },
 
     startDrag(x, y, mode = "beam") {
-        const node = this.getNearestNode(x, y, 12);
+        const node = this.getNearestNode(x, y, 10);
 
         // Joints take priority near beam endpoints; beam middles extrude boxes.
         if (!node) {
@@ -662,27 +662,32 @@ const Building = {
             length < 5 || length > material.maxLength
         )) return false;
 
-        const cost = material.cost * 5;
+        const cost = material.cost * 7;
         if (!this.charge(cost)) return false;
 
-        const nodeA = this.createNode(newA.x, newA.y, {
-            team: sourceStrut.team
-        });
-        const nodeB = this.createNode(newB.x, newB.y, {
-            team: sourceStrut.team
-        });
+        const nodeA = this.createNode(newA.x, newA.y, { team: sourceStrut.team });
+        const nodeB = this.createNode(newB.x, newB.y, { team: sourceStrut.team });
+        const center = this.createNode(
+            (newA.x + newB.x) / 2,
+            (newA.y + newB.y) / 2,
+            { team: sourceStrut.team }
+        );
 
+        // Split the X at its crossing so every brace stays within beam length limits.
         const created = [
             this.createStrut(sourceStrut.a, nodeA),
             this.createStrut(sourceStrut.b, nodeB),
             this.createStrut(nodeA, nodeB),
-            this.createStrut(sourceStrut.a, nodeB),
-            this.createStrut(sourceStrut.b, nodeA)
+            this.createStrut(sourceStrut.a, center),
+            this.createStrut(center, nodeB),
+            this.createStrut(sourceStrut.b, center),
+            this.createStrut(center, nodeA)
         ];
 
         if (created.some(strut => !strut)) {
             this.removeNode(nodeA);
             this.removeNode(nodeB);
+            this.removeNode(center);
             this.resources.metal += cost;
             this.updateHUD();
             return false;
