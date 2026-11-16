@@ -1,14 +1,17 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.0",
-  "releaseDate": "2026-11-16T01:34:46.546Z",
+  "version": "1.0.1",
+  "releaseDate": "2026-11-15T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle initial release",
-  "description": "Official Crimson Castle release manifest. The game checks this file at startup and uses it to decide whether an update prompt should be shown.",
+  "title": "Crimson Castle 1.0.1",
+  "description": "Crimson Castle 1.0.1 is available.",
   "changes": [
-    "Established the initial Crimson Castle version record.",
-    "Added a central update-information file for the game's startup update prompt."
+    "Improved enemy fort building and construction strategy.",
+    "Prevented player building pieces from being placed through enemy fort structures.",
+    "Added safer Delete Mode with a D-key shortcut.",
+    "Improved settings, theme preferences, and fast boot.",
+    "Improved version display and update-check messaging."
   ],
   "required": false,
   "minimumVersion": "1.0.0"
