@@ -405,7 +405,9 @@ const Weapons = {
         );
 
         this.selectedCannons = this.selectedCannons.filter(cannon =>
-            this.cannons.includes(cannon) && cannon.team === "player"
+            this.cannons.includes(cannon) &&
+            cannon.team === "player" &&
+            !cannon.detached
         ).slice(0, 3);
         this.selectedCannon = this.selectedCannons[0] || null;
     },
