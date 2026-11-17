@@ -120,7 +120,8 @@ const Physics = {
             this.rightWall
         ]);
 
-        this.generateTerrain();\n        this.setupCollisions();
+        this.generateTerrain();
+        this.setupCollisions();
     },
 
     setupCollisions() {
@@ -177,7 +178,8 @@ const Physics = {
 
                 // Hit the ground or world boundaries.
                 if (
-                    target === this.ground ||\n                    target.label === "terrain" ||
+                    target === this.ground ||
+                    target.label === "terrain" ||
                     target === this.leftWall ||
                     target === this.rightWall
                 ) {
