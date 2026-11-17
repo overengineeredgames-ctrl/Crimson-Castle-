@@ -8,6 +8,50 @@ const Physics = {
     rightWall: null,
     groundY: 0,
     worldWidth: 0,
+    terrainPoints: [],
+    terrainBodies: [],
+
+    terrainYAt(x) {
+        const points = this.terrainPoints;
+        if (!points.length) return this.groundY;
+        const clamped = Math.max(0, Math.min(this.worldWidth, x));
+        const index = Math.min(points.length - 2, Math.floor(clamped / (this.worldWidth / (points.length - 1))));
+        const a = points[index], b = points[index + 1];
+        const t = (clamped - a.x) / Math.max(1, b.x - a.x);
+        return a.y + (b.y - a.y) * t;
+    },
+
+    generateTerrain() {
+        this.terrainPoints = [];
+        this.terrainBodies = [];
+        const step = 90;
+        const playerZone = this.worldWidth * 0.35;
+        const enemyZone = this.worldWidth * 0.62;
+        for (let x = 0; x <= this.worldWidth + step; x += step) {
+            const safePlayer = Math.max(0, 1 - Math.abs(x - playerZone) / 260);
+            const safeEnemy = Math.max(0, 1 - Math.abs(x - enemyZone) / 280);
+            const safe = Math.max(safePlayer, safeEnemy);
+            const hills = Math.sin(x * 0.0021) * 34 + Math.sin(x * 0.0063 + 1.4) * 17 + Math.sin(x * 0.011 + 0.7) * 7;
+            const y = this.groundY + hills * (1 - safe * 0.92);
+            this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
+            if (x >= this.worldWidth) break;
+        }
+        const thickness = 190;
+        for (let i = 0; i < this.terrainPoints.length - 1; i++) {
+            const a = this.terrainPoints[i], b = this.terrainPoints[i + 1];
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const length = Math.hypot(dx, dy) + 4;
+            const angle = Math.atan2(dy, dx);
+            const body = Matter.Bodies.rectangle(
+                (a.x + b.x) / 2 - Math.sin(angle) * thickness / 2,
+                (a.y + b.y) / 2 + Math.cos(angle) * thickness / 2,
+                length, thickness,
+                { isStatic: true, label: "terrain", friction: 1, frictionStatic: 1, restitution: 0, slop: 0.01 }
+            );
+            this.terrainBodies.push(body);
+        }
+        Matter.Composite.add(this.world, this.terrainBodies);
+    },
 
     init() {
         this.engine = Matter.Engine.create();
@@ -76,7 +120,7 @@ const Physics = {
             this.rightWall
         ]);
 
-        this.setupCollisions();
+        this.generateTerrain();\n        this.setupCollisions();
     },
 
     setupCollisions() {
@@ -133,7 +177,7 @@ const Physics = {
 
                 // Hit the ground or world boundaries.
                 if (
-                    target === this.ground ||
+                    target === this.ground ||\n                    target.label === "terrain" ||
                     target === this.leftWall ||
                     target === this.rightWall
                 ) {
