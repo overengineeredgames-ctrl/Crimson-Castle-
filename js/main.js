@@ -995,43 +995,57 @@ const Game = {
         const ctx = this.ctx;
         const w = Physics.worldWidth || this.canvas.width;
         const h = this.canvas.height;
-        const groundY = Physics.groundY;
-
-        const sky = ctx.createLinearGradient(0, 0, 0, h);
-
         const lightMode = this.preferences.theme === "light";
+        const sky = ctx.createLinearGradient(0, 0, 0, h);
         sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
         sky.addColorStop(1, lightMode ? "#f1f7fb" : "#d8e9f4");
-
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, w, h);
 
-        ctx.fillStyle = lightMode ? "#b3cf9b" : "#94b77b";
+        const points = Physics.terrainPoints || [];
+        if (!points.length) return;
         ctx.beginPath();
-        ctx.moveTo(0, groundY);
-
-        for (let x = 0; x <= w + 40; x += 40) {
-            const y =
-                h * 0.70 +
-                Math.sin(x * 0.004) * 25 +
-                Math.sin(x * 0.011) * 12;
-
-            ctx.lineTo(x, y);
-        }
-
+        ctx.moveTo(points[0].x, points[0].y);
+        for (const point of points) ctx.lineTo(point.x, point.y);
         ctx.lineTo(w, h);
         ctx.lineTo(0, h);
         ctx.closePath();
+        ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
         ctx.fill();
 
-        ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
-        ctx.fillRect(0, groundY, w, h - groundY);
-
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y + 9);
+        for (const point of points) ctx.lineTo(point.x, point.y + 9);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
         ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
-        ctx.fillRect(0, groundY + 12, w, h - groundY - 12);
+        ctx.fill();
 
-        ctx.fillStyle = lightMode ? "#648b50" : "#405c35";
-        ctx.fillRect(0, groundY, w, 5);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (const point of points) ctx.lineTo(point.x, point.y);
+        ctx.strokeStyle = lightMode ? "#648b50" : "#405c35";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // Subtle distant ridgelines give the generated battlefield more depth.
+        ctx.save();
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = lightMode ? "#557b75" : "#c3e0ee";
+        ctx.lineWidth = 2;
+        for (let layer = 0; layer < 2; layer++) {
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 55) {
+                const y = h * (0.55 + layer * 0.055) +
+                    Math.sin(x * 0.0017 + layer * 2) * 24 +
+                    Math.sin(x * 0.004 + layer) * 10;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        ctx.restore();
     },
 
     drawHints() {
