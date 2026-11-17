@@ -123,7 +123,7 @@ const AI = {
     createEnemyFort() {
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
         const leftX = Math.round(worldWidth * 0.62);
-        const baseY = Building.groundY - Building.nodeRadius;
+        const baseY = Physics.terrainYAt(leftX) - Building.nodeRadius;
         const availablePresets = this.difficulty === "easy"
             ? this.presetDefinitions.filter(item => item.weapon === "cannon")
             : this.presetDefinitions;
@@ -760,7 +760,7 @@ const AI = {
         anchors.sort((a, b) => a.body.position.x - b.body.position.x);
         const anchor = anchors[0];
         const origin = anchor.body.position;
-        const baseY = Building.groundY - Building.nodeRadius;
+        const baseY = Physics.terrainYAt(origin.x) - Building.nodeRadius;
         const paths = [
             {
                 name: "Low Armored Bridge",
