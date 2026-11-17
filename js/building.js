@@ -103,7 +103,7 @@ const Building = {
     // filling the physics world with thousands of unused bodies.
     getGroundAnchor(x, team = "player") {
         const anchorX = this.snap(x);
-        const anchorY = this.groundY - this.nodeRadius;
+        const anchorY = Physics.terrainYAt(anchorX) - this.nodeRadius;
         const existing = this.nodes.find(node =>
             !node.removed &&
             node.isGroundJoint &&
@@ -122,7 +122,7 @@ const Building = {
     },
 
     snapPointToGround(point, team = "player", threshold = 85) {
-        const groundNodeY = this.groundY - this.nodeRadius;
+        const groundNodeY = Physics.terrainYAt(point.x) - this.nodeRadius;
 
         // Snap the joint center to the floor-node row when the player builds
         // reasonably close to the ground. A wider tolerance makes this work
@@ -279,7 +279,7 @@ const Building = {
             isCore,
             hidden: !!options.hidden,
             canHoldMine: !isCore &&
-                Math.abs(y + (isCore ? this.coreRadius : this.nodeRadius) - this.groundY) <= 8,
+                Math.abs(y + (isCore ? this.coreRadius : this.nodeRadius) - Physics.terrainYAt(x)) <= 8,
             health: isCore ? this.coreHealth : material.maxHealth,
             maxHealth: isCore ? this.coreHealth : material.maxHealth,
             supported: isFoundation,
@@ -479,7 +479,7 @@ const Building = {
 
         const leftX = cameraOffset + 100;
         const rightX = leftX + 160;
-        const baseY = this.groundY - this.nodeRadius;
+        const baseY = Physics.terrainYAt(leftX) - this.nodeRadius;
 
         const bottomLeft = this.createNode(leftX, baseY, {
             isFoundation: true,
@@ -730,7 +730,7 @@ const Building = {
                 const radius = node.isCore ? this.coreRadius : this.nodeRadius;
                 const bottom = node.body.bounds?.max?.y ??
                     (node.body.position.y + radius);
-                return bottom >= this.groundY - 8;
+                return bottom >= Physics.terrainYAt(node.body.position.x) - 8;
             });
 
             if (touchingGround && !group.grounded) {
@@ -1846,7 +1846,7 @@ const Building = {
             node.canHoldMine =
                 !node.removed &&
                 !node.isCore &&
-                Math.abs(bottom - this.groundY) <= 8;
+                Math.abs(bottom - Physics.terrainYAt(node.body.position.x)) <= 8;
         }
 
         for (const strut of [...this.struts]) {
