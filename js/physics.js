@@ -75,7 +75,7 @@ const Physics = {
 
         this.ground = Matter.Bodies.rectangle(
             this.worldWidth / 2,
-            this.groundY + groundThickness / 2,
+            this.groundY + 100 + groundThickness / 2,
             this.worldWidth + 2000,
             groundThickness,
             {
