@@ -43,11 +43,14 @@ const Weapons = {
             cannonButton.onclick = () => {
                 if (typeof Building !== "undefined") {
                     Building.utilityTool = null;
+                    Building.repairMode = false;
                     Building.updateToolbar();
                 }
                 if (typeof Building !== "undefined" && Building.deleteMode) {
                     Building.setDeleteMode(false);
                 }
+                this.clearSelectedCannon();
+                this.clearSelectedTool();
                 const alreadySelected = this.selectedTool === "cannon" &&
                     this.selectedWeaponType === "cannon";
                 this.selectedWeaponType = "cannon";
@@ -81,12 +84,15 @@ const Weapons = {
         mineButton.onclick = () => {
             if (typeof Building !== "undefined") {
                 Building.utilityTool = null;
+                Building.repairMode = false;
                 Building.updateToolbar();
             }
             if (typeof Building !== "undefined" && Building.deleteMode) {
                 Building.setDeleteMode(false);
             }
-            this.selectedTool = this.selectedTool === "mine" ? null : "mine";
+            this.clearSelectedCannon();
+            this.clearSelectedTool();
+            this.selectedTool = "mine";
             this.mineDragging = false;
             this.updateToolButtons();
         };
@@ -130,11 +136,14 @@ const Weapons = {
         button.onclick = () => {
             if (typeof Building !== "undefined") {
                 Building.utilityTool = null;
+                Building.repairMode = false;
                 Building.updateToolbar();
             }
             if (typeof Building !== "undefined" && Building.deleteMode) {
                 Building.setDeleteMode(false);
             }
+            this.clearSelectedCannon();
+            this.clearSelectedTool();
             const alreadySelected = this.selectedTool === "cannon" &&
                 this.selectedWeaponType === weaponType;
             this.selectedWeaponType = weaponType;
@@ -164,6 +173,14 @@ const Weapons = {
         this.selectedTool = null;
         this.mineDragging = false;
         this.updateToolButtons();
+    },
+
+    clearSelectedCannon() {
+        this.selectedCannon = null;
+        this.selectedCannons = [];
+        this.fireHeld = false;
+        this.lastCannonClick = 0;
+        this.lastClickedCannon = null;
     },
 
     addCannon(node, team = "player", isAI = false, weaponType = "cannon") {
