@@ -1,17 +1,15 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.4",
-  "releaseDate": "2026-11-15T00:00:00.000Z",
+  "version": "1.0.6",
+  "releaseDate": "2026-11-18T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.0.4",
-  "description": "Crimson Castle 1.0.4 is available.",
+  "title": "Crimson Castle 1.0.6",
+  "description": "Crimson Castle 1.0.6 is available.",
   "changes": [
-    "Windows installer and uninstaller now use the Crimson Castle game icon.",
-    "AI automatically rebuilds a cannon if all enemy cannons are destroyed.",
-    "Select up to three player cannons with Ctrl + click.",
-    "Aim selected cannons together and fire them with one click.",
-    "Portable ZIP is now included with Windows releases."
+    "Updated battlefield terrain with the terrain generation improvements.",
+    "Added touch-friendly mobile controls for camera panning, zooming, firing selected weapons, and pausing.",
+    "Improved mobile viewport behavior and touch interaction."
   ],
   "required": false,
   "minimumVersion": "1.0.0"
