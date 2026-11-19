@@ -1105,6 +1105,7 @@ const Building = {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
+        const repairButton = document.getElementById("btn-repair");
         this.createUtilityButtons();
 
         if (woodButton) {
@@ -1117,6 +1118,17 @@ const Building = {
 
         if (deleteButton) {
             deleteButton.onclick = () => this.setDeleteMode(!this.deleteMode);
+        }
+
+        if (repairButton) {
+            repairButton.onclick = () => {
+                this.setRepairMode(!this.repairMode, Game.difficulty);
+                if (typeof Weapons !== "undefined") {
+                    Weapons.selectedCannon = null;
+                    Weapons.selectedCannons = [];
+                    Weapons.clearSelectedTool();
+                }
+            };
         }
 
         this.updateToolbar();
@@ -1148,6 +1160,7 @@ const Building = {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
+        const repairButton = document.getElementById("btn-repair");
 
         for (const type of Object.keys(this.utilityDefinitions)) {
             const button = document.getElementById("btn-" + type);
@@ -1169,6 +1182,11 @@ const Building = {
         if (deleteButton) {
             deleteButton.classList.toggle("active", this.deleteMode);
             deleteButton.setAttribute("aria-pressed", String(this.deleteMode));
+        }
+
+        if (repairButton) {
+            repairButton.classList.toggle("active", this.repairMode);
+            repairButton.setAttribute("aria-pressed", String(this.repairMode));
         }
     },
 
@@ -1732,6 +1750,11 @@ const Building = {
     setRepairMode(enabled, difficulty = "normal") {
         this.repairMode = !!enabled;
         this.repairTarget = null;
+        if (this.repairMode) {
+            this.deleteMode = false;
+            this.utilityTool = null;
+        }
+        this.updateToolbar();
 
         const rates = {
             easy: 100,
