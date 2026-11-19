@@ -1,0 +1,79 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Crimson Castle for Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install game and Android wrapper dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund matter-js@0.20.0 @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+
+      - name: Prepare offline-ready game files
+        shell: bash
+        run: |
+          rm -rf www
+          mkdir -p www/vendor
+          cp index.html styles.css www/
+          cp -R js www/js
+          cp node_modules/matter-js/build/matter.min.js www/vendor/matter.min.js
+          sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js#vendor/matter.min.js#' www/index.html
+
+      - name: Generate Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build installable APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Name APK
+        id: apk
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          APK="Crimson-Castle-MOBILE-v${VERSION}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK to workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crimson-Castle-MOBILE
+          path: ${{ steps.apk.outputs.apk }}
+          if-no-files-found: error
+
+      - name: Attach APK to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.apk.outputs.version }}"
+          TAG="v${VERSION}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Crimson Castle v${VERSION}" --notes "Crimson Castle Android and desktop release."
+          fi
+          gh release upload "$TAG" "${{ steps.apk.outputs.apk }}" --clobber
