@@ -103,7 +103,7 @@ jobs:
           android = "{http://schemas.android.com/apk/res/android}"
           app = root.find("application")
           app.set(android+"icon", "@mipmap/ic_launcher")
-          app.set(android+"roundIcon", "@mipmap/ic_launcher")
+          app.set(android+"roundIcon", "@mipmap/ic_launcher_round")
           activity = app.find("activity")
           if activity is None: raise RuntimeError("Capacitor activity not found")
           activity.set(android+"screenOrientation", "landscape")
