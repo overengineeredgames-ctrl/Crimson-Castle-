@@ -74,7 +74,7 @@ jobs:
           foreground.alpha_composite(artwork, ((432-artwork.width)//2, (432-artwork.height)//2))
           drawable = Path("android/app/src/main/res/drawable")
           drawable.mkdir(parents=True, exist_ok=True)
-          foreground.save(drawable / "ic_launcher_foreground.png")
+          foreground.save(drawable / "crimson_launcher_foreground.png")
 
           # A unique background resource avoids collisions with Capacitor defaults.
           values = Path("android/app/src/main/res/values")
@@ -91,7 +91,7 @@ jobs:
               '<?xml version="1.0" encoding="utf-8"?>\n'
               '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
               '  <background android:drawable="@color/crimson_launcher_background"/>\n'
-              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\n'
+              '  <foreground android:drawable="@drawable/crimson_launcher_foreground"/>\n'
               '</adaptive-icon>\n'
           )
           (adaptive / "ic_launcher.xml").write_text(adaptive_xml, encoding="utf-8")
