@@ -53,10 +53,41 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as ET
           icon = Image.open("CrimsonCastle.ico").convert("RGBA")
+          # Legacy launcher icons for older Android versions.
           for density, size in {"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}.items():
               folder = Path(f"android/app/src/main/res/mipmap-{density}")
               folder.mkdir(parents=True, exist_ok=True)
               icon.resize((size,size), Image.Resampling.LANCZOS).save(folder / "ic_launcher.png")
+
+          # Adaptive launcher icon for Android 8+ launchers.
+          # Keep the artwork inside the safe zone so circular/squircle masks
+          # do not crop the castle.
+          foreground = Image.new("RGBA", (432,432), (0,0,0,0))
+          artwork = icon.copy()
+          artwork.thumbnail((288,288), Image.Resampling.LANCZOS)
+          foreground.alpha_composite(artwork, ((432-artwork.width)//2, (432-artwork.height)//2))
+          drawable = Path("android/app/src/main/res/drawable")
+          drawable.mkdir(parents=True, exist_ok=True)
+          foreground.save(drawable / "ic_launcher_foreground.png")
+
+          values = Path("android/app/src/main/res/values")
+          values.mkdir(parents=True, exist_ok=True)
+          (values / "ic_launcher_colors.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\\n'
+              '<resources><color name="ic_launcher_background">#101827</color></resources>\\n',
+              encoding="utf-8"
+          )
+          adaptive = Path("android/app/src/main/res/mipmap-anydpi-v26")
+          adaptive.mkdir(parents=True, exist_ok=True)
+          (adaptive / "ic_launcher.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\\n'
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\\n'
+              '  <background android:drawable="@color/ic_launcher_background"/>\\n'
+              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\\n'
+              '</adaptive-icon>\\n',
+              encoding="utf-8"
+          )
+
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           tree = ET.parse(manifest)
           root = tree.getroot()
