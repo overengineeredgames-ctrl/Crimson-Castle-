@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Crimson Castle</title>
+    <link rel="icon" href="CrimsonCastle.ico">
+    <meta name="theme-color" content="#101827">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -65,10 +67,18 @@
     <canvas id="gameCanvas"></canvas>
 
     <nav id="mobile-controls" aria-label="Mobile game controls">
-        <button type="button" data-mobile-action="pan-left" aria-label="Move camera left">◀</button>
-        <button type="button" data-mobile-action="pan-right" aria-label="Move camera right">▶</button>
-        <button type="button" data-mobile-action="zoom-out" aria-label="Zoom out">−</button>
-        <button type="button" data-mobile-action="zoom-in" aria-label="Zoom in">+</button>
+        <div class="mobile-camera-pad" aria-label="Camera movement">
+            <button type="button" data-mobile-action="pan-up" aria-label="Move camera up">▲</button>
+            <div>
+                <button type="button" data-mobile-action="pan-left" aria-label="Move camera left">◀</button>
+                <button type="button" data-mobile-action="pan-down" aria-label="Move camera down">▼</button>
+                <button type="button" data-mobile-action="pan-right" aria-label="Move camera right">▶</button>
+            </div>
+            <div>
+                <button type="button" data-mobile-action="zoom-out" aria-label="Zoom out">−</button>
+                <button type="button" data-mobile-action="zoom-in" aria-label="Zoom in">+</button>
+            </div>
+        </div>
         <button type="button" data-mobile-action="fire" aria-label="Fire selected weapons">FIRE</button>
         <button type="button" data-mobile-action="pause" aria-label="Pause game">Ⅱ</button>
     </nav>
