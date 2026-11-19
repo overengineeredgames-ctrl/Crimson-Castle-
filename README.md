@@ -6,10 +6,10 @@ Crimson Castle is an in-development fortress-building and artillery game.
 
 Open the [GitHub Releases](https://github.com/overengineeredgames-ctrl/Crimson-Castle-/releases) page for available builds.
 
-- **Windows:** Download the setup installer or portable ZIP when a release is published.
-- **Mobile:** Touch-friendly controls are included in the game interface, but an installable Android APK is not available yet.
+- **WINDOWS:** Download the setup installer or portable ZIP.
+- **MOBILE:** An Android APK is built by the **Build Android APK** workflow. Run it from the GitHub Actions tab; the workflow also attaches the APK to the matching GitHub release.
 
-## Run from source
+## Run from source (Windows)
 
 1. Install [Node.js](https://nodejs.org/) (LTS).
 2. Download or clone this repository.
@@ -32,6 +32,12 @@ npm run dist:win
 Build files are created in the `dist` folder.
 
 To publish a Windows release, update the version in `package.json` and `updater.json` so they match, then run the **Publish Windows Release** workflow from the GitHub Actions tab.
+
+## Build for Android
+
+Open **Actions → Build Android APK → Run workflow** on GitHub. When it finishes, the APK is available under the workflow's Artifacts and is also attached to the matching GitHub release.
+
+The Android build bundles Matter.js locally so the game physics do not depend on a CDN connection. The Windows Electron build remains separate.
 
 ## Controls
 
