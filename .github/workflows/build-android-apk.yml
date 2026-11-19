@@ -59,9 +59,18 @@ jobs:
           largest_size = max(ico.ico.sizes(), key=lambda size: size[0] * size[1])
           icon = ico.ico.getimage(largest_size).convert("RGBA")
 
-          # Remove transparent padding around the actual castle artwork.
-          # This makes the visible logo fill the launcher icon instead of
-          # appearing tiny inside the adaptive icon safe area.
+          # Crop deeply into the source icon. The source artwork has a
+          # large built-in margin/background, so alpha-trimming alone does
+          # not remove the empty space. Keep the centered 55% of the image
+          # before fitting it into Android's adaptive-icon safe area.
+          width, height = icon.size
+          crop_w = int(width * 0.55)
+          crop_h = int(height * 0.55)
+          left = (width - crop_w) // 2
+          top = (height - crop_h) // 2
+          icon = icon.crop((left, top, left + crop_w, top + crop_h))
+
+          # Also trim any transparent pixels remaining after the crop.
           alpha = icon.getchannel("A")
           bounds = alpha.getbbox()
           if bounds:
