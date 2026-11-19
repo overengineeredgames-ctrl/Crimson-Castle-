@@ -1,59 +1,46 @@
 # Crimson Castle
 
-An in-development fortress warfare game made for enjoyment. This project is not an attempt to pirate or replace the original *Forts*.
+Crimson Castle is an in-development fortress-building and artillery game.
 
-## Run from source (development)
+## Download
 
-1. Install Node.js (LTS).
-2. Download and extract the repository.
-3. Open PowerShell in the extracted folder.
-4. Run:
+Open the [GitHub Releases](https://github.com/overengineeredgames-ctrl/Crimson-Castle-/releases) page for available builds.
 
-```powershell
-npm.cmd install
-npm.cmd start
-```
+- **Windows:** Download the setup installer or portable ZIP when a release is published.
+- **Mobile:** Touch-friendly controls are included in the game interface, but an installable Android APK is not available yet.
 
-## Install the game on Windows
+## Run from source
 
-Download the latest Windows installer from the repository's **Releases** page and run `Crimson-Castle-Setup-<version>.exe`. The installer already contains the Crimson Castle app icon and creates a desktop shortcut with that icon. No separate icon download or setup step is needed.
-
-The icon file (`CrimsonCastle.ico`) is included in this repository and is also added automatically to the portable ZIP.
-
-## Build the Windows versions
-
-Run this from PowerShell after installing the dependencies:
+1. Install [Node.js](https://nodejs.org/) (LTS).
+2. Download or clone this repository.
+3. Open a terminal in the project folder.
+4. Install dependencies and start the game:
 
 ```powershell
-npm.cmd run dist:win
+npm install
+npm start
 ```
 
-This creates:
-- A Windows setup installer in `dist`. The installer creates Start Menu and desktop shortcuts. This is the recommended version because it supports in-app updates.
-- A portable desktop ZIP in `dist`. It contains the portable game EXE, `Create Desktop Shortcut.bat`, and `CrimsonCastle.ico`.
+## Build for Windows
 
-## Add the portable game to your desktop
-
-1. Find `Crimson-Castle-Setup-1.0.0-Desktop.zip` in the `dist` folder. The version number in the filename may be different.
-2. Right-click the ZIP and choose **Extract All...**.
-3. Open the extracted folder. Keep the game EXE, `Create Desktop Shortcut.bat`, and `CrimsonCastle.ico` together in that folder. All three files are already included in the ZIP.
-4. Double-click **Create Desktop Shortcut.bat**.
-5. If Windows asks for permission to run the script, approve it only if you trust the ZIP and its source.
-6. A **Crimson Castle** shortcut should appear on your Windows desktop. Double-click it to play.
-
-**Important:** Do not move or delete the extracted game EXE or `CrimsonCastle.ico` after creating the shortcut. The shortcut points to the EXE in that extracted folder and uses the ICO beside it. If you move the folder, run `Create Desktop Shortcut.bat` again from its new location.
-
-### If the shortcut has the default icon
-
-Make sure `CrimsonCastle.ico` is in the same extracted folder as the EXE and the BAT file. The ZIP created from this repository includes the icon automatically; if it is missing, download the repository again or rebuild the ZIP. Windows may cache shortcut icons; if the old icon remains, delete the old desktop shortcut and run the BAT file again.
-
-## Updates
-
-The installed version checks the Crimson Castle update manifest when it starts. When a newer release is published, the game offers the update and can download/install it. To publish a new Windows update, create a GitHub release using the NSIS build:
+In PowerShell, run:
 
 ```powershell
-$env:GH_TOKEN = "YOUR_GITHUB_TOKEN"
-npm.cmd run release:win
+npm run dist:win
 ```
 
-Publish releases with a new version in `package.json` and update `updater.json` to the same version. Do not publish the portable executable as the auto-update package; in-app updates are supported by the installed NSIS version.
+Build files are created in the `dist` folder.
+
+To publish a Windows release, update the version in `package.json` and `updater.json` so they match, then run the **Publish Windows Release** workflow from the GitHub Actions tab.
+
+## Controls
+
+- **Build:** Select a building material, then drag from one joint to another.
+- **Weapons:** Select a weapon, click a cannon to select it, aim, then click to fire.
+- **Camera:** Use the mouse wheel to zoom, Shift + wheel or the left/right arrow keys to scroll, and middle-mouse drag to pan.
+- **Grid:** Press `G`.
+- **Repair:** Press `R`.
+- **Pause:** Press `Esc`.
+- **Tool categories:** Press `Q` or `E` to switch tabs.
+
+On touch devices, the interface also provides on-screen camera, zoom, fire, and pause buttons.
