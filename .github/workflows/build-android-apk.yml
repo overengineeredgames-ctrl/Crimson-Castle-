@@ -59,6 +59,14 @@ jobs:
           largest_size = max(ico.ico.sizes(), key=lambda size: size[0] * size[1])
           icon = ico.ico.getimage(largest_size).convert("RGBA")
 
+          # Remove transparent padding around the actual castle artwork.
+          # This makes the visible logo fill the launcher icon instead of
+          # appearing tiny inside the adaptive icon safe area.
+          alpha = icon.getchannel("A")
+          bounds = alpha.getbbox()
+          if bounds:
+              icon = icon.crop(bounds)
+
           # Legacy launcher icons for older Android versions.
           for density, size in {"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}.items():
               folder = Path(f"android/app/src/main/res/mipmap-{density}")
