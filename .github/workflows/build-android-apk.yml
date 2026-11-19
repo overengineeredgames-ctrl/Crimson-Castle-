@@ -80,19 +80,19 @@ jobs:
           values = Path("android/app/src/main/res/values")
           values.mkdir(parents=True, exist_ok=True)
           (values / "crimson_launcher_background.xml").write_text(
-              '<?xml version="1.0" encoding="utf-8"?>\\n'
-              '<resources><color name="crimson_launcher_background">#101827</color></resources>\\n',
+              '<?xml version="1.0" encoding="utf-8"?>\n'
+              '<resources><color name="crimson_launcher_background">#101827</color></resources>\n',
               encoding="utf-8"
           )
 
           adaptive = Path("android/app/src/main/res/mipmap-anydpi-v26")
           adaptive.mkdir(parents=True, exist_ok=True)
           adaptive_xml = (
-              '<?xml version="1.0" encoding="utf-8"?>\\n'
-              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\\n'
-              '  <background android:drawable="@color/crimson_launcher_background"/>\\n'
-              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\\n'
-              '</adaptive-icon>\\n'
+              '<?xml version="1.0" encoding="utf-8"?>\n'
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+              '  <background android:drawable="@color/crimson_launcher_background"/>\n'
+              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\n'
+              '</adaptive-icon>\n'
           )
           (adaptive / "ic_launcher.xml").write_text(adaptive_xml, encoding="utf-8")
           (adaptive / "ic_launcher_round.xml").write_text(adaptive_xml, encoding="utf-8")
