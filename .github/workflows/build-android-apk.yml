@@ -52,16 +52,22 @@ jobs:
           from PIL import Image
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          icon = Image.open("CrimsonCastle.ico").convert("RGBA")
+
+          # ICO files can contain several resolutions. Always use the largest
+          # embedded artwork so Android does not enlarge a tiny 16px image.
+          ico = Image.open("CrimsonCastle.ico")
+          largest_size = max(ico.ico.sizes(), key=lambda size: size[0] * size[1])
+          icon = ico.ico.getimage(largest_size).convert("RGBA")
+
           # Legacy launcher icons for older Android versions.
           for density, size in {"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}.items():
               folder = Path(f"android/app/src/main/res/mipmap-{density}")
               folder.mkdir(parents=True, exist_ok=True)
-              icon.resize((size,size), Image.Resampling.LANCZOS).save(folder / "ic_launcher.png")
+              resized = icon.resize((size,size), Image.Resampling.LANCZOS)
+              resized.save(folder / "ic_launcher.png")
+              resized.save(folder / "ic_launcher_round.png")
 
-          # Adaptive launcher icon for Android 8+ launchers.
-          # Keep the artwork inside the safe zone so circular/squircle masks
-          # do not crop the castle.
+          # Adaptive icon artwork, padded to stay inside Android's safe zone.
           foreground = Image.new("RGBA", (432,432), (0,0,0,0))
           artwork = icon.copy()
           artwork.thumbnail((288,288), Image.Resampling.LANCZOS)
@@ -70,19 +76,26 @@ jobs:
           drawable.mkdir(parents=True, exist_ok=True)
           foreground.save(drawable / "ic_launcher_foreground.png")
 
-          # Capacitor already creates ic_launcher_background in values/.
-          # Reuse that resource; creating another color with the same name
-          # causes Android's resource merger to fail.
-          adaptive = Path("android/app/src/main/res/mipmap-anydpi-v26")
-          adaptive.mkdir(parents=True, exist_ok=True)
-          (adaptive / "ic_launcher.xml").write_text(
-              '<?xml version="1.0" encoding="utf-8"?>\n'
-              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-              '  <background android:drawable="@color/ic_launcher_background"/>\n'
-              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\n'
-              '</adaptive-icon>\n',
+          # A unique background resource avoids collisions with Capacitor defaults.
+          values = Path("android/app/src/main/res/values")
+          values.mkdir(parents=True, exist_ok=True)
+          (values / "crimson_launcher_background.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\\n'
+              '<resources><color name="crimson_launcher_background">#101827</color></resources>\\n',
               encoding="utf-8"
           )
+
+          adaptive = Path("android/app/src/main/res/mipmap-anydpi-v26")
+          adaptive.mkdir(parents=True, exist_ok=True)
+          adaptive_xml = (
+              '<?xml version="1.0" encoding="utf-8"?>\\n'
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\\n'
+              '  <background android:drawable="@color/crimson_launcher_background"/>\\n'
+              '  <foreground android:drawable="@drawable/ic_launcher_foreground"/>\\n'
+              '</adaptive-icon>\\n'
+          )
+          (adaptive / "ic_launcher.xml").write_text(adaptive_xml, encoding="utf-8")
+          (adaptive / "ic_launcher_round.xml").write_text(adaptive_xml, encoding="utf-8")
 
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           tree = ET.parse(manifest)
