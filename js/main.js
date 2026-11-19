@@ -20,6 +20,7 @@ const Game = {
     settingsReturnScreen: null,
     preferences: { theme: "dark", fastBoot: false },
     cameraOffsetX: 0,
+    cameraOffsetY: 0,
     cameraZoom: 1,
     panDrag: null,
 
@@ -35,18 +36,22 @@ const Game = {
     clampCamera() {
         const worldWidth = Physics.worldWidth || this.canvas.width;
         const visibleWidth = this.canvas.width / this.cameraZoom;
-        this.cameraOffsetX = Math.max(0, Math.min(
-            Math.max(0, worldWidth - visibleWidth),
-            this.cameraOffsetX
-        ));
+        const visibleHeight = this.canvas.height / this.cameraZoom;
+        const worldBottom = (Physics.groundY || this.canvas.height * 0.82) + 260;
+        this.cameraOffsetX = Math.max(0, Math.min(Math.max(0, worldWidth - visibleWidth), this.cameraOffsetX));
+        this.cameraOffsetY = Math.max(-this.canvas.height * 0.75,
+            Math.min(Math.max(-this.canvas.height * 0.75, worldBottom - visibleHeight), this.cameraOffsetY));
     },
 
-    setCameraZoomAt(clientX, nextZoom) {
+    setCameraZoomAt(clientX, nextZoom, clientY = null) {
         const rect = this.canvas.getBoundingClientRect();
         const screenX = clientX - rect.left;
+        const screenY = (clientY == null ? rect.top + rect.height / 2 : clientY) - rect.top;
         const worldAnchorX = this.cameraX + screenX / this.cameraZoom;
-        this.cameraZoom = Math.max(0.55, Math.min(2.25, nextZoom));
+        const worldAnchorY = this.cameraOffsetY + screenY / this.cameraZoom;
+        this.cameraZoom = Math.max(0.4, Math.min(2.5, nextZoom));
         this.cameraOffsetX = worldAnchorX - screenX / this.cameraZoom;
+        this.cameraOffsetY = worldAnchorY - screenY / this.cameraZoom;
         this.clampCamera();
     },
 
@@ -786,33 +791,26 @@ const Game = {
     setupMobileControls() {
         const controls = document.getElementById("mobile-controls");
         if (!controls) return;
-
         controls.addEventListener("click", event => {
             const button = event.target.closest("[data-mobile-action]");
             if (!button || this.state !== "playing") return;
-
             const action = button.dataset.mobileAction;
-            const centerX = this.canvas.getBoundingClientRect().left +
-                this.canvas.getBoundingClientRect().width / 2;
-
-            if (action === "pan-left") {
-                this.cameraOffsetX -= 180 / this.cameraZoom;
-                this.clampCamera();
-            } else if (action === "pan-right") {
-                this.cameraOffsetX += 180 / this.cameraZoom;
-                this.clampCamera();
-            } else if (action === "zoom-in") {
-                this.setCameraZoomAt(centerX, this.cameraZoom * 1.18);
-            } else if (action === "zoom-out") {
-                this.setCameraZoomAt(centerX, this.cameraZoom / 1.18);
-            } else if (action === "fire") {
-                const selected = this.selectedCannons.length
-                    ? this.selectedCannons
-                    : (this.selectedCannon ? [this.selectedCannon] : []);
+            const rect = this.canvas.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const panStep = 150 / this.cameraZoom;
+            if (action === "pan-left") this.cameraOffsetX -= panStep;
+            else if (action === "pan-right") this.cameraOffsetX += panStep;
+            else if (action === "pan-up") this.cameraOffsetY -= panStep;
+            else if (action === "pan-down") this.cameraOffsetY += panStep;
+            else if (action === "zoom-in") this.setCameraZoomAt(centerX, this.cameraZoom * 1.18, centerY);
+            else if (action === "zoom-out") this.setCameraZoomAt(centerX, this.cameraZoom / 1.18, centerY);
+            else if (action === "fire") {
+                const selected = this.selectedCannons.length ? this.selectedCannons :
+                    (this.selectedCannon ? [this.selectedCannon] : []);
                 for (const cannon of selected) Weapons.fire(cannon);
-            } else if (action === "pause") {
-                this.togglePause();
-            }
+            } else if (action === "pause") this.togglePause();
+            this.clampCamera();
         });
     },
 
@@ -821,7 +819,7 @@ const Game = {
             if (this.state !== "playing") return;
 
             if (event.button === 1) {
-                this.panDrag = { clientX: event.clientX };
+                this.panDrag = { clientX: event.clientX, clientY: event.clientY };
                 this.canvas.setPointerCapture(event.pointerId);
                 event.preventDefault();
                 return;
@@ -855,9 +853,12 @@ const Game = {
             if (this.state !== "playing") return;
 
             if (this.panDrag) {
-                const movement = event.clientX - this.panDrag.clientX;
+                const movementX = event.clientX - this.panDrag.clientX;
+                const movementY = event.clientY - this.panDrag.clientY;
                 this.panDrag.clientX = event.clientX;
-                this.cameraOffsetX -= movement / this.cameraZoom;
+                this.panDrag.clientY = event.clientY;
+                this.cameraOffsetX -= movementX / this.cameraZoom;
+                this.cameraOffsetY -= movementY / this.cameraZoom;
                 this.clampCamera();
                 return;
             }
@@ -1029,20 +1030,22 @@ const Game = {
         const ctx = this.ctx;
         const w = Physics.worldWidth || this.canvas.width;
         const h = this.canvas.height;
+        const top = -this.canvas.height;
+        const bottom = (Physics.groundY || h * 0.82) + 300;
         const lightMode = this.preferences.theme === "light";
-        const sky = ctx.createLinearGradient(0, 0, 0, h);
+        const sky = ctx.createLinearGradient(0, top, 0, bottom);
         sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
         sky.addColorStop(1, lightMode ? "#f1f7fb" : "#d8e9f4");
         ctx.fillStyle = sky;
-        ctx.fillRect(0, 0, w, h);
+        ctx.fillRect(0, top, w, bottom - top);
 
         const points = Physics.terrainPoints || [];
         if (!points.length) return;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (const point of points) ctx.lineTo(point.x, point.y);
-        ctx.lineTo(w, h);
-        ctx.lineTo(0, h);
+        ctx.lineTo(w, bottom);
+        ctx.lineTo(0, bottom);
         ctx.closePath();
         ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
         ctx.fill();
@@ -1050,8 +1053,8 @@ const Game = {
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y + 9);
         for (const point of points) ctx.lineTo(point.x, point.y + 9);
-        ctx.lineTo(w, h);
-        ctx.lineTo(0, h);
+        ctx.lineTo(w, bottom);
+        ctx.lineTo(0, bottom);
         ctx.closePath();
         ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
         ctx.fill();
@@ -1083,6 +1086,7 @@ const Game = {
     },
 
     drawHints() {
+        if (window.matchMedia('(max-width: 900px), (pointer: coarse)').matches) return;
         const ctx = this.ctx;
 
         ctx.save();
@@ -1164,7 +1168,7 @@ const Game = {
 
         ctx.save();
 
-        ctx.translate(-this.cameraX * this.cameraZoom, 0);
+        ctx.translate(-this.cameraX * this.cameraZoom, -this.cameraOffsetY * this.cameraZoom);
         ctx.scale(this.cameraZoom, this.cameraZoom);
 
         this.drawBackground();
