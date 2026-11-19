@@ -465,8 +465,8 @@ const Game = {
                     Machine Gun: hold fire for rapid, light damage<br>
                     Mega Cannon: 220 damage with a 15-second reload<br>
                     Click a cannon to select; aim and click to fire<br>
-                    Mouse wheel zooms the battlefield; Shift + wheel or arrow keys scroll sideways<br>
-                    Middle mouse drag also pans the map<br>
+                    Mouse wheel zooms the battlefield; arrow keys move the camera in every direction<br>
+                    Middle mouse drag pans the map horizontally and vertically<br>
                     Press ESC to pause
                 </div>
             </div>
@@ -945,9 +945,13 @@ const Game = {
                 return;
             }
 
-            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            if (event.key.startsWith("Arrow")) {
                 event.preventDefault();
-                this.cameraOffsetX += (event.key === "ArrowRight" ? 90 : -90) / this.cameraZoom;
+                const step = 90 / this.cameraZoom;
+                if (event.key === "ArrowLeft") this.cameraOffsetX -= step;
+                else if (event.key === "ArrowRight") this.cameraOffsetX += step;
+                else if (event.key === "ArrowUp") this.cameraOffsetY -= step;
+                else if (event.key === "ArrowDown") this.cameraOffsetY += step;
                 this.clampCamera();
                 return;
             }
@@ -1110,7 +1114,7 @@ const Game = {
         );
 
         ctx.fillText(
-            "Wheel: zoom map | Shift+wheel / ← →: scroll map | Middle-drag: pan | G: grid | R: repair | ESC: pause",
+            "Wheel: zoom map | Arrow keys: move camera | Middle-drag: pan | G: grid | R: repair | ESC: pause",
             14,
             this.canvas.height - 38
         );
