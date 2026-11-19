@@ -166,7 +166,7 @@ const Game = {
             x: (event.clientX - rect.left) *
                 (this.canvas.width / rect.width) / this.cameraZoom + this.cameraX,
             y: (event.clientY - rect.top) *
-                (this.canvas.height / rect.height) / this.cameraZoom
+                (this.canvas.height / rect.height) / this.cameraZoom + this.cameraOffsetY
         };
     },
 
