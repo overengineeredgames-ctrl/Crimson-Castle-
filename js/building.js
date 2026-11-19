@@ -800,8 +800,9 @@ const Building = {
         this.deleteMode = false;
         this.repairMode = false;
         this.repairTarget = null;
-        if (typeof Weapons !== "undefined" && Weapons.clearSelectedTool) {
-            Weapons.clearSelectedTool();
+        if (typeof Weapons !== "undefined") {
+            if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+            if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
         }
         this.updateToolbar();
     },
@@ -1124,8 +1125,7 @@ const Building = {
             repairButton.onclick = () => {
                 this.setRepairMode(!this.repairMode, Game.difficulty);
                 if (typeof Weapons !== "undefined") {
-                    Weapons.selectedCannon = null;
-                    Weapons.selectedCannons = [];
+                    Weapons.clearSelectedCannon();
                     Weapons.clearSelectedTool();
                 }
             };
@@ -1139,6 +1139,12 @@ const Building = {
 
         this.material = material;
         this.utilityTool = null;
+        this.repairMode = false;
+        this.repairTarget = null;
+        if (typeof Weapons !== "undefined") {
+            if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+            if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
+        }
         this.setDeleteMode(false);
         this.updateToolbar();
     },
@@ -1149,8 +1155,9 @@ const Building = {
             this.utilityTool = null;
             this.repairMode = false;
             this.repairTarget = null;
-            if (typeof Weapons !== "undefined" && Weapons.clearSelectedTool) {
-                Weapons.clearSelectedTool();
+            if (typeof Weapons !== "undefined") {
+                if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+                if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
             }
         }
         this.updateToolbar();
@@ -1753,6 +1760,10 @@ const Building = {
         if (this.repairMode) {
             this.deleteMode = false;
             this.utilityTool = null;
+            if (typeof Weapons !== "undefined") {
+                if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+                if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
+            }
         }
         this.updateToolbar();
 
