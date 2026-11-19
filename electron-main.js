@@ -4,7 +4,7 @@ const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
-const MANIFEST_URL = "https://raw.githubusercontent.com/overengineeredgames-ctrl/Forts/main/updater.json";
+const MANIFEST_URL = "https://raw.githubusercontent.com/overengineeredgames-ctrl/Crimson-Castle-/main/updater.json";
 let mainWindow = null;
 let updateDownloadStarted = false;
 
