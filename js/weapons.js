@@ -41,6 +41,8 @@ const Weapons = {
 
         if (cannonButton) {
             cannonButton.onclick = () => {
+                const alreadySelected = this.selectedTool === "cannon" &&
+                    this.selectedWeaponType === "cannon";
                 if (typeof Building !== "undefined") {
                     Building.utilityTool = null;
                     Building.repairMode = false;
@@ -51,8 +53,6 @@ const Weapons = {
                 }
                 this.clearSelectedCannon();
                 this.clearSelectedTool();
-                const alreadySelected = this.selectedTool === "cannon" &&
-                    this.selectedWeaponType === "cannon";
                 this.selectedWeaponType = "cannon";
                 this.selectedTool = alreadySelected ? null : "cannon";
                 this.updateToolButtons();
@@ -82,6 +82,7 @@ const Weapons = {
         }
 
         mineButton.onclick = () => {
+            const alreadySelected = this.selectedTool === "mine";
             if (typeof Building !== "undefined") {
                 Building.utilityTool = null;
                 Building.repairMode = false;
@@ -92,7 +93,7 @@ const Weapons = {
             }
             this.clearSelectedCannon();
             this.clearSelectedTool();
-            this.selectedTool = "mine";
+            this.selectedTool = alreadySelected ? null : "mine";
             this.mineDragging = false;
             this.updateToolButtons();
         };
@@ -134,6 +135,8 @@ const Weapons = {
             }
         }
         button.onclick = () => {
+            const alreadySelected = this.selectedTool === "cannon" &&
+                this.selectedWeaponType === weaponType;
             if (typeof Building !== "undefined") {
                 Building.utilityTool = null;
                 Building.repairMode = false;
@@ -144,8 +147,6 @@ const Weapons = {
             }
             this.clearSelectedCannon();
             this.clearSelectedTool();
-            const alreadySelected = this.selectedTool === "cannon" &&
-                this.selectedWeaponType === weaponType;
             this.selectedWeaponType = weaponType;
             this.selectedTool = alreadySelected ? null : "cannon";
             this.updateToolButtons();
