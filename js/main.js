@@ -22,6 +22,7 @@ const Game = {
     cameraOffsetX: 0,
     cameraOffsetY: 0,
     cameraZoom: 1,
+    isMobileViewport: false,
     panDrag: null,
 
     get cameraX() {
@@ -39,8 +40,9 @@ const Game = {
         const visibleHeight = this.canvas.height / this.cameraZoom;
         const worldBottom = (Physics.groundY || this.canvas.height * 0.82) + 260;
         this.cameraOffsetX = Math.max(0, Math.min(Math.max(0, worldWidth - visibleWidth), this.cameraOffsetX));
+        const mobileVerticalRoom = this.isMobileViewport ? this.canvas.height * 0.75 : 0;
         this.cameraOffsetY = Math.max(-this.canvas.height * 0.75,
-            Math.min(Math.max(-this.canvas.height * 0.75, worldBottom - visibleHeight), this.cameraOffsetY));
+            Math.min(Math.max(-this.canvas.height * 0.75, worldBottom + mobileVerticalRoom - visibleHeight), this.cameraOffsetY));
     },
 
     setCameraZoomAt(clientX, nextZoom, clientY = null) {
@@ -72,10 +74,13 @@ const Game = {
 
         // Phones have a much narrower landscape viewport than desktop.
         // Start mobile battles zoomed out so more of the battlefield is visible.
-        const isMobileViewport = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
-        this.cameraZoom = isMobileViewport ? 0.5 : 1;
+        this.isMobileViewport = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+        this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
         const visibleWorldWidth = this.canvas.width / this.cameraZoom;
         this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
+        // Raise the mobile battlefield slightly in the opening view.
+        this.cameraOffsetY = this.isMobileViewport ? (this.canvas.height * 0.10) / this.cameraZoom : 0;
+        this.clampCamera();
         Building.init();
         Weapons.init();
         AI.init();
