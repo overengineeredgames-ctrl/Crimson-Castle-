@@ -47,34 +47,17 @@ jobs:
 
       - name: Generate Android launcher icon and force landscape
         run: |
-          python -m pip install --quiet pillow
+          python -m pip install --quiet pillow cairosvg
           python - <<'PY'
           from PIL import Image
           from pathlib import Path
           import xml.etree.ElementTree as ET
 
-          # ICO files can contain several resolutions. Always use the largest
-          # embedded artwork so Android does not enlarge a tiny 16px image.
-          ico = Image.open("CrimsonCastle.ico")
-          largest_size = max(ico.ico.sizes(), key=lambda size: size[0] * size[1])
-          icon = ico.ico.getimage(largest_size).convert("RGBA")
-
-          # Crop deeply into the source icon. The source artwork has a
-          # large built-in margin/background, so alpha-trimming alone does
-          # not remove the empty space. Keep the centered 55% of the image
-          # before fitting it into Android's adaptive-icon safe area.
-          width, height = icon.size
-          crop_w = int(width * 0.55)
-          crop_h = int(height * 0.55)
-          left = (width - crop_w) // 2
-          top = (height - crop_h) // 2
-          icon = icon.crop((left, top, left + crop_w, top + crop_h))
-
-          # Also trim any transparent pixels remaining after the crop.
-          alpha = icon.getchannel("A")
-          bounds = alpha.getbbox()
-          if bounds:
-              icon = icon.crop(bounds)
+          # Use dedicated mobile artwork; desktop continues using CrimsonCastle.ico.
+          import cairosvg
+          cairosvg.svg2png(url="assets/mobile-launcher.svg", write_to="mobile-launcher.png",
+                           output_width=512, output_height=512)
+          icon = Image.open("mobile-launcher.png").convert("RGBA")
 
           # Legacy launcher icons for older Android versions.
           for density, size in {"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}.items():
@@ -84,11 +67,8 @@ jobs:
               resized.save(folder / "ic_launcher.png")
               resized.save(folder / "ic_launcher_round.png")
 
-          # Adaptive icon artwork, padded to stay inside Android's safe zone.
-          foreground = Image.new("RGBA", (432,432), (0,0,0,0))
-          artwork = icon.copy()
-          artwork.thumbnail((288,288), Image.Resampling.LANCZOS)
-          foreground.alpha_composite(artwork, ((432-artwork.width)//2, (432-artwork.height)//2))
+          # Full-bleed adaptive foreground; do not add extra empty padding.
+          foreground = icon.resize((432,432), Image.Resampling.LANCZOS)
           drawable = Path("android/app/src/main/res/drawable")
           drawable.mkdir(parents=True, exist_ok=True)
           foreground.save(drawable / "crimson_launcher_foreground.png")
