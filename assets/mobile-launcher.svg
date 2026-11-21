@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+ <clipPath id="round"><rect width="512" height="512" rx="76"/></clipPath>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#210008"/><stop offset="1" stop-color="#070509"/></linearGradient>
+ <radialGradient id="moon"><stop stop-color="#ff171f"/><stop offset="1" stop-color="#b90016"/></radialGradient>
+</defs>
+<g clip-path="url(#round)">
+ <rect width="512" height="512" fill="url(#sky)"/>
+ <circle cx="256" cy="213" r="196" fill="url(#moon)"/>
+ <path d="M0 150 Q35 105 72 145 Q108 115 143 159 L185 171 H0Z M345 157 Q390 122 422 151 Q465 111 512 151 V183 H345Z" fill="#570014"/>
+ <path d="M0 360 Q50 315 88 353 Q130 321 168 354 Q212 322 256 354 Q300 322 344 354 Q390 320 428 353 Q470 316 512 360 V512 H0Z" fill="#16070d"/>
+ <!-- fortress silhouette -->
+ <path d="M54 456V290H83V224H143V290H172V265H202V183H221V151H291V183H310V265H340V290H369V224H429V290H458V456Z" fill="#08070c" stroke="#030205" stroke-width="9" stroke-linejoin="round"/>
+ <path d="M92 456V292H133V456 M379 456V292H420V456" fill="#211922"/>
+ <path d="M190 456V275H322V456Z" fill="#211922"/>
+ <path d="M206 183V151H230V139H282V151H306V183Z" fill="#211922"/>
+ <path d="M220 139V111H292V139Z" fill="#211922"/>
+ <path d="M244 111V56H267V111Z" fill="#08070c"/>
+ <path d="M266 63 Q311 68 348 91 Q310 117 266 104Z" fill="#08070c"/>
+ <path d="M78 224V201H96V185H130V201H148V224Z M364 224V201H382V185H416V201H434V224Z" fill="#211922"/>
+ <path d="M205 456V383Q256 315 307 383V456Z" fill="#08070c"/>
+ <path d="M225 456V390Q256 350 287 390V456Z" fill="#d0001b"/>
+ <path d="M241 456V399H251V456 M261 399H271V456" stroke="#08070c" stroke-width="8"/>
+ <path d="M245 197H267V219H245Z" fill="#08070c"/>
+ <path d="M101 242H121V264H101Z M391 242H411V264H391Z" fill="#08070c"/>
+ <path d="M0 480H512V512H0Z" fill="#050407"/>
+</g></svg>
