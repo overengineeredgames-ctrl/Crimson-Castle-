@@ -73,7 +73,7 @@ const Game = {
         // Phones have a much narrower landscape viewport than desktop.
         // Start mobile battles zoomed out so more of the battlefield is visible.
         const isMobileViewport = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
-        this.cameraZoom = isMobileViewport ? 0.3 : 1;
+        this.cameraZoom = isMobileViewport ? 0.5 : 1;
         const visibleWorldWidth = this.canvas.width / this.cameraZoom;
         this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
         Building.init();
