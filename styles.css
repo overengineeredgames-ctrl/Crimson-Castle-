@@ -557,16 +557,17 @@ body.cc-theme-light #btn-battery.active { background:#c3e7e9; border-color:#4a9c
     .hud-topline .resources { gap:3px; font-size:9px; }
     .hud-topline .resource { padding:3px 5px; }
     #mobile-controls {
-        top:50%; right:max(7px, env(safe-area-inset-right)); bottom:auto; left:auto;
-        width:58px; transform:translateY(-50%); display:flex; flex-direction:column;
-        flex-wrap:nowrap; align-items:stretch; justify-content:center; gap:5px; pointer-events:none;
+        top:auto; left:50%; right:auto; bottom:max(8px, env(safe-area-inset-bottom));
+        width:auto; max-width:calc(100vw - 16px); transform:translateX(-50%);
+        display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center;
+        justify-content:center; gap:6px; pointer-events:none;
     }
-    #mobile-controls button { min-width:42px; min-height:42px; padding:5px; border-radius:9px; font-size:17px; }
-    #mobile-controls .mobile-camera-pad { display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:none; }
-    #mobile-controls .mobile-camera-pad > div { display:flex; gap:3px; pointer-events:none; }
+    #mobile-controls button { min-width:40px; min-height:40px; padding:5px; border-radius:9px; font-size:16px; }
+    #mobile-controls .mobile-camera-pad { display:flex; flex-direction:row; align-items:center; gap:4px; pointer-events:none; }
+    #mobile-controls .mobile-camera-pad > div { display:flex; flex-direction:row; gap:3px; pointer-events:none; }
     #mobile-controls .mobile-camera-pad button { pointer-events:auto; }
     #mobile-controls [data-mobile-action="fire"], #mobile-controls [data-mobile-action="pause"] {
-        min-height:42px; min-width:42px; font-size:11px;
+        min-height:40px; min-width:40px; font-size:11px;
     }
 }
 @media (orientation: portrait) and (pointer: coarse) {
