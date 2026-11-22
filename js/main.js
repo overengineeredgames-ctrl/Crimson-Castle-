@@ -165,8 +165,13 @@ const Game = {
     },
 
     resizeCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        // Match the drawing buffer to the canvas's actual visible size.
+        // Mobile browsers can report a narrower layout viewport than the visible canvas.
+        const rect = this.canvas.getBoundingClientRect();
+        const width = Math.max(1, Math.round(rect.width || window.innerWidth));
+        const height = Math.max(1, Math.round(rect.height || window.innerHeight));
+        this.canvas.width = width;
+        this.canvas.height = height;
     },
 
     mousePosition(event) {
