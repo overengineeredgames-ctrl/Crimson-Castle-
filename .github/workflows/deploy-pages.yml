@@ -21,11 +21,18 @@ jobs:
       - name: Check out game
         uses: actions/checkout@v4
 
-      - name: Prepare website
+      - name: Prepare website and iPhone icons
         run: |
           mkdir -p dist
           cp index.html styles.css CrimsonCastle.ico manifest.json service-worker.js dist/
           cp -R js assets dist/
+          python -m pip install --quiet cairosvg
+          python - <<'PY'
+          import cairosvg
+          cairosvg.svg2png(url="assets/mobile-launcher.svg", write_to="dist/assets/apple-touch-icon.png", output_width=180, output_height=180)
+          cairosvg.svg2png(url="assets/mobile-launcher.svg", write_to="dist/assets/icon-192.png", output_width=192, output_height=192)
+          cairosvg.svg2png(url="assets/mobile-launcher.svg", write_to="dist/assets/icon-512.png", output_width=512, output_height=512)
+          PY
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
