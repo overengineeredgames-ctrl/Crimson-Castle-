@@ -761,3 +761,19 @@ body.cc-theme-light #hud {
         letter-spacing: 2px !important;
     }
 }
+
+
+/* Ensure the mobile battlefield canvas covers the entire landscape viewport. */
+@media (max-width: 900px), (pointer: coarse) {
+    html, body { width: 100%; min-width: 100%; max-width: 100%; }
+    #gameCanvas {
+        position: fixed !important;
+        inset: 0 !important;
+        display: block !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: none !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+    }
+}
