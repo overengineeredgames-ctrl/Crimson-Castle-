@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Crimson Castle",
+  "short_name": "Crimson Castle",
+  "description": "Build, defend, and battle in Crimson Castle.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "icons": [
+    {
+      "src": "assets/mobile-launcher.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
