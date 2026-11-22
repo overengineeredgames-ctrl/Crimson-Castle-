@@ -79,7 +79,7 @@ const Game = {
         const visibleWorldWidth = this.canvas.width / this.cameraZoom;
         this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
         // Raise the mobile battlefield slightly in the opening view.
-        this.cameraOffsetY = this.isMobileViewport ? (this.canvas.height * 0.35) / this.cameraZoom : 0;
+        this.cameraOffsetY = this.isMobileViewport ? -this.canvas.height * 0.75 : 0;
         this.clampCamera();
         Building.init();
         Weapons.init();
