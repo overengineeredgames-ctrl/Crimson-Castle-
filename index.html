@@ -6,6 +6,11 @@
     <title>Crimson Castle</title>
     <link rel="icon" href="CrimsonCastle.ico">
     <meta name="theme-color" content="#101827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Crimson Castle">
+    <link rel="apple-touch-icon" href="assets/mobile-launcher.svg">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -99,5 +104,14 @@
     <script src="js/updater-ui.js"></script>
     <script src="js/main.js"></script>
 
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("./service-worker.js").catch(error => {
+                    console.warn("Crimson Castle offline support could not start:", error);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
