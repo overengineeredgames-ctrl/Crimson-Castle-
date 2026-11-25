@@ -257,6 +257,14 @@ var Weapons = window.Weapons = {
             if (!d.isDoor || d.team !== "player" || !d.a || !d.b ||
                 d.a.removed || d.b.removed) continue;
             const a = d.a.body.position, b = d.b.body.position;
+            // Treat the whole door beam AND both endpoint nodes as one target.
+            // This makes the target forgiving on touch screens without scanning
+            // unrelated structural beams.
+            const nodeRadiusSq = 58 * 58;
+            const ax = x - a.x, ay = y - a.y;
+            const bx = x - b.x, by = y - b.y;
+            if (ax * ax + ay * ay <= nodeRadiusSq ||
+                bx * bx + by * by <= nodeRadiusSq) return d;
             const dx = b.x - a.x, dy = b.y - a.y;
             const lenSq = dx * dx + dy * dy;
             if (lenSq < 1) continue;
@@ -275,7 +283,7 @@ var Weapons = window.Weapons = {
                 const ox=x-(a.x+ot*odx), oy=y-(a.y+ot*ody);
                 bestSq = Math.min(bestSq,ox*ox+oy*oy);
             }
-            if (bestSq <= 48*48) return d;
+            if (bestSq <= 58*58) return d;
         }
         return null;
     },
@@ -291,9 +299,9 @@ var Weapons = window.Weapons = {
                 const added = this.linkDoorToWeapon(this.linkSource, door);
                 this.linkHoverDoor = null;
                 Building.showPlacementMessage(added ? "Door linked." : "Door unlinked.");
-            } else {
-                Building.showPlacementMessage("Tap a door to link it.");
             }
+            // A tap outside a door beam or either endpoint is intentionally a
+            // no-op. Keep Link mode active and do not touch building drag state.
             return true;
         }
 
