@@ -4,6 +4,8 @@
 const Building = {
     nodes: [],
     struts: [],
+    doors: [],
+    doorPlacementMode: false,
     mines: [],
     debris: [],
     installations: [],
@@ -62,6 +64,8 @@ const Building = {
     init() {
         this.nodes = [];
         this.struts = [];
+        this.doors = [];
+        this.doorPlacementMode = false;
         this.mines = [];
         this.debris = [];
         this.installations = [];
@@ -1107,7 +1111,9 @@ const Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const doorButton = document.getElementById("btn-door");
         this.createUtilityButtons();
+        if (doorButton) doorButton.onclick = () => this.setDoorPlacementMode(!this.doorPlacementMode);
 
         if (woodButton) {
             woodButton.onclick = () => this.setMaterial("wood");
@@ -1134,8 +1140,24 @@ const Building = {
         this.updateToolbar();
     },
 
+    setDoorPlacementMode(enabled) {
+        this.doorPlacementMode = !!enabled;
+        if (this.doorPlacementMode) {
+            this.utilityTool = null;
+            this.repairMode = false;
+            this.repairTarget = null;
+            this.deleteMode = false;
+            if (typeof Weapons !== "undefined") {
+                if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+                if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
+            }
+        }
+        this.updateToolbar();
+    },
+
     setMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
+        this.doorPlacementMode = false;
 
         this.material = material;
         this.utilityTool = null;
@@ -1152,6 +1174,7 @@ const Building = {
     setDeleteMode(enabled) {
         this.deleteMode = !!enabled;
         if (this.deleteMode) {
+            this.doorPlacementMode = false;
             this.utilityTool = null;
             this.repairMode = false;
             this.repairTarget = null;
@@ -1168,6 +1191,7 @@ const Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const doorButton = document.getElementById("btn-door");
 
         for (const type of Object.keys(this.utilityDefinitions)) {
             const button = document.getElementById("btn-" + type);
@@ -1179,12 +1203,14 @@ const Building = {
         }
 
         if (steelButton) {
-            steelButton.classList.toggle("active", !this.deleteMode && this.material === "steel");
+            steelButton.classList.toggle("active", !this.deleteMode && !this.doorPlacementMode && this.material === "steel");
         }
 
         if (woodButton) {
-            woodButton.classList.toggle("active", !this.deleteMode && this.material === "wood");
+            woodButton.classList.toggle("active", !this.deleteMode && !this.doorPlacementMode && this.material === "wood");
         }
+
+        if (doorButton) doorButton.classList.toggle("active", this.doorPlacementMode);
 
         if (deleteButton) {
             deleteButton.classList.toggle("active", this.deleteMode);
@@ -1241,9 +1267,11 @@ const Building = {
     },
 
     startDrag(x, y, mode = "beam") {
+        // Door placement only uses existing joints; structural beams are never edited.
+        if (mode !== "door" && this.doorPlacementMode) mode = "door";
         // Prefer the middle of a beam for box extrusion, even when an
         // existing brace/joint happens to sit close to the click.
-        const beam = this.getStrutAtPoint(x, y, 30);
+        const beam = mode === "door" ? null : this.getStrutAtPoint(x, y, 30);
         if (beam && beam.team === "player" && beam.a && beam.b) {
             const a = beam.a.body.position;
             const b = beam.b.body.position;
@@ -1304,6 +1332,7 @@ const Building = {
         if (drag.sourceStrut) {
             return this.finishStrutExtrusion(drag.sourceStrut, x, y);
         }
+        if (drag.mode === "door") return this.finishDoor(drag.startNode, x, y);
 
         // Give the player a little extra room to snap onto an existing
         // node. Only consider nodes belonging to the same team.
@@ -1336,6 +1365,87 @@ const Building = {
         }
 
         return this.finishExtrusion(drag.startNode, x, y);
+    },
+
+    finishDoor(hingeNode, x, y) {
+        if (!hingeNode || hingeNode.removed || hingeNode.team !== "player") return false;
+        const endNode = this.getNearestNode(x, y, Math.max(CONFIG.NODE_SNAP_RADIUS || 25, 35));
+        if (!endNode || endNode === hingeNode || endNode.removed || endNode.team !== hingeNode.team) {
+            this.showPlacementMessage("Connect the door to another joint");
+            return false;
+        }
+        const a = hingeNode.body.position, b = endNode.body.position;
+        const length = this.distance(a, b);
+        const material = this.settings(this.material);
+        if (length < 20 || length > material.maxLength) {
+            this.showPlacementMessage("Door is too short or too long");
+            return false;
+        }
+        if (this.doors.some(d => !d.removed && ((d.a === hingeNode && d.b === endNode) || (d.a === endNode && d.b === hingeNode)))) {
+            this.showPlacementMessage("A door already connects those joints");
+            return false;
+        }
+        const cost = material.cost * 2;
+        const resource = this.buildingResource();
+        if (!this.charge(cost, resource)) return false;
+        const angle = Math.atan2(b.y - a.y, b.x - a.x);
+        const body = Matter.Bodies.rectangle(
+            (a.x + b.x) / 2, (a.y + b.y) / 2, length, Math.max(7, material.width),
+            {
+                isStatic: true, isSensor: true, angle,
+                label: "fort-door",
+                collisionFilter: { category: 0x0010, mask: 0x0001, group: 0 }
+            }
+        );
+        body.isFortDoor = true;
+        body.team = hingeNode.team;
+        const door = {
+            a: hingeNode, b: endNode, body, team: hingeNode.team,
+            material: this.material, width: Math.max(7, material.width),
+            length, baseAngle: angle, open: false, openAmount: 0,
+            health: material.maxHealth, maxHealth: material.maxHealth,
+            damageFlash: 0, removed: false
+        };
+        body.fortDoor = door;
+        this.doors.push(door);
+        Matter.Composite.add(Physics.world, body);
+        this.doorPlacementMode = false;
+        this.updateToolbar();
+        this.showPlacementMessage("Hinged door placed");
+        return true;
+    },
+
+    handleDoorPointerDown(x, y) {
+        if (this.doorPlacementMode) return false;
+        for (let i = this.doors.length - 1; i >= 0; i--) {
+            const door = this.doors[i];
+            if (door.removed || !door.body) continue;
+            const p = door.body.position, angle = door.body.angle || 0;
+            const dx = x - p.x, dy = y - p.y;
+            const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
+            const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
+            if (Math.abs(localX) <= door.length / 2 + 12 && Math.abs(localY) <= door.width / 2 + 14) {
+                door.open = !door.open;
+                return true;
+            }
+        }
+        return false;
+    },
+
+    removeDoor(door) {
+        if (!door || door.removed) return;
+        door.removed = true;
+        Matter.Composite.remove(Physics.world, door.body);
+        const index = this.doors.indexOf(door);
+        if (index >= 0) this.doors.splice(index, 1);
+    },
+
+    damageDoor(body, damage = 35) {
+        const door = body && body.fortDoor;
+        if (!door || door.removed) return;
+        door.health -= damage;
+        door.damageFlash = 180;
+        if (door.health <= 0) this.removeDoor(door);
     },
 
     finishBeam(nodeA, nodeB) {
@@ -1866,6 +1976,20 @@ const Building = {
     update(delta = 16.667) {
         this.updateRepair(delta);
         this.updateDebris(delta);
+        for (const door of [...this.doors]) {
+            if (!door.a || !door.b || door.a.removed || door.b.removed) { this.removeDoor(door); continue; }
+            const hinge = door.a.body.position;
+            const swing = door.openAmount * (door.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
+            const angle = door.baseAngle + swing;
+            Matter.Body.setPosition(door.body, {
+                x: hinge.x + Math.cos(angle) * door.length / 2,
+                y: hinge.y + Math.sin(angle) * door.length / 2
+            });
+            Matter.Body.setAngle(door.body, angle);
+            door.openAmount += ((door.open ? 1 : 0) - door.openAmount) * Math.min(1, delta / 150);
+            door.body.collisionFilter.mask = door.openAmount > 0.12 ? 0 : 0x0001;
+            door.damageFlash = Math.max(0, (door.damageFlash || 0) - delta);
+        }
         this.updateUtilities(delta);
 
         this.mines = this.mines.filter(mine =>
@@ -1948,6 +2072,21 @@ const Building = {
 
         this.drawGrid(ctx);
         this.drawEnclosedCells(ctx);
+
+        for (const door of this.doors) {
+            if (door.removed) continue;
+            const p = door.body.position, angle = door.body.angle;
+            const material = this.settings(door.material);
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(angle);
+            ctx.lineCap = "butt";
+            ctx.strokeStyle = "#241b17"; ctx.lineWidth = door.width + 4;
+            ctx.beginPath(); ctx.moveTo(-door.length / 2, 0); ctx.lineTo(door.length / 2, 0); ctx.stroke();
+            ctx.strokeStyle = door.damageFlash > 0 ? "#f4d7a0" : material.color;
+            ctx.lineWidth = door.width;
+            ctx.beginPath(); ctx.moveTo(-door.length / 2, 0); ctx.lineTo(door.length / 2, 0); ctx.stroke();
+            ctx.fillStyle = "#e6c16a"; ctx.beginPath(); ctx.arc(door.length / 2 - 9, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
 
         for (const strut of this.struts) {
             ctx.save();
