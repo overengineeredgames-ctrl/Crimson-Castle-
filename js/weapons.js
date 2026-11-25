@@ -6,7 +6,7 @@ var Weapons = window.Weapons = {
     projectiles: [],
     selectedTool: null,
     selectedCannon: null,
-    links: [], linkMode: false, linkSource: null, linkHoverDoor: null,
+    links: [], linkMode: false, linkSource: null, linkHoverDoor: null, linkDoorTargets: [],
     selectedCannons: [],
     mouse: { x: 0, y: 0 },
     mineDragging: false,
@@ -32,7 +32,7 @@ var Weapons = window.Weapons = {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.selectedTool = null;
-        this.links = []; this.linkMode = false; this.linkSource = null; this.linkHoverDoor = null;
+        this.links = []; this.linkMode = false; this.linkSource = null; this.linkHoverDoor = null; this.linkDoorTargets = [];
         this.selectedWeaponType = "cannon";
         this.fireHeld = false;
         this.mineDragging = false;
@@ -226,6 +226,11 @@ var Weapons = window.Weapons = {
 
         this.linkMode = next;
         this.selectedTool = next ? "link" : null;
+        // Snapshot player doors once when entering Link mode. Hit testing
+        // now visits doors only, not every structural beam.
+        this.linkDoorTargets = next
+            ? Building.struts.filter(strut => strut.isDoor && strut.team === "player")
+            : [];
         this.syncLinkedDoors();
 
         if (typeof Building !== "undefined") Building.updateToolbar();
@@ -246,7 +251,7 @@ var Weapons = window.Weapons = {
     findLinkDoorAtPoint(x, y) {
         // Fast scalar hit-test: no temporary arrays/objects or sorting.
         // Check the swung leaf and its original beam position.
-        const doors = Building.struts;
+        const doors = this.linkDoorTargets;
         for (let i = doors.length - 1; i >= 0; i--) {
             const d = doors[i];
             if (!d.isDoor || d.team !== "player" || !d.a || !d.b ||
@@ -736,7 +741,15 @@ var Weapons = window.Weapons = {
                 const p = this.linkSource.node.body.position;
                 ctx.beginPath(); ctx.arc(p.x, p.y, 27, 0, Math.PI * 2);
                 ctx.strokeStyle = "#ffe66d"; ctx.lineWidth = 3; ctx.stroke();
-
+                // Live dotted guide uses cached pointer coordinates only.
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(this.mouse.x, this.mouse.y);
+                ctx.setLineDash([3, 5]);
+                ctx.strokeStyle = "rgba(255,230,109,.85)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
             ctx.restore();
         }
