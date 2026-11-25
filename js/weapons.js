@@ -703,8 +703,11 @@ var Weapons = window.Weapons = {
         const angle = cannon.angle;
 
         if (weaponType === "flakCannon") {
-            // Emit a visible rapid burst of separate shells over several frames.
-            const count = Math.max(2, stats.volleyCount || 11);
+            // Easy-mode AI flak is deliberately limited to two shells.
+            // Player flak and every other difficulty retain the normal volley.
+            const easyAI = cannon.team === "enemy" &&
+                window.AI && window.AI.difficulty === "easy";
+            const count = easyAI ? 2 : Math.max(2, stats.volleyCount || 11);
             const spread = stats.spread || 0.72;
             cannon.flakBurstShots = Array.from({ length: count }, (_, i) =>
                 angle - spread / 2 + spread * (i / (count - 1))
