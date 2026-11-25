@@ -9,6 +9,7 @@ var Weapons = window.Weapons = {
     selectedCannon: null,
     links: [], linkMode: false, linkSource: null, linkHoverDoor: null, linkDoorTargets: [],
     selectedCannons: [],
+    groupSelectMode: false,
     mouse: { x: 0, y: 0 },
     mineDragging: false,
     mineMetalCost: 50,
@@ -34,6 +35,7 @@ var Weapons = window.Weapons = {
         this.flakExplosions = [];
         this.selectedCannon = null;
         this.selectedCannons = [];
+        this.groupSelectMode = false;
         this.selectedTool = null;
         this.links = []; this.linkMode = false; this.linkSource = null; this.linkHoverDoor = null; this.linkDoorTargets = [];
         this.selectedWeaponType = "cannon";
@@ -236,6 +238,7 @@ var Weapons = window.Weapons = {
         // this through a toggle that can accidentally turn Link straight back off.
         this.selectedCannon = null;
         this.selectedCannons = [];
+        this.groupSelectMode = false;
         this.selectedTool = null;
         this.fireHeld = false;
         this.mineDragging = false;
@@ -365,6 +368,9 @@ var Weapons = window.Weapons = {
         // behaviorally selected. Preserve unrelated modes such as Link/Mine.
         this.selectedCannon = null;
         this.selectedCannons = [];
+        this.groupSelectMode = false;
+        const groupButton = document.querySelector('[data-mobile-action="group-select"]');
+        if (groupButton) groupButton.classList.remove("active");
         this.fireHeld = false;
         if (this.selectedTool === "cannon") this.selectedTool = null;
         this.lastCannonClick = 0;
@@ -379,6 +385,9 @@ var Weapons = window.Weapons = {
     clearSelectedCannon() {
         this.selectedCannon = null;
         this.selectedCannons = [];
+        this.groupSelectMode = false;
+        const groupButton = document.querySelector('[data-mobile-action="group-select"]');
+        if (groupButton) groupButton.classList.remove("active");
         this.fireHeld = false;
         this.syncLinkedDoors();
         this.lastCannonClick = 0;
@@ -566,11 +575,11 @@ var Weapons = window.Weapons = {
         if (clickedCannon) {
             const selectedIndex = this.selectedCannons.indexOf(clickedCannon);
 
-            if (ctrlKey) {
-                // Ctrl-click toggles this cannon in or out of the group.
+            if (ctrlKey || this.groupSelectMode) {
+                // Desktop Ctrl-click or held Android GROUP toggles any number of guns.
                 if (selectedIndex >= 0) {
                     this.selectedCannons.splice(selectedIndex, 1);
-                } else if (this.selectedCannons.length < 3) {
+                } else {
                     this.selectedCannons.push(clickedCannon);
                 }
             } else if (
