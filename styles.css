@@ -779,9 +779,11 @@ body.cc-theme-light #hud {
 }
 
 
-#door-confirm-actions { position:fixed; z-index:80; left:50%; bottom:max(88px,calc(env(safe-area-inset-bottom) + 78px)); transform:translateX(-50%); display:flex; width:min(280px,calc(100vw - 36px)); min-height:50px; overflow:hidden; border:2px solid #8ce5ff; border-radius:10px; background:#17466b; box-shadow:0 4px 18px rgba(0,0,0,.4); }
+#door-confirm-actions { position:fixed !important; z-index:200000 !important; left:50%; bottom:max(112px,calc(env(safe-area-inset-bottom) + 96px)); transform:translateX(-50%); display:flex; width:min(280px,calc(100vw - 36px)); min-height:54px; overflow:hidden; border:2px solid #8ce5ff; border-radius:10px; background:#17466b; box-shadow:0 4px 18px rgba(0,0,0,.65); pointer-events:auto !important; }
 #door-confirm-actions[hidden] { display:none !important; }
-#door-confirm-actions button { min-height:48px; border:0; color:#fff; font-size:15px; font-weight:900; touch-action:manipulation; }
+#gameCanvas { z-index:0; }
+#door-confirm-actions:not([hidden]) { visibility:visible !important; opacity:1 !important; }
+#door-confirm-actions button { min-height:50px; border:0; color:#fff; font-size:15px; font-weight:900; touch-action:manipulation; pointer-events:auto !important; }
 #btn-confirm-door { flex:1; background:#17466b; letter-spacing:.6px; }
 #btn-cancel-door { flex:0 0 58px; border-left:2px solid #8ce5ff !important; background:#7b252b; font-size:25px !important; line-height:1; }
 #door-confirm-actions button:active { filter:brightness(1.25); }

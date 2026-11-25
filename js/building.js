@@ -1282,8 +1282,20 @@ var Building = window.Building = {
 
     startDoorModifier(x, y) {
         if (!this.doorMaterial) return false;
-        const node = this.getNearestNode(x, y, 38);
-        if (!node || node.team !== "player" || node.removed) {
+        // Resolve the closest usable player joint directly. The generic
+        // nearest-node helper can choose an overlapping enemy/hidden joint,
+        // which made some upper endpoints impossible to start from.
+        let node = null, nodeDistance = 54;
+        for (const candidate of this.nodes) {
+            if (candidate.removed || candidate.hidden || candidate.team !== "player") continue;
+            const p = candidate.body.position;
+            const distance = Math.hypot(p.x - x, p.y - y);
+            if (distance < nodeDistance) {
+                node = candidate;
+                nodeDistance = distance;
+            }
+        }
+        if (!node) {
             this.showPlacementMessage("Touch a joint, then drag along one of its beams.");
             return true;
         }
@@ -1306,7 +1318,7 @@ var Building = window.Building = {
         if (!drag || drag.released) return;
         drag.x = x;
         drag.y = y;
-        let best = 58, candidate = null;
+        let best = 72, candidate = null;
         for (const beam of drag.connected) {
             if (!this.struts.includes(beam) || !beam.a || !beam.b) continue;
             const distance = this.pointToSegmentDistance(x, y, beam.a.body.position, beam.b.body.position);
@@ -1321,15 +1333,16 @@ var Building = window.Building = {
             this.doorConfirmTimer = setTimeout(() => {
                 if (this.doorModifierDrag !== drag) return;
                 drag.confirmReady = true;
-                const panel = document.getElementById("door-confirm-actions");
-                if (panel) panel.hidden = false;
-                this.showPlacementMessage("Beam selected. Release, then confirm the door.");
+                // The action bar is shown after pointer release, not while
+                // the player is still dragging across the beam.
+                this.showPlacementMessage("Beam selected. Release to confirm the door.");
             }, 500);
         }
     },
     releaseDoorModifier() {
         const drag = this.doorModifierDrag;
         if (!drag) return false;
+        if (drag.released) return true;
         drag.released = true;
         if (!drag.candidate || !this.struts.includes(drag.candidate)) {
             this.showPlacementMessage("Start at a joint and drag directly along a connected beam.");
@@ -1344,7 +1357,10 @@ var Building = window.Building = {
             const panel = document.getElementById("door-confirm-actions");
             if (panel) panel.hidden = false;
             this.showPlacementMessage("Confirm to replace the selected beam with a door.");
-        }, drag.confirmReady ? 0 : 500);
+        }, drag.confirmReady ? 0 : 150);
+        // Show immediately as well; the delayed callback only finalizes readiness.
+        const panel = document.getElementById("door-confirm-actions");
+        if (panel) panel.hidden = false;
         return true;
     },
     hideDoorConfirm() {

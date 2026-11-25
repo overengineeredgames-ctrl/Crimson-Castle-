@@ -927,6 +927,14 @@ var Game = window.Game = {
             Weapons.handlePointerMove(p.x, p.y);
         });
 
+        // Keep touch interactions reliable even if the browser routes the
+        // release outside the canvas after pointer capture is interrupted.
+        window.addEventListener("pointerup", () => {
+            if (Building.doorModifierDrag && !Building.doorModifierDrag.released) {
+                Building.releaseDoorModifier();
+            }
+        }, true);
+
         // Mine placement gets first chance to handle pointer release.
         this.canvas.addEventListener("pointerup", event => {
             if (this.panDrag) {
