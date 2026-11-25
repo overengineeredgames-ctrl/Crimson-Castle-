@@ -39,6 +39,13 @@ Open **Actions → Build Android APK → Run workflow** on GitHub. When it finis
 
 The Android build bundles Matter.js locally so the game physics do not depend on a CDN connection. The Windows Electron build remains separate.
 
+## Power and water production
+
+- **Solar Panel:** A low-cost source of steady energy.
+- **Water Driller:** Place on a ground joint; it uses energy to produce water.
+- **Water Storage:** Adds 300 water capacity, like a Battery adds energy capacity.
+- **Geothermal Generator:** Uses 6 water and 1.25 energy per second to generate 18 energy per second. Build solar panels or windmills first, then drill and store enough water to sustain geothermal power.
+
 ## Controls
 
 - **Build:** Select a building material, then drag from one joint to another.
