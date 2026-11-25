@@ -138,26 +138,33 @@ var Weapons = window.Weapons = {
             button = document.createElement("button");
             button.id = "btn-" + id;
             button.type = "button";
-            button.className = "tool";
-            button.dataset.toolCategory = "weapons";
             button.innerHTML = label + "<small>" + costLabel + "</small>";
-            button.title = weaponType === "machineGun"
-                ? "7 damage per shot • 0.12 second reload • hold to fire"
-                : weaponType === "megaCannon"
-                    ? "220 damage • 15 second reload • visible cooldown"
-                    : "Intercepts enemy bullets with proximity-fused explosions";
-            const cannonButton = document.getElementById("btn-cannon");
-            const previousButton = weaponType === "megaCannon"
-                ? document.getElementById("btn-machine-gun") || cannonButton
-                : weaponType === "flakCannon"
-                    ? document.getElementById("btn-mega-cannon") || cannonButton
-                    : cannonButton;
-            if (previousButton && previousButton.parentElement) {
-                previousButton.insertAdjacentElement("afterend", button);
-            } else {
-                (document.querySelector(".toolbar") || document.body).appendChild(button);
-            }
         }
+
+        // Always normalize metadata, including buttons authored in index.html.
+        // This keeps static and dynamically-created weapons in the same tab.
+        button.classList.add("tool");
+        button.dataset.toolCategory = "weapons";
+        button.type = "button";
+        button.title = weaponType === "machineGun"
+            ? "7 damage per shot • 0.12 second reload • hold to fire"
+            : weaponType === "megaCannon"
+                ? "220 damage • 15 second reload • visible cooldown"
+                : "Intercepts enemy bullets with proximity-fused explosions";
+
+        const cannonButton = document.getElementById("btn-cannon");
+        const previousButton = weaponType === "machineGun"
+            ? cannonButton
+            : weaponType === "megaCannon"
+                ? document.getElementById("btn-machine-gun") || cannonButton
+                : document.getElementById("btn-mega-cannon") || cannonButton;
+        if (previousButton && previousButton.parentElement &&
+            button.previousElementSibling !== previousButton) {
+            previousButton.insertAdjacentElement("afterend", button);
+        } else if (!button.parentElement) {
+            (document.querySelector(".toolbar") || document.body).appendChild(button);
+        }
+
         button.onclick = () => {
             const alreadySelected = this.selectedTool === "cannon" &&
                 this.selectedWeaponType === weaponType;
