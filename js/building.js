@@ -1316,7 +1316,12 @@ var Building = window.Building = {
             this.showPlacementMessage("That joint has no beam to modify.");
             return true;
         }
-        this.doorModifierDrag = { node, connected, candidate: null, x, y, released: false, confirmReady: false };
+        this.doorModifierDrag = {
+            node, connected, candidate: null, x, y,
+            startInput: { x, y },
+            startNodePosition: { x: node.body.position.x, y: node.body.position.y },
+            released: false, confirmReady: false
+        };
         this.hideDoorConfirm();
         this.showPlacementMessage("Drag from the joint along the beam, then release.");
         return true;
@@ -1419,7 +1424,7 @@ var Building = window.Building = {
             if (door) this.removeStrut(door, false);
             if (remainder) this.removeStrut(remainder, false);
             this.removeNode(splitNode);
-            const restored = this.createStrut(a, b, { material: beam.material });
+            const restored = this.createStrut(beam.a, beam.b, { material: beam.material });
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage(restored ? "Door split failed; original beam restored." : "Door split failed. Please report this.");
         } else {
