@@ -22,7 +22,7 @@ var Weapons = window.Weapons = {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
         megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 },
-        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050, volleyCount: 11, spread: 0.72, burstInterval: 55 }
+        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050, volleyCount: 5, spread: 0.48, burstInterval: 65 }
     },
     lastCannonClick: 0,
     lastClickedCannon: null,
