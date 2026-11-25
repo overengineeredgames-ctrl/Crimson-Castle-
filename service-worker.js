@@ -15,8 +15,7 @@ const APP_SHELL = [
   "./js/weapons.js",
   "./js/ai.js",
   "./js/updater-ui.js",
-  "./js/main.js",
-  "./js/debug-panel.js"
+  "./js/main.js"
 ];
 
 self.addEventListener("install", event => {
