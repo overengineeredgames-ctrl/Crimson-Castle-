@@ -1,6 +1,6 @@
 "use strict";
 
-const AI = {
+var AI = window.AI = {
     initialized: false,
 
     buildTimer: 0,
