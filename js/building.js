@@ -1318,7 +1318,7 @@ var Building = window.Building = {
                 const confirm = document.getElementById("btn-confirm-door");
                 if (confirm) confirm.hidden = false;
                 this.showPlacementMessage("Beam selected. Release, then confirm the door.");
-            }, 1000);
+            }, 500);
         }
     },
     releaseDoorModifier() {
@@ -1338,7 +1338,7 @@ var Building = window.Building = {
             const button = document.getElementById("btn-confirm-door");
             if (button) button.hidden = false;
             this.showPlacementMessage("Confirm to replace the selected beam with a door.");
-        }, drag.confirmReady ? 0 : 1000);
+        }, drag.confirmReady ? 0 : 500);
         return true;
     },
     hideDoorConfirm() {
@@ -2129,6 +2129,32 @@ var Building = window.Building = {
 
         this.drawGrid(ctx);
         this.drawEnclosedCells(ctx);
+
+        // Live door-size preview: highlight the exact beam section that
+        // will become the door while the player drags from a joint.
+        const doorDrag = this.doorModifierDrag;
+        const previewBeam = doorDrag && doorDrag.candidate;
+        if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
+            const a = previewBeam.a.body.position;
+            const b = previewBeam.b.body.position;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const lengthSq = dx * dx + dy * dy;
+            let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
+            t = Math.max(0.08, Math.min(0.92, t));
+            const endX = a.x + dx * t, endY = a.y + dy * t;
+            const previewMaterial = this.settings(this.doorMaterial || previewBeam.material);
+            ctx.save();
+            ctx.lineCap = "round";
+            ctx.shadowColor = previewMaterial.color;
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = "rgba(8, 16, 24, 0.9)";
+            ctx.lineWidth = Math.max(10, previewBeam.width + 7);
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.strokeStyle = previewMaterial.color;
+            ctx.lineWidth = Math.max(5, previewBeam.width - 1);
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.restore();
+        }
 
         for (const strut of this.struts) {
             if (strut.isDoor) { this.drawDoor(ctx, strut); continue; }
