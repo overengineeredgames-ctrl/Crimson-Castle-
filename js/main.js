@@ -838,12 +838,8 @@ var Game = window.Game = {
         if (!controls) return;
 
         const groupButton = controls.querySelector('[data-mobile-action="group-select"]');
-        let isNativeAndroid = false;
-        try {
-            isNativeAndroid = !!(window.Capacitor &&
-                typeof window.Capacitor.isNativePlatform === "function" &&
-                window.Capacitor.isNativePlatform());
-        } catch (_) {}
+        const isNativeAndroid = window.CC_ANDROID_APK === true;
+        let groupSelectPointerId = null;
         if (groupButton) groupButton.hidden = !isNativeAndroid;
 
         document.addEventListener("pointerdown", event => {
@@ -851,11 +847,14 @@ var Game = window.Game = {
             if (!target || !isNativeAndroid || this.state !== "playing") return;
             event.preventDefault();
             event.stopPropagation();
+            groupSelectPointerId = event.pointerId;
             Weapons.groupSelectMode = true;
             target.classList.add("active");
         }, true);
-        const releaseGroupSelect = () => {
+        const releaseGroupSelect = event => {
             if (!Weapons.groupSelectMode) return;
+            if (event && Number.isFinite(event.pointerId) && event.pointerId !== groupSelectPointerId) return;
+            groupSelectPointerId = null;
             Weapons.groupSelectMode = false;
             if (groupButton) groupButton.classList.remove("active");
         };
