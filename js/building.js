@@ -1354,6 +1354,9 @@ const Building = {
             return this.finishBeam(drag.startNode, endNode);
         }
 
+        // Doors connect existing joints only; never silently turn a door drag
+        // into a new beam-and-joint extrusion.
+        if (this.doorMaterial) return false;
         return this.finishExtrusion(drag.startNode, x, y);
     },
 
@@ -1780,6 +1783,7 @@ const Building = {
         this.repairMode = !!enabled;
         this.repairTarget = null;
         if (this.repairMode) {
+            this.doorMaterial = null;
             this.deleteMode = false;
             this.utilityTool = null;
             if (typeof Weapons !== "undefined") {
