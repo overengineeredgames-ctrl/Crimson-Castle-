@@ -29,7 +29,8 @@ var Building = window.Building = {
     resources: {
         metal: CONFIG.STARTING_METAL || 500,
         wood: 250,
-        energy: CONFIG.STARTING_ENERGY || 100
+        energy: CONFIG.STARTING_ENERGY || 100,
+        water: 0
     },
 
     settings(material = this.material) {
@@ -75,7 +76,8 @@ var Building = window.Building = {
         this.resources = {
             metal: CONFIG.STARTING_METAL || 500,
             wood: 250,
-            energy: CONFIG.STARTING_ENERGY || 100
+            energy: CONFIG.STARTING_ENERGY || 100,
+            water: 0
         };
 
         this.groundY = Physics.groundY;
@@ -767,9 +769,13 @@ var Building = window.Building = {
 
     utilityDefinitions: {
         drill: { name: "Metal Drill", metalCost: 130, energyCost: 0, drillRate: 5.5, powerUse: 3.5 },
+        waterDrill: { name: "Water Driller", metalCost: 130, waterRate: 4.5, powerUse: 3.5 },
         treeMine: { name: "Tree Mine", metalCost: 105, woodRate: 4 },
         windmill: { name: "Windmill", metalCost: 115, energyCost: 0 },
-        battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 }
+        solar: { name: "Solar Panel", metalCost: 65, energyCost: 0, output: 2 },
+        battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 },
+        waterTank: { name: "Water Storage", metalCost: 90, capacity: 300 },
+        geothermal: { name: "Geothermal Generator", metalCost: 190, waterUse: 6, powerUse: 1.25, output: 18 }
     },
 
     createUtilityButtons() {
@@ -778,9 +784,13 @@ var Building = window.Building = {
 
         const definitions = [
             ["drill", "Metal Drill", "130 metal • ground only • uses power"],
+            ["waterDrill", "Water Driller", "130 metal • ground only • uses power • +4.5 water/sec"],
             ["treeMine", "Tree Mine", "105 metal • produces 4 wood/sec"],
             ["windmill", "Windmill", "115 metal • variable power"],
-            ["battery", "Battery", "90 metal • +300 storage"]
+            ["solar", "Solar Panel", "65 metal • +2 power/sec"],
+            ["battery", "Battery", "90 metal • +300 energy storage"],
+            ["waterTank", "Water Storage", "90 metal • +300 water storage"],
+            ["geothermal", "Geothermal Generator", "190 metal • uses 6 water/sec + 1.25 power/sec • +18 power/sec"]
         ];
 
         for (const [type, label, detail] of definitions) {
@@ -911,8 +921,8 @@ var Building = window.Building = {
         let mountY = y;
         let windmillMountFound = false;
 
-        if (type === "drill") {
-            // Metal drills must sit on a genuine ground joint, just like mines.
+        if (type === "drill" || type === "waterDrill") {
+            // Both resource drills require a genuine ground joint, just like mines.
             const groundJoint = this.nodes
                 .filter(node => node.team === "player" && !node.removed &&
                     node.canHoldMine)
@@ -920,7 +930,9 @@ var Building = window.Building = {
                 .filter(item => item.distance <= 38)
                 .sort((a,b) => a.distance - b.distance)[0];
             if (!groundJoint) {
-                this.showPlacementMessage("Metal Drills can only be placed on a ground joint");
+                this.showPlacementMessage(type === "waterDrill"
+                    ? "Water Drillers can only be placed on a ground joint"
+                    : "Metal Drills can only be placed on a ground joint");
                 return true;
             }
             anchorNodes = [groundJoint.node];
@@ -937,7 +949,7 @@ var Building = window.Building = {
                 return true;
             }
             anchorNodes = cell.nodes;
-        } else if (type === "windmill") {
+        } else if (type === "windmill" || type === "solar") {
             const nearestNode = this.nodes
                 .filter(node => node.team === "player" && !node.removed && !node.isCore)
                 .map(node => ({node, distance:this.distance(node.body.position,{x,y})}))
@@ -973,11 +985,15 @@ var Building = window.Building = {
                 }
             }
             if (!anchorNodes.length) {
-                this.showPlacementMessage("Place a windmill on a node or near the middle of a beam");
+                this.showPlacementMessage(type === "solar"
+                    ? "Place a solar panel on a node or near the middle of a beam"
+                    : "Place a windmill on a node or near the middle of a beam");
                 return true;
             }
             if (!this.hasOpenAir(mountX,mountY-48,anchorNodes)) {
-                this.showPlacementMessage("Windmills need clear open air above the mount");
+                this.showPlacementMessage(type === "solar"
+                    ? "Solar panels need clear open sky above the mount"
+                    : "Windmills need clear open air above the mount");
                 return true;
             }
         } else {
@@ -998,7 +1014,7 @@ var Building = window.Building = {
 
         // All utilities occupy physical space. Keep a generous gap so they
         // cannot stack on top of one another inside a box or on the ground.
-        const footprint = type === "windmill" ? 42 : 34;
+        const footprint = type === "windmill" ? 42 : type === "solar" ? 36 : 34;
         const overlapping = this.installations.some(item =>
             !item.removed && Math.hypot(item.x-mountX,item.y-mountY) < footprint + 30
         );
@@ -1013,8 +1029,10 @@ var Building = window.Building = {
             x: anchorNodes.reduce((sum,node)=>sum+node.body.position.x,0)/anchorNodes.length,
             y: anchorNodes.reduce((sum,node)=>sum+node.body.position.y,0)/anchorNodes.length
         };
-        const installX = type === "drill" || type === "windmill" ? mountX : x;
-        const installY = type === "drill" || type === "windmill" ? mountY : y;
+        const installX = type === "drill" || type === "waterDrill" ||
+            type === "windmill" || type === "solar" ? mountX : x;
+        const installY = type === "drill" || type === "waterDrill" ||
+            type === "windmill" || type === "solar" ? mountY : y;
         this.installations.push({
             type,
             x: installX,
@@ -1064,9 +1082,8 @@ var Building = window.Building = {
                 item.output = 2 + item.windSpeed * 7;
                 item.angle += seconds * (1.2 + item.windSpeed * 5.5);
             }
-            if (item.type === "drill") {
-                item.angle += seconds * 7;
-            }
+            if (item.type === "solar") item.output = this.utilityDefinitions.solar.output;
+            if (item.type === "drill" || item.type === "waterDrill") item.angle += seconds * 7;
         }
     },
 
@@ -1076,14 +1093,23 @@ var Building = window.Building = {
         ).length * this.utilityDefinitions.battery.capacity;
     },
 
+    getWaterCapacity() {
+        return 100 + this.installations.filter(item =>
+            !item.removed && item.type === "waterTank"
+        ).length * this.utilityDefinitions.waterTank.capacity;
+    },
+
     getEnergyProduction() {
         const minePower = this.mines.filter(mine =>
             mine && !mine.removed && mine.node && !mine.node.removed
         ).reduce((sum,mine) => sum + (mine.energyPerSecond || 2),0);
-        const windPower = this.installations.filter(item =>
-            !item.removed && item.type === "windmill"
-        ).reduce((sum,item) => sum + item.output,0);
-        return minePower + windPower;
+        const renewablePower = this.installations.filter(item =>
+            !item.removed && (item.type === "windmill" || item.type === "solar")
+        ).reduce((sum,item) => sum + (item.output || 0),0);
+        const geothermalPower = this.installations.filter(item =>
+            !item.removed && item.type === "geothermal" && this.resources.water > 0
+        ).reduce((sum,item) => sum + this.utilityDefinitions.geothermal.output,0);
+        return minePower + renewablePower + geothermalPower;
     },
 
     addMine(node) {
@@ -1787,15 +1813,17 @@ var Building = window.Building = {
         const inCircle = (cx, cy, radius) =>
             Math.hypot(px - cx, py - cy) <= radius;
 
-        if (item.type === "drill") {
+        if (item.type === "drill" || item.type === "waterDrill") {
             return inRect(-19, -17, 19, 31);
         }
         if (item.type === "treeMine") {
             return inRect(-20, -15, 20, 25);
         }
-        if (item.type === "battery") {
+        if (item.type === "battery" || item.type === "waterTank") {
             return inRect(-19, -27, 19, 22);
         }
+        if (item.type === "solar") return inRect(-25, -30, 25, 16);
+        if (item.type === "geothermal") return inRect(-24, -23, 24, 25);
         if (item.type === "windmill") {
             // Match the mast and hub, then test the three rotating blades
             // against the same local rectangles used by the renderer.
@@ -1838,6 +1866,7 @@ var Building = window.Building = {
             hitInstallation.removed = true;
             this.installations = this.installations.filter(item => item !== hitInstallation);
             this.resources.energy = Math.min(this.resources.energy, this.getEnergyCapacity());
+            this.resources.water = Math.min(this.resources.water, this.getWaterCapacity());
             this.updateHUD();
             return true;
         }
@@ -2152,7 +2181,13 @@ var Building = window.Building = {
         }
 
         if (energyElement) {
-            energyElement.textContent = Math.floor(this.resources.energy);
+            energyElement.textContent = Math.floor(this.resources.energy) +
+                " / " + Math.floor(this.getEnergyCapacity());
+        }
+        const waterElement = document.getElementById("water-count");
+        if (waterElement) {
+            waterElement.textContent = Math.floor(this.resources.water) +
+                " / " + Math.floor(this.getWaterCapacity());
         }
     },
 
@@ -2481,7 +2516,7 @@ var Building = window.Building = {
             if (item.removed) continue;
             const {x,y} = item;
             ctx.save();
-            if (item.type === "drill") {
+            if (item.type === "drill" || item.type === "waterDrill") {
                 ctx.translate(x,y);
                 ctx.fillStyle = "#263746";
                 ctx.fillRect(-19,-12,38,25);
@@ -2497,8 +2532,14 @@ var Building = window.Building = {
                 ctx.moveTo(-5,0); ctx.lineTo(5,0); ctx.lineTo(0,19);
                 ctx.closePath(); ctx.fill();
                 ctx.restore();
-                ctx.fillStyle = "#65dfff";
+                ctx.fillStyle = item.type === "waterDrill" ? "#4bd5e8" : "#65dfff";
                 ctx.beginPath(); ctx.arc(0,-2,3,0,Math.PI*2); ctx.fill();
+                if (item.type === "waterDrill") {
+                    ctx.fillStyle = "#a7f6ff";
+                    ctx.font = "bold 8px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillText("H2O",0,27);
+                }
             } else if (item.type === "windmill") {
                 ctx.translate(x,y);
                 ctx.strokeStyle = "#b8c9d7";
@@ -2538,18 +2579,38 @@ var Building = window.Building = {
                 ctx.font = "bold 9px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText("+WOOD",0,25);
-            } else if (item.type === "battery") {
+            } else if (item.type === "battery" || item.type === "waterTank") {
                 ctx.translate(x,y);
-                ctx.fillStyle = "#263b4b";
+                ctx.fillStyle = item.type === "waterTank" ? "#214b60" : "#263b4b";
                 ctx.fillRect(-19,-22,38,44);
                 ctx.fillStyle = "#90a8ba";
                 ctx.fillRect(-8,-27,16,5);
-                ctx.strokeStyle = "#55d9ff";
+                ctx.strokeStyle = item.type === "waterTank" ? "#49d9e8" : "#55d9ff";
                 ctx.lineWidth = 3;
                 ctx.strokeRect(-13,-16,26,32);
-                ctx.fillStyle = "#55d9ff";
+                ctx.fillStyle = item.type === "waterTank" ? "#36b8d1" : "#55d9ff";
                 ctx.fillRect(-4,-10,8,20);
                 ctx.fillRect(-9,-4,18,8);
+                if (item.type === "waterTank") {
+                    ctx.fillStyle = "#d4faff"; ctx.font = "bold 8px Arial";
+                    ctx.textAlign = "center"; ctx.fillText("H2O",0,34);
+                }
+            } else if (item.type === "solar") {
+                ctx.translate(x,y);
+                ctx.fillStyle = "#344b63"; ctx.fillRect(-25,-22,50,34);
+                ctx.strokeStyle = "#9bd5ff"; ctx.lineWidth = 1.5; ctx.strokeRect(-25,-22,50,34);
+                ctx.strokeStyle = "#6aa9d6"; ctx.lineWidth = 1;
+                for (let col=-15;col<=15;col+=10) { ctx.beginPath(); ctx.moveTo(col,-22); ctx.lineTo(col,12); ctx.stroke(); }
+                ctx.beginPath(); ctx.moveTo(-25,-5); ctx.lineTo(25,-5); ctx.stroke();
+                ctx.fillStyle = "#f7d36b"; ctx.beginPath(); ctx.arc(0,-29,7,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#7ce5ff"; ctx.font = "bold 9px Arial"; ctx.textAlign = "center"; ctx.fillText("+2⚡",0,25);
+            } else if (item.type === "geothermal") {
+                ctx.translate(x,y);
+                ctx.fillStyle = "#343a43"; ctx.fillRect(-23,-20,46,42);
+                ctx.fillStyle = "#b35c35"; ctx.fillRect(-16,-13,32,27);
+                ctx.fillStyle = "#f0b45b"; ctx.fillRect(-5,-25,10,9);
+                ctx.fillStyle = "#4bd5e8"; ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#e9faff"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.fillText("GEO",0,33);
             }
             ctx.restore();
         }
