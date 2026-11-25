@@ -125,7 +125,12 @@ var AI = window.AI = {
         const leftX = Math.round(worldWidth * 0.62);
         const baseY = Physics.terrainYAt(leftX) - Building.nodeRadius;
         const availablePresets = this.difficulty === "easy"
-            ? this.presetDefinitions.filter(item => item.weapon === "cannon")
+            ? [
+                ...this.presetDefinitions.filter(item => item.weapon === "cannon"),
+                ...this.presetDefinitions
+                    .filter(item => item.weapon === "cannon")
+                    .map(item => ({ ...item, weapon: "flakCannon" }))
+            ]
             : this.presetDefinitions;
         const preset = availablePresets[
             Math.floor(Math.random() * availablePresets.length)
@@ -694,8 +699,10 @@ var AI = window.AI = {
     },
 
     chooseAIWeaponType() {
-        // Easy mode uses standard cannons only; no rapid-fire or mega weapons.
-        if (this.difficulty === "easy") return "cannon";
+        // Easy mode is limited to standard Cannons and Flak Cannons.
+        if (this.difficulty === "easy") {
+            return Math.random() < 0.5 ? "cannon" : "flakCannon";
+        }
 
         const roll = Math.random();
         if (roll < 0.38) return "machineGun";
