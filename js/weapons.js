@@ -713,6 +713,9 @@ var Weapons = window.Weapons = {
         this.flakExplosions = this.flakExplosions.filter(explosion => explosion.life > 0);
 
         for (const projectile of [...this.projectiles]) {
+            // A flak blast may have removed a later projectile from this
+            // frame's iteration snapshot; never process that intercepted shot.
+            if (!this.projectiles.includes(projectile)) continue;
             projectile.life -= delta;
 
             // Flak shells detonate on hostile-fire proximity or when their
@@ -825,6 +828,7 @@ var Weapons = window.Weapons = {
             const dx = target.position.x - center.x;
             const dy = target.position.y - center.y;
             if (dx * dx + dy * dy <= radiusSq) {
+                target.intercepted = true;
                 Matter.Composite.remove(Physics.world, target);
                 this.projectiles = this.projectiles.filter(item => item !== target);
             }
