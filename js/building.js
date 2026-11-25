@@ -232,7 +232,9 @@ var Building = window.Building = {
 
     createNode(x, y, options = {}) {
         const team = options.team || "player";
-        if (!this.canPlaceNode(x, y, team)) return null;
+        // A split point on an already-valid beam is not a new fort placement:
+        // allow it even when nearby enemy-clearance rules would reject it.
+        if (!options.isBeamSplit && !this.canPlaceNode(x, y, team)) return null;
 
         const materialName = options.material || this.material;
         const material = this.settings(materialName);
@@ -398,7 +400,9 @@ var Building = window.Building = {
             return null;
         }
 
-        if (!this.canPlaceStrut(nodeA, nodeB, material.width)) {
+        // Door replacement pieces exactly subdivide an existing valid beam.
+        // Skip fresh-placement clearance checks for these two pieces only.
+        if (!options.isBeamSplit && !this.canPlaceStrut(nodeA, nodeB, material.width)) {
             return null;
         }
 
@@ -1408,42 +1412,55 @@ var Building = window.Building = {
             this.showPlacementMessage("Not enough resources for that door.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
-        // Always build the door outward from the joint the player touched.
-        // Beam endpoint order (a/b) is an implementation detail and must not
-        // reverse the user's drag direction.
+
         const startNode = drag.node;
         if (beam.a !== startNode && beam.b !== startNode) {
+            this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("That beam is no longer connected to the starting joint.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
+
         const endNode = beam.a === startNode ? beam.b : beam.a;
         const p1 = startNode.body.position, p2 = endNode.body.position;
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const lenSq = dx * dx + dy * dy;
         let t = lenSq ? ((drag.x - p1.x) * dx + (drag.y - p1.y) * dy) / lenSq : 0;
         t = Math.max(0.08, Math.min(0.92, t));
-        const splitX = p1.x + dx * t, splitY = p1.y + dy * t;
-        const splitNode = this.createNode(splitX, splitY, { team: beam.team, material: beam.material });
+        const splitNode = this.createNode(
+            p1.x + dx * t,
+            p1.y + dy * t,
+            { team: beam.team, material: beam.material, isBeamSplit: true }
+        );
+
         if (!splitNode) {
             this.resources[resource] += material.cost; this.updateHUD();
-            this.showPlacementMessage("Couldn't create the door split point. Try a clearer spot.");
+            this.showPlacementMessage("Couldn't create the door split point. The original beam was kept.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
-        this.removeStrut(beam, false);
-        const remainder = this.createStrut(splitNode, endNode, { material: beam.material });
-        const door = this.createStrut(startNode, splitNode, { material: materialName, isDoor: true });
+
+        // Build both replacement pieces BEFORE removing the original beam.
+        // This makes the operation atomic: a failed door/remainder creation
+        // can be rolled back without risking the player's existing structure.
+        const remainder = this.createStrut(splitNode, endNode, {
+            material: beam.material, isBeamSplit: true
+        });
+        const door = this.createStrut(startNode, splitNode, {
+            material: materialName, isDoor: true, isBeamSplit: true
+        });
+
         if (!door || !remainder) {
             if (door) this.removeStrut(door, false);
             if (remainder) this.removeStrut(remainder, false);
-            this.removeNode(splitNode);
-            const restored = this.createStrut(beam.a, beam.b, { material: beam.material });
+            this.removeNode(splitNode, false);
             this.resources[resource] += material.cost; this.updateHUD();
-            this.showPlacementMessage(restored ? "Door split failed; original beam restored." : "Door split failed. Please report this.");
+            this.showPlacementMessage("Door split failed; the original beam remains intact.");
         } else {
+            this.removeStrut(beam, false);
             this.checkSupport();
-            this.showPlacementMessage("Door placed on the selected section; the remaining beam stays intact.");
+            this.showPlacementMessage("Door placed; both beam sections and the fort remain connected.");
         }
-        this.doorModifierDrag = null; this.hideDoorConfirm();
+        this.doorModifierDrag = null;
+        this.hideDoorConfirm();
     },
 
     startDrag(x, y, mode = "beam") {
