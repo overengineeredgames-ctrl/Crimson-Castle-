@@ -889,6 +889,45 @@ var Weapons = window.Weapons = {
             }
         }
 
+        // Player Flak Cannons provide automatic projectile defense.
+        // This intentionally ignores buildings and every other weapon type.
+        for (const cannon of this.cannons) {
+            if (cannon.team !== "player" || cannon.weaponType !== "flakCannon" ||
+                !cannon.node || cannon.node.removed || cannon.cooldown > 0 ||
+                (cannon.flakBurstShots && cannon.flakBurstShots.length)) continue;
+
+            const origin = cannon.node.body.position;
+            const range = 900;
+            let target = null;
+            let targetDistance = Infinity;
+
+            for (const projectile of this.projectiles) {
+                if (projectile.team === cannon.team ||
+                    projectile.weaponType === "flakCannon" ||
+                    projectile.hasHit || projectile.intercepted) continue;
+
+                const dx = projectile.position.x - origin.x;
+                const dy = projectile.position.y - origin.y;
+                const distance = Math.hypot(dx, dy);
+                if (distance > range || distance >= targetDistance) continue;
+
+                target = projectile;
+                targetDistance = distance;
+            }
+
+            if (!target) continue;
+
+            // Lead the target using its current velocity so the flak volley
+            // aims at where the hostile projectile is going, not where it was.
+            const velocity = target.velocity || { x: 0, y: 0 };
+            const interceptTime = Math.min(1.5, targetDistance /
+                Math.max(1, this.weaponStats.flakCannon.speed));
+            const predictedX = target.position.x + velocity.x * interceptTime;
+            const predictedY = target.position.y + velocity.y * interceptTime;
+            cannon.angle = Math.atan2(predictedY - origin.y, predictedX - origin.x);
+            this.fire(cannon);
+        }
+
         this.updateSniperFireButton();
 
         if (this.fireHeld) {
