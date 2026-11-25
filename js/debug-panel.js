@@ -10,6 +10,7 @@
         checks: {},
         panel: null,
         pointerState: { lastEvent: null, counts: {}, lastMoveLog: 0, activePointer: null },
+        weaponState: { fireCalls: 0, projectileSpawnCalls: 0, lastFire: null, lastProjectile: null },
         doorDiagnostics() {
             const B = window.Building, G = window.Game, drag = B && B.doorModifierDrag;
             const panel = document.getElementById("door-confirm-actions");
@@ -54,6 +55,23 @@
                 selectedCannon: !!(W && W.selectedCannon),
                 selectedCannons: W && W.selectedCannons && W.selectedCannons.length,
                 selectedWeaponTool: W && W.selectedTool,
+                selectedCannonDetails: W ? (W.selectedCannons && W.selectedCannons.length
+                    ? W.selectedCannons
+                    : (W.selectedCannon ? [W.selectedCannon] : [])
+                ).map(cannon => ({
+                    weaponType: cannon.weaponType || "cannon",
+                    team: cannon.team,
+                    cooldown: +((cannon.cooldown || 0).toFixed(2)),
+                    burstShotsQueued: cannon.flakBurstShots ? cannon.flakBurstShots.length : 0
+                })) : [],
+                weaponDiagnostics: W ? {
+                    totalProjectiles: W.projectiles ? W.projectiles.length : 0,
+                    flakProjectiles: W.projectiles ? W.projectiles.filter(p => p.weaponType === "flakCannon").length : 0,
+                    otherProjectiles: W.projectiles ? W.projectiles.filter(p => p.weaponType !== "flakCannon").length : 0,
+                    flakVolleyCount: W.weaponStats && W.weaponStats.flakCannon && W.weaponStats.flakCannon.volleyCount,
+                    flakBurstInterval: W.weaponStats && W.weaponStats.flakCannon && W.weaponStats.flakCannon.burstInterval,
+                    counters: this.weaponState
+                } : null,
                 fireHeld: !!(W && W.fireHeld),
                 mobileDeselectButton: (() => {
                     const button = document.querySelector('#mobile-controls [data-mobile-action="deselect"]');
@@ -217,6 +235,36 @@
             if (confirm) confirm.addEventListener("click", () => this.report("DOOR_CONFIRM_CLICK","INFO","Confirm button clicked.",this.doorDiagnostics()));
             if (cancel) cancel.addEventListener("click", () => this.report("DOOR_CANCEL_CLICK","INFO","Cancel button clicked.",this.doorDiagnostics()));
             this.wrap(window.Weapons, "setLinkMode", "LINK_TOGGLE");
+            if (window.Weapons) {
+                const self = this;
+                const originalFire = window.Weapons.fire;
+                if (typeof originalFire === "function" && !originalFire.__ccWeaponDebug) {
+                    const wrappedFire = function (cannon, ...args) {
+                        self.weaponState.fireCalls++;
+                        self.weaponState.lastFire = {
+                            weaponType: cannon && (cannon.weaponType || "cannon"),
+                            cooldown: cannon && cannon.cooldown,
+                            time: new Date().toLocaleTimeString()
+                        };
+                        return originalFire.call(this, cannon, ...args);
+                    };
+                    wrappedFire.__ccWeaponDebug = true;
+                    window.Weapons.fire = wrappedFire;
+                }
+                const originalSpawn = window.Weapons.spawnProjectile;
+                if (typeof originalSpawn === "function" && !originalSpawn.__ccWeaponDebug) {
+                    const wrappedSpawn = function (cannon, angle, stats, ...args) {
+                        self.weaponState.projectileSpawnCalls++;
+                        self.weaponState.lastProjectile = {
+                            weaponType: cannon && (cannon.weaponType || "cannon"),
+                            time: new Date().toLocaleTimeString()
+                        };
+                        return originalSpawn.call(this, cannon, angle, stats, ...args);
+                    };
+                    wrappedSpawn.__ccWeaponDebug = true;
+                    window.Weapons.spawnProjectile = wrappedSpawn;
+                }
+            }
             this.wrap(window.Weapons, "linkDoorToWeapon", "LINK_CREATE");
             // No pointer listeners and no wrappers around pointermove/pointerdown.
         }
