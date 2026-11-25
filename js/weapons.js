@@ -233,20 +233,15 @@ var Weapons = window.Weapons = {
             button.id = "btn-flak-settings";
             button.type = "button";
             button.className = "tool";
-            button.textContent = "Settings";
+            button.textContent = "Flak Settings";
             button.hidden = true;
             button.title = "Configure the selected Flak Cannon";
             const flakButton = document.getElementById("btn-flak-cannon");
-            if (flakButton && flakButton.parentElement) {
-                flakButton.insertAdjacentElement("afterend", button);
-            } else {
-                (document.querySelector(".toolbar") || document.body).appendChild(button);
-            }
+            if (flakButton && flakButton.parentElement) flakButton.insertAdjacentElement("afterend", button);
+            else (document.querySelector(".toolbar") || document.body).appendChild(button);
         }
         button.onclick = () => {
-            const selected = this.selectedCannons.length ? this.selectedCannons :
-                (this.selectedCannon ? [this.selectedCannon] : []);
-            if (selected.length !== 1 || selected[0].weaponType !== "flakCannon") return;
+            if (!this.getSettingsFlakCannon()) return;
             const panel = document.getElementById("flak-settings-panel");
             if (panel) panel.hidden = !panel.hidden;
             this.refreshFlakSettingsUI();
@@ -258,34 +253,58 @@ var Weapons = window.Weapons = {
             panel.id = "flak-settings-panel";
             panel.hidden = true;
             panel.setAttribute("aria-label", "Flak Cannon settings");
-            panel.style.cssText = "position:fixed;z-index:13000;right:16px;bottom:18px;width:min(310px,calc(100vw - 28px));padding:14px;border:1px solid #e58b3d;border-radius:10px;background:rgba(12,22,34,.97);color:#f4f7fb;box-shadow:0 8px 28px rgba(0,0,0,.55);font:13px Arial,sans-serif;box-sizing:border-box";
+            panel.style.cssText = "position:fixed;z-index:13000;right:12px;bottom:16px;width:min(340px,calc(100vw - 24px));max-height:75vh;overflow:auto;padding:14px;border:1px solid #e58b3d;border-radius:10px;background:rgba(12,22,34,.98);color:#f4f7fb;box-shadow:0 8px 28px rgba(0,0,0,.55);font:13px Arial,sans-serif;box-sizing:border-box";
             if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) panel.style.bottom = "58px";
-            panel.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><strong style="flex:1;font-size:15px">FLAK CANNON SETTINGS</strong><button id="flak-settings-close" type="button" aria-label="Close settings" style="padding:4px 9px">×</button></div>' +
-                '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Control</span><button id="flak-auto-toggle" type="button"></button></div>' +
-                '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Detect enemy bullets</span><button id="flak-detect-toggle" type="button"></button></div>' +
-                '<label for="flak-priority" style="display:block;margin-top:14px;font-weight:700">Target priority: <span id="flak-priority-value">50</span></label>' +
-                '<input id="flak-priority" type="range" min="0" max="100" step="1" value="50" style="width:100%;margin:9px 0;accent-color:#e58b3d">' +
-                '<div style="display:flex;justify-content:space-between;color:#b9c7d6;font-size:11px"><span>Nearest bullet</span><span>Fastest bullet</span></div>';
+            panel.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><strong style="flex:1;font-size:15px">FLAK CANNON SETTINGS</strong><button id="flak-settings-close" type="button" aria-label="Close settings">×</button></div>' +
+                '<div style="font-weight:700;margin:8px 0">Control mode</div>' +
+                '<div style="display:flex;gap:8px"><button id="flak-mode-auto" type="button" style="flex:1">AUTO CANNON</button><button id="flak-mode-manual" type="button" style="flex:1">MANUAL</button></div>' +
+                '<div style="font-weight:700;margin:16px 0 4px">Bullet types to target</div>' +
+                '<div id="flak-target-types"></div>' +
+                '<div style="color:#aebdca;font-size:11px;margin-top:10px">Priority is used to choose between detected bullet types. Higher percentages are preferred.</div>';
             document.body.appendChild(panel);
             panel.querySelector("#flak-settings-close").onclick = () => { panel.hidden = true; };
-            panel.querySelector("#flak-auto-toggle").onclick = () => {
+            panel.querySelector("#flak-mode-auto").onclick = () => {
                 const cannon = this.getSettingsFlakCannon();
                 if (!cannon) return;
-                cannon.autoDefense = !(cannon.autoDefense !== false);
+                cannon.autoDefense = true;
                 this.refreshFlakSettingsUI();
             };
-            panel.querySelector("#flak-detect-toggle").onclick = () => {
+            panel.querySelector("#flak-mode-manual").onclick = () => {
                 const cannon = this.getSettingsFlakCannon();
                 if (!cannon) return;
-                cannon.detectEnemyBullets = !(cannon.detectEnemyBullets !== false);
+                cannon.autoDefense = false;
                 this.refreshFlakSettingsUI();
             };
-            panel.querySelector("#flak-priority").oninput = event => {
-                const cannon = this.getSettingsFlakCannon();
-                if (!cannon) return;
-                cannon.targetPriority = Number(event.target.value);
-                this.refreshFlakSettingsUI();
-            };
+            const types = [
+                ["cannon", "Cannon"],
+                ["machineGun", "Machine Gun"],
+                ["megaCannon", "Mega Cannon"],
+                ["sniper", "Sniper"]
+            ];
+            const container = panel.querySelector("#flak-target-types");
+            for (const [type, label] of types) {
+                const row = document.createElement("div");
+                row.style.cssText = "padding:9px 0;border-top:1px solid rgba(255,255,255,.12)";
+                row.innerHTML = '<label style="display:flex;align-items:center;gap:8px;font-weight:700"><input type="checkbox" data-flak-type="' + type + '" style="accent-color:#e58b3d">' + label + '</label>' +
+                    '<label style="display:block;margin:7px 0 0">Priority: <strong data-priority-value="' + type + '">50%</strong></label>' +
+                    '<input type="range" min="0" max="100" step="1" value="50" data-priority="' + type + '" style="width:100%;accent-color:#e58b3d">';
+                container.appendChild(row);
+                row.querySelector("[data-flak-type]").onchange = event => {
+                    const cannon = this.getSettingsFlakCannon();
+                    if (!cannon) return;
+                    cannon.targetTypes = cannon.targetTypes || {};
+                    cannon.targetTypes[type] = event.target.checked;
+                    this.refreshFlakSettingsUI();
+                };
+                row.querySelector("[data-priority]").oninput = event => {
+                    const cannon = this.getSettingsFlakCannon();
+                    if (!cannon) return;
+                    cannon.targetPriorities = cannon.targetPriorities || {};
+                    cannon.targetPriorities[type] = Number(event.target.value);
+                    this.refreshFlakSettingsUI();
+                };
+            }
         }
         this.refreshFlakSettingsUI();
     },
@@ -310,16 +329,20 @@ var Weapons = window.Weapons = {
         }
         button.classList.toggle("active", !panel.hidden);
         const auto = cannon.autoDefense !== false;
-        const detects = cannon.detectEnemyBullets !== false;
-        const autoButton = panel.querySelector("#flak-auto-toggle");
-        const detectButton = panel.querySelector("#flak-detect-toggle");
-        autoButton.textContent = auto ? "AUTO DEFENSE: ON" : "MANUAL CONTROL";
-        autoButton.setAttribute("aria-pressed", String(auto));
-        detectButton.textContent = detects ? "DETECTION: ON" : "DETECTION: OFF";
-        detectButton.setAttribute("aria-pressed", String(detects));
-        const priority = Math.max(0, Math.min(100, Number(cannon.targetPriority ?? 50)));
-        panel.querySelector("#flak-priority").value = String(priority);
-        panel.querySelector("#flak-priority-value").textContent = String(priority);
+        panel.querySelector("#flak-mode-auto").classList.toggle("active", auto);
+        panel.querySelector("#flak-mode-manual").classList.toggle("active", !auto);
+        const targetTypes = cannon.targetTypes || {};
+        const priorities = cannon.targetPriorities || {};
+        for (const type of ["cannon", "machineGun", "megaCannon", "sniper"]) {
+            const enabled = targetTypes[type] !== false;
+            const priority = Math.max(0, Math.min(100, Number(priorities[type] ?? 50)));
+            const checkbox = panel.querySelector('[data-flak-type="' + type + '"]');
+            const slider = panel.querySelector('[data-priority="' + type + '"]');
+            checkbox.checked = enabled;
+            slider.value = String(priority);
+            slider.disabled = !enabled;
+            panel.querySelector('[data-priority-value="' + type + '"]').textContent = priority + "%";
+        }
     },
 
     createWeaponButton(id, label, weaponType, costLabel) {
@@ -608,8 +631,8 @@ var Weapons = window.Weapons = {
             cooldown: 0,
             cooldownMax: stats.cooldown,
             autoDefense: true,
-            detectEnemyBullets: true,
-            targetPriority: 50
+            targetTypes: { cannon: true, machineGun: true, megaCannon: true, sniper: true },
+            targetPriorities: { cannon: 50, machineGun: 50, megaCannon: 50, sniper: 50 }
         };
 
         this.cannons.push(cannon);
@@ -994,7 +1017,7 @@ var Weapons = window.Weapons = {
         // This intentionally ignores buildings and every other weapon type.
         for (const cannon of this.cannons) {
             if (cannon.team !== "player" || cannon.weaponType !== "flakCannon" ||
-                cannon.autoDefense === false || cannon.detectEnemyBullets === false ||
+                cannon.autoDefense === false ||
                 !cannon.node || cannon.node.removed || cannon.cooldown > 0 ||
                 (cannon.flakBurstShots && cannon.flakBurstShots.length)) continue;
 
@@ -1002,22 +1025,28 @@ var Weapons = window.Weapons = {
             const range = 900;
             let target = null;
             let targetDistance = Infinity;
-            let bestScore = Infinity;
-            const priority = Math.max(0, Math.min(100, Number(cannon.targetPriority ?? 50))) / 100;
+            let bestScore = -Infinity;
+            const targetTypes = cannon.targetTypes || {};
 
             for (const projectile of this.projectiles) {
+                const type = projectile.weaponType || "cannon";
                 if (projectile.team === cannon.team ||
-                    projectile.weaponType === "flakCannon" ||
+                    type === "flakCannon" || targetTypes[type] === false ||
+                    !["cannon", "machineGun", "megaCannon", "sniper"].includes(type) ||
                     projectile.hasHit || projectile.intercepted) continue;
 
                 const dx = projectile.position.x - origin.x;
                 const dy = projectile.position.y - origin.y;
                 const distance = Math.hypot(dx, dy);
                 if (distance > range) continue;
-                const velocity = projectile.velocity || { x: 0, y: 0 };
-                const speed = Math.min(20, Math.hypot(velocity.x, velocity.y)) / 20;
-                const score = (1 - priority) * (distance / range) + priority * (1 - speed);
-                if (score >= bestScore) continue;
+
+                const priority = Math.max(0, Math.min(100,
+                    Number((cannon.targetPriorities || {})[type] ?? 50)));
+                if (priority <= 0) continue;
+                // Priority percentage dominates; distance breaks ties between equally
+                // prioritized projectile types so nearby threats are handled first.
+                const score = priority - (distance / range) * 0.01;
+                if (score <= bestScore) continue;
 
                 target = projectile;
                 targetDistance = distance;
