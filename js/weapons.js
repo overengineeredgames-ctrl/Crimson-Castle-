@@ -22,7 +22,7 @@ var Weapons = window.Weapons = {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
         megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 },
-        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050 }
+        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050, volleyCount: 7, spread: 0.42 }
     },
     lastCannonClick: 0,
     lastClickedCannon: null,
@@ -658,42 +658,54 @@ var Weapons = window.Weapons = {
 
         const start = cannon.node.body.position;
         const angle = cannon.angle;
-
         const stats = this.weaponStats[cannon.weaponType] || this.weaponStats.cannon;
-        const projectile = Matter.Bodies.circle(
-            start.x + Math.cos(angle) * 34,
-            start.y + Math.sin(angle) * 34,
-            stats.radius,
-            {
-                label: "cannon-projectile",
-                density: 0.003,
-                frictionAir: 0.002,
-                restitution: 0.1,
-                isSensor: true
+        const weaponType = cannon.weaponType || "cannon";
+        const volleyCount = weaponType === "flakCannon"
+            ? Math.max(1, stats.volleyCount || 7)
+            : 1;
+        const spread = weaponType === "flakCannon" ? (stats.spread || 0.42) : 0;
+
+        // Flak fires a fan of independent shells in one trigger pull. Each
+        // shell keeps the normal proximity fuse and blast interception logic.
+        for (let i = 0; i < volleyCount; i++) {
+            const offset = volleyCount === 1
+                ? 0
+                : -spread / 2 + spread * (i / (volleyCount - 1));
+            const shotAngle = angle + offset;
+            const projectile = Matter.Bodies.circle(
+                start.x + Math.cos(shotAngle) * 34,
+                start.y + Math.sin(shotAngle) * 34,
+                stats.radius,
+                {
+                    label: "cannon-projectile",
+                    density: 0.003,
+                    frictionAir: 0.002,
+                    restitution: 0.1,
+                    isSensor: true
+                }
+            );
+
+            projectile.isProjectile = true;
+            projectile.damage = stats.damage;
+            projectile.team = cannon.team;
+            projectile.weaponType = weaponType;
+            projectile.life = 20000;
+            if (weaponType === "flakCannon") {
+                projectile.flakFuse = stats.fuse || 1050;
+                projectile.blastRadius = stats.blastRadius || 76;
             }
-        );
+            projectile.displayRadius = Math.max(4, stats.radius);
+            projectile.hasHit = false;
+            projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
 
-        projectile.isProjectile = true;
-        projectile.damage = stats.damage;
-        projectile.team = cannon.team;
-        projectile.weaponType = cannon.weaponType || "cannon";
-        projectile.life = 20000;
-        if (projectile.weaponType === "flakCannon") {
-            projectile.flakFuse = stats.fuse || 1050;
-            projectile.blastRadius = stats.blastRadius || 76;
+            Matter.Composite.add(Physics.world, projectile);
+            Matter.Body.setVelocity(projectile, {
+                x: Math.cos(shotAngle) * stats.speed,
+                y: Math.sin(shotAngle) * stats.speed
+            });
+            this.projectiles.push(projectile);
         }
-        projectile.displayRadius = Math.max(4, stats.radius);
-        projectile.hasHit = false;
-        projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
 
-        Matter.Composite.add(Physics.world, projectile);
-
-        Matter.Body.setVelocity(projectile, {
-            x: Math.cos(angle) * stats.speed,
-            y: Math.sin(angle) * stats.speed
-        });
-
-        this.projectiles.push(projectile);
         cannon.cooldownMax = stats.cooldown;
         cannon.cooldown = stats.cooldown;
     },
