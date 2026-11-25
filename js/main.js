@@ -893,6 +893,12 @@ var Game = window.Game = {
             }
 
             const p = this.mousePosition(event);
+            if (Weapons.linkMode) {
+                // Link mode only updates the guide position. Skip all
+                // building/repair drag processing while the tool is active.
+                Weapons.handlePointerMove(p.x, p.y);
+                return;
+            }
             Building.moveDoorModifier(p.x, p.y);
             Building.setMousePosition(p.x, p.y);
             if (Building.repairMode) {
