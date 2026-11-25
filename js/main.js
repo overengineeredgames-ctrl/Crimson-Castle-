@@ -782,6 +782,11 @@ var Game = window.Game = {
 
     startGame() {
         AI.setDifficulty(this.difficulty);
+        // A new difficulty selection must get a fresh enemy fort built for
+        // that mode, rather than carrying over the previous mode's base.
+        if (AI.fortCreated && AI.fortDifficulty !== this.difficulty) {
+            AI.resetEnemyFort();
+        }
         // Build the enemy fort only after the player has chosen a difficulty.
         if (!AI.fortCreated) AI.createEnemyFort();
 

@@ -3,6 +3,7 @@
 var AI = window.AI = {
     initialized: false,
     fortCreated: false,
+    fortDifficulty: null,
 
     buildTimer: 0,
     repairTimer: 0,
@@ -120,9 +121,32 @@ var AI = window.AI = {
     ],
     activePreset: null,
 
+    resetEnemyFort() {
+        // Remove the previous difficulty's entire enemy structure before
+        // generating a new one. Player structures and resources are untouched.
+        const enemyNodes = Building.nodes.filter(node =>
+            node.team === "enemy" && !node.removed
+        );
+        for (const node of enemyNodes) {
+            Building.removeNode(node, false);
+        }
+        Weapons.cannons = Weapons.cannons.filter(cannon => cannon.team !== "enemy");
+        Weapons.projectiles = Weapons.projectiles.filter(projectile => projectile.team !== "enemy");
+        this.fortCreated = false;
+        this.fortDifficulty = null;
+        this.activePreset = null;
+        this.buildTimer = 0;
+        this.repairTimer = 0;
+        this.extraCannonTimer = 0;
+        this.expansionCount = 0;
+        this.currentTarget = null;
+        Building.checkSupport();
+    },
+
     createEnemyFort() {
         if (this.fortCreated) return;
         this.fortCreated = true;
+        this.fortDifficulty = this.difficulty;
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
         const leftX = Math.round(worldWidth * 0.62);
         const baseY = Physics.terrainYAt(leftX) - Building.nodeRadius;
