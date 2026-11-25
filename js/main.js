@@ -1,7 +1,7 @@
 
 "use strict";
 
-const Game = {
+var Game = window.Game = {
     canvas: null,
     ctx: null,
 
