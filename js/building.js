@@ -10,6 +10,7 @@ var Building = window.Building = {
     utilityTool: null,
     drag: null,
     doorMaterial: null,
+    lastDoorConversion: null,
 
     repairMode: false,
     deleteMode: false,
@@ -1404,6 +1405,7 @@ var Building = window.Building = {
         if (panel) panel.hidden = true;
     },
     confirmDoorModifier() {
+        this.lastDoorConversion = null;
         const drag = this.doorModifierDrag, beam = drag && drag.candidate;
         if (!drag || !drag.released || !drag.confirmReady || !beam || !this.struts.includes(beam)) return;
         const materialName = this.doorMaterial, material = this.settings(materialName);
@@ -1462,12 +1464,23 @@ var Building = window.Building = {
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("Door split failed; the original beam remains intact.");
         } else {
+            // Keep object references for the debug panel so it can verify
+            // both replacement constraints immediately and after physics steps.
+            this.lastDoorConversion = {
+                createdAt: Date.now(),
+                original: beam,
+                startNode,
+                endNode,
+                splitNode,
+                door,
+                remainder
+            };
             this.removeStrut(beam, false);
             // Replacing one connected beam with two collinear sections does
             // not change the fort's support graph. Do not run the global
             // debris/support pass here: custom builds can use construction
             // anchors that are intentionally not treated as original bases.
-            this.showPlacementMessage("Door placed; both beam sections and the fort remain connected.");
+            this.showPlacementMessage("Door placed; checking both replacement connections.");
         }
         this.doorModifierDrag = null;
         this.hideDoorConfirm();
