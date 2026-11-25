@@ -1,15 +1,15 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.6",
-  "releaseDate": "2026-11-18T00:00:00.000Z",
+  "version": "1.0.7",
+  "releaseDate": "2026-11-25T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.0.6",
-  "description": "Crimson Castle 1.0.6 is available.",
+  "title": "Crimson Castle 1.0.7",
+  "description": "Crimson Castle 1.0.7 is available.",
   "changes": [
-    "Updated battlefield terrain with the terrain generation improvements.",
-    "Added touch-friendly mobile controls for camera panning, zooming, firing selected weapons, and pausing.",
-    "Improved mobile viewport behavior and touch interaction."
+    "Removed the debug panel from the public website and Android APK; desktop diagnostics remain available.",
+    "Added an Android hold-to-select control for selecting and aiming multiple guns together.",
+    "Updated group selection to support any number of guns; the X control clears all selected guns."
   ],
   "required": false,
   "minimumVersion": "1.0.0"
