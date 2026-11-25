@@ -1356,58 +1356,36 @@ const Building = {
             this.showPlacementMessage("Not enough resources for that door.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
-
-        // Project the drag position onto the beam and place a short door centered there.
+        // Convert only the selected portion from the starting joint to the
+        // projected drag point. The rest of the original beam remains intact.
         const a = beam.a, b = beam.b;
         const p1 = a.body.position, p2 = b.body.position;
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
-        const beamLength = Math.hypot(dx, dy);
-        if (beamLength < 75) {
+        const lenSq = dx * dx + dy * dy;
+        let t = lenSq ? ((drag.x - p1.x) * dx + (drag.y - p1.y) * dy) / lenSq : 0;
+        t = Math.max(0.08, Math.min(0.92, t));
+        const splitX = p1.x + dx * t, splitY = p1.y + dy * t;
+        const splitNode = this.createNode(splitX, splitY, { team: beam.team, material: beam.material });
+        if (!splitNode) {
             this.resources[resource] += material.cost; this.updateHUD();
-            this.showPlacementMessage("That beam is too short for a partial door.");
+            this.showPlacementMessage("Couldn't create the door split point. Try a clearer spot.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
-        const projection = ((drag.x - p1.x) * dx + (drag.y - p1.y) * dy) / (beamLength * beamLength);
-        const centerT = Math.max(0.08, Math.min(0.92, projection));
-        const doorLength = Math.min(82, beamLength * 0.55);
-        const halfT = doorLength / (2 * beamLength);
-        const startT = Math.max(0.04, Math.min(0.96 - doorLength / beamLength, centerT - halfT));
-        const endT = startT + doorLength / beamLength;
-
-        const startNode = this.createNode(p1.x + dx * startT, p1.y + dy * startT,
-            { team: beam.team, material: beam.material });
-        const endNode = startNode && this.createNode(p1.x + dx * endT, p1.y + dy * endT,
-            { team: beam.team, material: beam.material });
-        if (!startNode || !endNode) {
-            if (startNode) this.removeNode(startNode, false);
-            if (endNode) this.removeNode(endNode, false);
-            this.resources[resource] += material.cost; this.updateHUD();
-            this.showPlacementMessage("Couldn't create the door joints. Original beam was kept.");
-            this.doorModifierDrag = null; this.hideDoorConfirm(); return;
-        }
-
-        // Remove the original only after both split joints have been created.
         this.removeStrut(beam, false);
-        const left = this.createStrut(a, startNode, { material: beam.material });
-        const door = left && this.createStrut(startNode, endNode, { material: materialName, isDoor: true });
-        const right = door && this.createStrut(endNode, b, { material: beam.material });
-        if (!left || !door || !right) {
-            if (left) this.removeStrut(left, false);
+        const remainder = this.createStrut(splitNode, b, { material: beam.material });
+        const door = this.createStrut(a, splitNode, { material: materialName, isDoor: true });
+        if (!door || !remainder) {
             if (door) this.removeStrut(door, false);
-            if (right) this.removeStrut(right, false);
-            this.removeNode(startNode, false);
-            this.removeNode(endNode, false);
+            if (remainder) this.removeStrut(remainder, false);
+            this.removeNode(splitNode);
             const restored = this.createStrut(a, b, { material: beam.material });
             this.resources[resource] += material.cost; this.updateHUD();
-            this.showPlacementMessage(restored
-                ? "Door insertion failed; original beam restored."
-                : "Door insertion failed and the beam could not be restored. Please send the debug report.");
+            this.showPlacementMessage(restored ? "Door split failed; original beam restored." : "Door split failed. Please report this.");
         } else {
             this.checkSupport();
-            this.showPlacementMessage("Partial door inserted. Original beam remains on both sides.");
+            this.showPlacementMessage("Door placed on the selected section; the remaining beam stays intact.");
         }
-        this.doorModifierDrag = null;
-        this.hideDoorConfirm();
+        this.doorModifierDrag = null; this.hideDoorConfirm();
     },
 
     startDrag(x, y, mode = "beam") {
