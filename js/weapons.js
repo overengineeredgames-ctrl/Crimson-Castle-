@@ -233,6 +233,7 @@ var Weapons = window.Weapons = {
             button.id = "btn-flak-settings";
             button.type = "button";
             button.className = "tool";
+            button.dataset.toolCategory = "weapons";
             button.textContent = "Flak Settings";
             button.hidden = true;
             button.title = "Configure the selected Flak Cannon";
