@@ -70,6 +70,7 @@ var Building = window.Building = {
         this.utilityTool = null;
         this.drag = null;
         this.doorMaterial = null;
+        this.lastDoorConversion = null;
         this.doorModifierDrag = null;
         this.doorConfirmTimer = null;
 
