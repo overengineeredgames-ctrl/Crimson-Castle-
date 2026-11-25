@@ -836,6 +836,16 @@ var Game = window.Game = {
     setupMobileControls() {
         const controls = document.getElementById("mobile-controls");
         if (!controls) return;
+        // Handle the X control on pointerdown so Android touch input does not
+        // depend on a synthesized click event (which can be swallowed by overlays).
+        controls.addEventListener("pointerdown", event => {
+            const button = event.target.closest('[data-mobile-action="deselect"]');
+            if (!button || this.state !== "playing") return;
+            event.preventDefault();
+            event.stopPropagation();
+            Weapons.clearSelectedCannon();
+        });
+
         controls.addEventListener("click", event => {
             const button = event.target.closest("[data-mobile-action]");
             if (!button || this.state !== "playing") return;
@@ -851,7 +861,7 @@ var Game = window.Game = {
             else if (action === "zoom-in") this.setCameraZoomAt(centerX, this.cameraZoom * 1.18, centerY);
             else if (action === "zoom-out") this.setCameraZoomAt(centerX, this.cameraZoom / 1.18, centerY);
             else if (action === "deselect") {
-                Weapons.clearSelectedCannon();
+                // Deselect is handled on pointerdown for reliable touch behavior.
             } else if (action === "pause") this.togglePause();
             this.clampCamera();
         });
