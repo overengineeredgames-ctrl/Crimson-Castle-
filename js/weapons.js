@@ -6,7 +6,7 @@ var Weapons = window.Weapons = {
     projectiles: [],
     selectedTool: null,
     selectedCannon: null,
-    links: [], linkMode: false, linkSource: null,
+    links: [], linkMode: false, linkSource: null, linkHoverDoor: null,
     selectedCannons: [],
     mouse: { x: 0, y: 0 },
     mineDragging: false,
@@ -32,7 +32,7 @@ var Weapons = window.Weapons = {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.selectedTool = null;
-        this.links = []; this.linkMode = false; this.linkSource = null;
+        this.links = []; this.linkMode = false; this.linkSource = null; this.linkHoverDoor = null;
         this.selectedWeaponType = "cannon";
         this.fireHeld = false;
         this.mineDragging = false;
@@ -209,6 +209,7 @@ var Weapons = window.Weapons = {
         this.fireHeld = false;
         this.mineDragging = false;
         this.linkSource = null;
+        this.linkHoverDoor = null;
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
 
@@ -242,55 +243,78 @@ var Weapons = window.Weapons = {
             linkButton.setAttribute("aria-pressed", String(next));
         }
     },
+    findLinkDoorAtPoint(x, y) {
+        // Fast scalar hit-test: no temporary arrays/objects or sorting.
+        // Check the swung leaf and its original beam position.
+        const doors = Building.struts;
+        for (let i = doors.length - 1; i >= 0; i--) {
+            const d = doors[i];
+            if (!d.isDoor || d.team !== "player" || !d.a || !d.b ||
+                d.a.removed || d.b.removed) continue;
+            const a = d.a.body.position, b = d.b.body.position;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq < 1) continue;
+            const t = Math.max(0, Math.min(1, ((x-a.x)*dx + (y-a.y)*dy)/lenSq));
+            const closedX = a.x + t*dx, closedY = a.y + t*dy;
+            const closedDx = x-closedX, closedDy = y-closedY;
+            let bestSq = closedDx*closedDx + closedDy*closedDy;
+            const swing = (d.doorOpenAmount || 0) * Math.PI / 2;
+            if (swing > 0.015) {
+                const angle = Math.atan2(dy,dx) + swing;
+                const ex = a.x + Math.cos(angle)*Math.sqrt(lenSq);
+                const ey = a.y + Math.sin(angle)*Math.sqrt(lenSq);
+                const odx = ex-a.x, ody = ey-a.y;
+                const olenSq = odx*odx + ody*ody;
+                const ot = Math.max(0,Math.min(1,((x-a.x)*odx+(y-a.y)*ody)/olenSq));
+                const ox=x-(a.x+ot*odx), oy=y-(a.y+ot*ody);
+                bestSq = Math.min(bestSq,ox*ox+oy*oy);
+            }
+            if (bestSq <= 48*48) return d;
+        }
+        return null;
+    },
     handleLinkPointerDown(x, y) {
         if (!this.linkMode) return false;
 
-        // Use a generous world-space hit area so doors remain tappable at
-        // the smaller camera zoom used on phones.
-        const weapon = [...this.cannons].reverse().find(c => {
-            if (c.team !== "player" || !c.node || c.node.removed) return false;
-            const p = c.node.body.position;
-            const dx = x - p.x, dy = y - p.y;
-            const angle = c.angle || 0;
-            const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
-            const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
-            const type = c.weaponType || "cannon";
-            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
-            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
-            return Math.hypot(dx, dy) <= 32 ||
-                (localX >= -10 && localX <= barrelLength + 16 && Math.abs(localY) <= barrelHeight / 2 + 18);
-        });
-        if (weapon) {
-            this.linkSource = weapon;
-            Building.showPlacementMessage("Weapon selected — tap a door to link it.");
-            return true;
+        // Once a weapon is chosen, prioritize doors so a nearby cannon's
+        // generous tap radius cannot steal the door tap.
+        if (this.linkSource) {
+            const door = this.findLinkDoorAtPoint(x, y);
+            if (door) {
+                const added = this.linkDoorToWeapon(this.linkSource, door);
+                this.linkHoverDoor = null;
+                Building.showPlacementMessage(added ? "Door linked." : "Door unlinked.");
+                return true;
+            }
         }
 
-        // The rendered leaf swings around endpoint A. Hit-test that same
-        // rotated segment, not just the closed-door anchor positions.
-        const door = [...Building.struts].reverse().find(d => {
-            if (!d.isDoor || d.team !== "player" || !d.a || !d.b ||
-                d.a.removed || d.b.removed) return false;
-            const a = d.a.body.position, b = d.b.body.position;
-            const baseAngle = Math.atan2(b.y - a.y, b.x - a.x);
-            const length = Math.hypot(b.x - a.x, b.y - a.y);
-            const swing = (d.doorOpenAmount || 0) * (d.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
-            const angle = baseAngle + swing;
-            const end = { x: a.x + Math.cos(angle) * length, y: a.y + Math.sin(angle) * length };
-            const closedDistance = Building.pointToSegmentDistance(x, y, a, b);
-            const openDistance = Building.pointToSegmentDistance(x, y, a, end);
-            return Math.min(closedDistance, openDistance) <= 48;
-        });
-        if (door && this.linkSource) {
-            const added = this.linkDoorToWeapon(this.linkSource, door);
-            Building.showPlacementMessage(added ? "Door linked." : "Door unlinked.");
-            return true;
+        // No source yet: find a player weapon with a compact, allocation-free hit test.
+        for (let i = this.cannons.length - 1; i >= 0; i--) {
+            const c = this.cannons[i];
+            if (c.team !== "player" || !c.node || c.node.removed) continue;
+            const p = c.node.body.position;
+            const dx=x-p.x, dy=y-p.y, angle=c.angle||0;
+            const localX=dx*Math.cos(angle)+dy*Math.sin(angle);
+            const localY=-dx*Math.sin(angle)+dy*Math.cos(angle);
+            const type=c.weaponType||"cannon";
+            const barrelLength=type==="megaCannon"?43:type==="machineGun"?27:32;
+            const barrelHeight=type==="megaCannon"?14:type==="machineGun"?7:10;
+            if (dx*dx+dy*dy <= 32*32 ||
+                (localX>=-10 && localX<=barrelLength+16 &&
+                 Math.abs(localY)<=barrelHeight/2+18)) {
+                this.linkSource=c;
+                this.linkHoverDoor=null;
+                Building.showPlacementMessage("Weapon selected — tap a door to link it.");
+                return true;
+            }
         }
+
+        const door = this.findLinkDoorAtPoint(x, y);
         if (door) Building.showPlacementMessage("Select a weapon first.");
-        else Building.showPlacementMessage(this.linkSource ? "Tap directly on a door to link it." : "Select a weapon first.");
+        else Building.showPlacementMessage("Select a weapon first.");
         return !!door;
     },
-
     clearSelectedCannon() {
         this.selectedCannon = null;
         this.selectedCannons = [];
@@ -321,6 +345,11 @@ var Weapons = window.Weapons = {
     handlePointerMove(x, y) {
         this.mouse.x = x;
         this.mouse.y = y;
+        if (this.linkMode && this.linkSource) {
+            this.linkHoverDoor = this.findLinkDoorAtPoint(x, y);
+        } else {
+            this.linkHoverDoor = null;
+        }
 
         const selected = this.selectedCannons.length
             ? this.selectedCannons
@@ -705,7 +734,18 @@ var Weapons = window.Weapons = {
             ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(104,220,255,.72)";
             for (const link of this.links) { if (!this.cannons.includes(link.weapon) || !Building.struts.includes(link.door)) continue; const p = link.weapon.node.body.position, d = link.door; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo((d.a.body.position.x + d.b.body.position.x) / 2, (d.a.body.position.y + d.b.body.position.y) / 2); ctx.stroke(); }
             ctx.setLineDash([]);
-            if (this.linkSource && this.linkSource.node && !this.linkSource.node.removed) { const p = this.linkSource.node.body.position; ctx.beginPath(); ctx.arc(p.x, p.y, 27, 0, Math.PI * 2); ctx.strokeStyle = "#ffe66d"; ctx.lineWidth = 3; ctx.stroke(); }
+            if (this.linkSource && this.linkSource.node && !this.linkSource.node.removed) {
+                const p = this.linkSource.node.body.position;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 27, 0, Math.PI * 2);
+                ctx.strokeStyle = "#ffe66d"; ctx.lineWidth = 3; ctx.stroke();
+                const target = this.linkHoverDoor;
+                if (target && Building.struts.includes(target)) {
+                    const a=target.a.body.position, b=target.b.body.position;
+                    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo((a.x+b.x)/2,(a.y+b.y)/2);
+                    ctx.setLineDash([3,5]); ctx.strokeStyle="rgba(255,230,109,.95)";
+                    ctx.lineWidth=2.5; ctx.stroke(); ctx.setLineDash([]);
+                }
+            }
             ctx.restore();
         }
         for (const cannon of this.cannons) {
