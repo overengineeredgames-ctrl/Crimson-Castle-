@@ -411,27 +411,22 @@ var Building = window.Building = {
 
         const isDoor = !!options.isDoor;
         const initialAngle = Math.atan2(b.y - a.y, b.x - a.x);
-        // Ordinary beams remain endpoint-to-endpoint structural constraints.
-        // A door instead uses a rigid, solid panel body pinned directly to its
-        // hinge node. Its far end is deliberately NOT constrained to the frame
-        // node, so it can swing without stretching a spring or pulling nodes apart.
+        // The beam's endpoint constraint always keeps the fort structurally
+        // connected. A door panel is a kinematic sensor: it follows the hinge
+        // animation but never applies physics forces to the nodes or box.
         const beamBody = Matter.Bodies.rectangle(
             (a.x + b.x) / 2,
             (a.y + b.y) / 2,
             length,
             material.width,
             {
-                isStatic: false,
-                isSensor: !isDoor,
-                density: isDoor ? material.density : 0.001,
-                friction: isDoor ? 0.8 : 0,
-                frictionStatic: isDoor ? 1 : 0,
+                isStatic: true,
+                isSensor: true,
                 restitution: 0,
                 slop: 0.01,
                 collisionFilter: {
                     category: nodeA.team === "enemy" ? 0x0008 : 0x0004,
-                    // Door panels are solid against projectiles, but ignore
-                    // structural nodes and beams to avoid self-collision impulses.
+                    // Only projectile contacts are relevant for a door panel.
                     mask: 0x0001,
                     group: 0
                 },
@@ -440,28 +435,17 @@ var Building = window.Building = {
             }
         );
 
-        let constraint;
-        if (isDoor) {
-            constraint = Matter.Constraint.create({
-                bodyA: nodeA.body,
-                bodyB: beamBody,
-                pointA: { x: 0, y: 0 },
-                pointB: { x: -length / 2, y: 0 },
-                length: 0,
-                stiffness: 1,
-                damping: 0.2,
-                render: { visible: false }
-            });
-        } else {
-            constraint = Matter.Constraint.create({
-                bodyA: nodeA.body,
-                bodyB: nodeB.body,
-                length,
-                stiffness: material.stiffness,
-                damping: 0.15,
-                render: { visible: false }
-            });
-        }
+        // Keep the same endpoint-to-endpoint structural constraint used by
+        // ordinary beams. The visible door panel can swing independently,
+        // while the frame nodes remain firmly connected and cannot be yanked.
+        const constraint = Matter.Constraint.create({
+            bodyA: nodeA.body,
+            bodyB: nodeB.body,
+            length,
+            stiffness: material.stiffness,
+            damping: 0.15,
+            render: { visible: false }
+        });
 
         beamBody.isFortBeam = true;
         beamBody.team = nodeA.team;
@@ -2143,13 +2127,9 @@ var Building = window.Building = {
                 const centerX = a.x + Math.cos(angle) * half;
                 const centerY = a.y + Math.sin(angle) * half;
 
-                // Keep the rigid panel's hinge point exactly on the frame node.
-                // Unlike the old endpoint spring, this cannot stretch or leave
-                // a gap at the hinge when the door swings.
+                // Position the non-dynamic door panel at the hinge swing location.
                 Matter.Body.setAngle(strut.body, angle);
                 Matter.Body.setPosition(strut.body, { x: centerX, y: centerY });
-                Matter.Body.setVelocity(strut.body, { x: 0, y: 0 });
-                Matter.Body.setAngularVelocity(strut.body, 0);
                 strut.doorCollisionOpen = strut.doorOpenAmount >= 0.9;
             } else {
                 const centerX = (a.x + b.x) / 2;
