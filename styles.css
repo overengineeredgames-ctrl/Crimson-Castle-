@@ -818,6 +818,19 @@ body.cc-theme-light #hud {
 }
 
 
+/* Android-only held multi-gun selection control. */
+#mobile-controls [data-mobile-action="group-select"] {
+    pointer-events: auto !important; position: relative; z-index: 2;
+    min-height: 40px; min-width: 52px; padding: 0 8px;
+    font-size: 10px; font-weight: 900; letter-spacing: .4px;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+}
+#mobile-controls [data-mobile-action="group-select"][hidden] { display: none !important; }
+#mobile-controls [data-mobile-action="group-select"].active {
+    background: #b77a22; border-color: #ffe08a;
+    box-shadow: 0 0 12px rgba(255, 196, 82, .65);
+}
+
 /* Flak Cannon selection accent */
 #btn-flak-cannon.active {
     background: #8b4b20;
