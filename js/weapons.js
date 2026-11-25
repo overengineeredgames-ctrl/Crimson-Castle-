@@ -200,7 +200,20 @@ const Weapons = {
         for (const weapon of selected) if (weapon.team === "player") for (const door of this.getLinkedDoors(weapon)) active.add(door);
         for (const door of Building.struts) if (door.isDoor && door.team === "player") Building.setDoorOpen(door, active.has(door));
     },
-    setLinkMode(enabled) { this.linkMode = !!enabled; this.linkSource = null; this.selectedTool = this.linkMode ? "link" : null; this.clearSelectedCannon(); this.updateToolButtons(); },
+    setLinkMode(enabled) {
+        this.linkMode = !!enabled;
+        this.linkSource = null;
+        this.selectedTool = this.linkMode ? "link" : null;
+        this.clearSelectedCannon();
+        if (typeof Building !== "undefined") {
+            Building.doorMaterial = null;
+            Building.utilityTool = null;
+            Building.repairMode = false;
+            Building.deleteMode = false;
+            Building.updateToolbar();
+        }
+        this.updateToolButtons();
+    },
     handleLinkPointerDown(x, y) {
         if (!this.linkMode) return false;
 
