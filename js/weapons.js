@@ -322,7 +322,11 @@ var Weapons = window.Weapons = {
         const panel = document.getElementById("flak-settings-panel");
         if (!button || !panel) return;
         const cannon = this.getSettingsFlakCannon();
-        button.hidden = !cannon;
+        // Keep Flak Settings visible in the Weapons toolbar at all times.
+        button.hidden = false;
+        button.title = cannon
+            ? "Configure the selected Flak Cannon"
+            : "Select one player Flak Cannon to configure its settings";
         if (!cannon) {
             panel.hidden = true;
             button.classList.remove("active");
