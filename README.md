@@ -49,7 +49,7 @@ The Android build bundles Matter.js locally so the game physics do not depend on
 ## Controls
 
 - **Build:** Select a building material, then drag from one joint to another.
-- **Weapons:** Select a weapon, click a cannon to select it, aim, then click to fire. On Android, hold **GROUP** while tapping additional guns to aim/control them together; release **GROUP** when finished. Tap **✕** to clear all selected guns.
+- **Weapons:** Select a weapon, click a cannon to select it, aim, then click to fire. The Sniper fires a fast, straight 95-damage shot with a 5.5-second reload (230 Metal / 115 Energy). On Android, hold **GROUP** while tapping additional guns to aim/control them together; release **GROUP** when finished. Tap **✕** to clear all selected guns.
 - **Camera:** Use the mouse wheel to zoom, Shift + wheel or the left/right arrow keys to scroll, and middle-mouse drag to pan.
 - **Grid:** Press `G`.
 - **Repair:** Press `R`.
