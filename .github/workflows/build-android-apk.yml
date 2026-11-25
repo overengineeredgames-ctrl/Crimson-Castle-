@@ -34,11 +34,23 @@ jobs:
         shell: bash
         run: |
           rm -rf www
-          mkdir -p www/vendor
-          cp index.html styles.css CrimsonCastle.ico www/
+          mkdir -p www/vendor www/assets
+          cp index.html styles.css CrimsonCastle.ico manifest.json www/
           cp -R js www/js
+          cp -R assets/. www/assets/
           cp node_modules/matter-js/build/matter.min.js www/vendor/matter.min.js
           sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js#vendor/matter.min.js#' www/index.html
+
+      - name: Verify packaged game files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in index.html styles.css manifest.json js/config.js js/physics.js js/building.js js/weapons.js js/ai.js js/updater-ui.js js/main.js js/debug-panel.js vendor/matter.min.js assets/mobile-launcher.svg; do
+            test -s "www/$file" || { echo "Missing required APK asset: www/$file"; exit 1; }
+          done
+          grep -q "forceDeselectGuns" www/js/weapons.js
+          grep -q 'data-mobile-action="deselect"' www/index.html
+          echo "Verified current game scripts, mobile deselect control, physics engine, manifest and assets."
 
       - name: Generate Android project
         run: |
@@ -58,6 +70,13 @@ jobs:
           cairosvg.svg2png(url="assets/mobile-launcher.svg", write_to="mobile-launcher.png",
                            output_width=512, output_height=512)
           icon = Image.open("mobile-launcher.png").convert("RGBA")
+
+          # Generate every web-manifest icon referenced by index.html/manifest.json.
+          web_assets = Path("www/assets")
+          web_assets.mkdir(parents=True, exist_ok=True)
+          icon.resize((192,192), Image.Resampling.LANCZOS).save(web_assets / "icon-192.png")
+          icon.resize((512,512), Image.Resampling.LANCZOS).save(web_assets / "icon-512.png")
+          icon.resize((180,180), Image.Resampling.LANCZOS).save(web_assets / "apple-touch-icon.png")
 
           # Legacy launcher icons for older Android versions.
           for density, size in {"mdpi":48,"hdpi":72,"xhdpi":96,"xxhdpi":144,"xxxhdpi":192}.items():
