@@ -37,6 +37,8 @@ jobs:
           mkdir -p www/vendor www/assets
           cp index.html styles.css CrimsonCastle.ico manifest.json www/
           cp -R js www/js
+          # Keep diagnostics in source/desktop builds, never in the public APK.
+          rm -f www/js/debug-panel.js
           cp -R assets/. www/assets/
           cp node_modules/matter-js/build/matter.min.js www/vendor/matter.min.js
           sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js#vendor/matter.min.js#' www/index.html
@@ -45,12 +47,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in index.html styles.css manifest.json js/config.js js/physics.js js/building.js js/weapons.js js/ai.js js/updater-ui.js js/main.js js/debug-panel.js vendor/matter.min.js assets/mobile-launcher.svg; do
+          for file in index.html styles.css manifest.json js/config.js js/physics.js js/building.js js/weapons.js js/ai.js js/updater-ui.js js/main.js vendor/matter.min.js assets/mobile-launcher.svg; do
             test -s "www/$file" || { echo "Missing required APK asset: www/$file"; exit 1; }
           done
+          test ! -e www/js/debug-panel.js
+          ! grep -q "debug-panel.js" www/index.html
           grep -q "forceDeselectGuns" www/js/weapons.js
           grep -q 'data-mobile-action="deselect"' www/index.html
-          echo "Verified current game scripts, mobile deselect control, physics engine, manifest and assets."
+          grep -q 'data-mobile-action="group-select"' www/index.html
+          grep -q "groupSelectMode" www/js/weapons.js
+          echo "Verified v1.0.7 scripts, no APK debug panel, Android group selection, deselect control, physics engine, manifest and assets."
 
       - name: Generate Android project
         run: |
