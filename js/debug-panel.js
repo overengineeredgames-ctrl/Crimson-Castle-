@@ -9,6 +9,28 @@
         entries: [],
         checks: {},
         panel: null,
+        pointerState: { lastEvent: null, counts: {}, lastMoveLog: 0, activePointer: null },
+        doorDiagnostics() {
+            const B = window.Building, G = window.Game, drag = B && B.doorModifierDrag;
+            const panel = document.getElementById("door-confirm-actions");
+            const rect = panel && panel.getBoundingClientRect();
+            return {
+                dragExists: !!drag, released: !!(drag && drag.released),
+                confirmReady: !!(drag && drag.confirmReady),
+                candidateExists: !!(drag && drag.candidate),
+                candidateStillInStruts: !!(drag && drag.candidate && B.struts && B.struts.includes(drag.candidate)),
+                connectedBeamCount: drag && drag.connected ? drag.connected.length : 0,
+                dragWorldPosition: drag ? {x:+drag.x.toFixed(1),y:+drag.y.toFixed(1)} : null,
+                confirmPanel: panel ? {
+                    hidden:panel.hidden, display:getComputedStyle(panel).display,
+                    visibility:getComputedStyle(panel).visibility, opacity:getComputedStyle(panel).opacity,
+                    rect:rect?{x:+rect.x.toFixed(1),y:+rect.y.toFixed(1),width:+rect.width.toFixed(1),height:+rect.height.toFixed(1)}:null,
+                    parent:panel.parentElement&&panel.parentElement.tagName,
+                    buttons:Array.from(panel.querySelectorAll("button")).map(button=>({id:button.id,disabled:button.disabled,rect:(()=>{const r=button.getBoundingClientRect();return{x:+r.x.toFixed(1),y:+r.y.toFixed(1),width:+r.width.toFixed(1),height:+r.height.toFixed(1)}})()}))
+                }:{missing:true},
+                pointer:this.pointerState
+            };
+        },
 
         snapshot() {
             const B = window.Building, W = window.Weapons, G = window.Game;
@@ -25,7 +47,8 @@
                 selectedCannons: W && W.selectedCannons && W.selectedCannons.length,
                 linkSource: !!(W && W.linkSource),
                 cannons: W && W.cannons && W.cannons.length,
-                doors: B && B.struts ? B.struts.filter(s => s.isDoor && !s.removed).length : 0
+                doors: B && B.struts ? B.struts.filter(s => s.isDoor && !s.removed).length : 0,
+                doorDiagnostics: this.doorDiagnostics()
             };
         },
 
@@ -86,6 +109,24 @@
             }
         },
 
+        installDoorEventDiagnostics() {
+            if (!document.getElementById("gameCanvas") || document.documentElement.dataset.ccDoorDiagnostics) return;
+            document.documentElement.dataset.ccDoorDiagnostics = "1";
+            const self = this;
+            const record = (event) => {
+                const state = self.pointerState;
+                state.lastEvent = {type:event.type,pointerType:event.pointerType||(event.touches?"touch":"mouse"),pointerId:event.pointerId==null?null:event.pointerId,target:event.target&&(event.target.id||event.target.tagName),clientX:Number.isFinite(event.clientX)?+event.clientX.toFixed(1):null,clientY:Number.isFinite(event.clientY)?+event.clientY.toFixed(1):null,buttons:event.buttons==null?null:event.buttons,time:new Date().toLocaleTimeString()};
+                state.counts[event.type]=(state.counts[event.type]||0)+1;
+                if(event.type==="pointerdown"||event.type==="touchstart")state.activePointer=state.lastEvent;
+                if(["pointerup","touchend","pointercancel","touchcancel"].includes(event.type))state.activePointer=null;
+                if(!/move$/.test(event.type)) self.report("INPUT_"+event.type.toUpperCase(),"INFO",event.type+" observed on document.",self.doorDiagnostics());
+                else if(window.Building&&window.Building.doorModifierDrag&&Date.now()-state.lastMoveLog>350){state.lastMoveLog=Date.now();self.report("INPUT_MOVE","INFO",event.type+" while door drag active.",self.doorDiagnostics());}
+            };
+            ["pointerdown","pointerup","pointercancel","pointermove","touchstart","touchend","touchcancel","touchmove"].forEach(type=>document.addEventListener(type,record,{capture:true,passive:true}));
+            document.addEventListener("visibilitychange",()=>self.report("PAGE_VISIBILITY","INFO","Visibility: "+document.visibilityState,self.doorDiagnostics()));
+            this.report("DOOR_DIAGNOSTICS","PASS","Document-level input and confirmation UI diagnostics installed.");
+        },
+
         wrap(obj, name, key) {
             if (!obj || typeof obj[name] !== "function" || obj[name].__ccDebug) return;
             const original = obj[name];
@@ -143,7 +184,12 @@
                 (window.Building && window.Weapons && window.Game ? "available" : "missing"));
             this.wrap(window.Building, "setDoorMaterial", "DOOR_BUTTON");
             this.wrap(window.Building, "startDoorModifier", "DOOR_START");
+            this.wrap(window.Building, "releaseDoorModifier", "DOOR_RELEASE");
             this.wrap(window.Building, "confirmDoorModifier", "DOOR_CONFIRM");
+            this.installDoorEventDiagnostics();
+            const confirm = document.getElementById("btn-confirm-door"), cancel = document.getElementById("btn-cancel-door");
+            if (confirm) confirm.addEventListener("click", () => this.report("DOOR_CONFIRM_CLICK","INFO","Confirm button clicked.",this.doorDiagnostics()));
+            if (cancel) cancel.addEventListener("click", () => this.report("DOOR_CANCEL_CLICK","INFO","Cancel button clicked.",this.doorDiagnostics()));
             this.wrap(window.Weapons, "setLinkMode", "LINK_TOGGLE");
             this.wrap(window.Weapons, "linkDoorToWeapon", "LINK_CREATE");
             // No pointer listeners and no wrappers around pointermove/pointerdown.
