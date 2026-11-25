@@ -1,6 +1,8 @@
 name: Build Android APK
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -58,7 +60,9 @@ jobs:
           grep -q 'data-mobile-action="deselect"' www/index.html
           grep -q 'data-mobile-action="group-select"' www/index.html
           grep -q "groupSelectMode" www/js/weapons.js
-          echo "Verified v1.0.7 scripts, no APK debug panel, Android group selection, deselect control, physics engine, manifest and assets."
+          grep -q "updateSniperFireButton" www/js/weapons.js
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Verified Crimson Castle v${VERSION}: sniper fire control, Android group selection, deselect control, physics engine, manifest and assets; no APK debug panel."
 
       - name: Generate Android project
         run: |
