@@ -1391,10 +1391,16 @@ var Building = window.Building = {
             this.showPlacementMessage("Not enough resources for that door.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
-        // Convert only the selected portion from the starting joint to the
-        // projected drag point. The rest of the original beam remains intact.
-        const a = beam.a, b = beam.b;
-        const p1 = a.body.position, p2 = b.body.position;
+        // Always build the door outward from the joint the player touched.
+        // Beam endpoint order (a/b) is an implementation detail and must not
+        // reverse the user's drag direction.
+        const startNode = drag.node;
+        if (beam.a !== startNode && beam.b !== startNode) {
+            this.showPlacementMessage("That beam is no longer connected to the starting joint.");
+            this.doorModifierDrag = null; this.hideDoorConfirm(); return;
+        }
+        const endNode = beam.a === startNode ? beam.b : beam.a;
+        const p1 = startNode.body.position, p2 = endNode.body.position;
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const lenSq = dx * dx + dy * dy;
         let t = lenSq ? ((drag.x - p1.x) * dx + (drag.y - p1.y) * dy) / lenSq : 0;
@@ -1407,8 +1413,8 @@ var Building = window.Building = {
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
         this.removeStrut(beam, false);
-        const remainder = this.createStrut(splitNode, b, { material: beam.material });
-        const door = this.createStrut(a, splitNode, { material: materialName, isDoor: true });
+        const remainder = this.createStrut(splitNode, endNode, { material: beam.material });
+        const door = this.createStrut(startNode, splitNode, { material: materialName, isDoor: true });
         if (!door || !remainder) {
             if (door) this.removeStrut(door, false);
             if (remainder) this.removeStrut(remainder, false);
