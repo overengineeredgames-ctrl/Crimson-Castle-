@@ -1,7 +1,7 @@
 
 "use strict";
 
-const Weapons = {
+var Weapons = window.Weapons = {
     cannons: [],
     projectiles: [],
     selectedTool: null,
