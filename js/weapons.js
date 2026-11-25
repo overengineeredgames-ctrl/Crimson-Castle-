@@ -46,8 +46,13 @@ var Weapons = window.Weapons = {
                 const alreadySelected = this.selectedTool === "cannon" &&
                     this.selectedWeaponType === "cannon";
                 if (typeof Building !== "undefined") {
+                    // Switching to a weapon must exit door placement mode too.
+                    Building.doorMaterial = null;
+                    Building.doorModifierDrag = null;
+                    if (Building.hideDoorConfirm) Building.hideDoorConfirm();
                     Building.utilityTool = null;
                     Building.repairMode = false;
+                    Building.repairTarget = null;
                     Building.updateToolbar();
                 }
                 if (typeof Building !== "undefined" && Building.deleteMode) {
@@ -86,8 +91,13 @@ var Weapons = window.Weapons = {
         mineButton.onclick = () => {
             const alreadySelected = this.selectedTool === "mine";
             if (typeof Building !== "undefined") {
+                // Weapon and mine tools take priority over door construction.
+                Building.doorMaterial = null;
+                Building.doorModifierDrag = null;
+                if (Building.hideDoorConfirm) Building.hideDoorConfirm();
                 Building.utilityTool = null;
                 Building.repairMode = false;
+                Building.repairTarget = null;
                 Building.updateToolbar();
             }
             if (typeof Building !== "undefined" && Building.deleteMode) {
@@ -144,8 +154,13 @@ var Weapons = window.Weapons = {
             const alreadySelected = this.selectedTool === "cannon" &&
                 this.selectedWeaponType === weaponType;
             if (typeof Building !== "undefined") {
+                // Weapon and mine tools take priority over door construction.
+                Building.doorMaterial = null;
+                Building.doorModifierDrag = null;
+                if (Building.hideDoorConfirm) Building.hideDoorConfirm();
                 Building.utilityTool = null;
                 Building.repairMode = false;
+                Building.repairTarget = null;
                 Building.updateToolbar();
             }
             if (typeof Building !== "undefined" && Building.deleteMode) {
