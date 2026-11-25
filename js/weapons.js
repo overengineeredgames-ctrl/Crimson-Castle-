@@ -4,6 +4,7 @@
 var Weapons = window.Weapons = {
     cannons: [],
     projectiles: [],
+    flakExplosions: [],
     selectedTool: null,
     selectedCannon: null,
     links: [], linkMode: false, linkSource: null, linkHoverDoor: null, linkDoorTargets: [],
@@ -20,7 +21,8 @@ var Weapons = window.Weapons = {
     weaponStats: {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
-        megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 }
+        megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 },
+        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050 }
     },
     lastCannonClick: 0,
     lastClickedCannon: null,
@@ -29,6 +31,7 @@ var Weapons = window.Weapons = {
     init() {
         this.cannons = [];
         this.projectiles = [];
+        this.flakExplosions = [];
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.selectedTool = null;
@@ -68,6 +71,7 @@ var Weapons = window.Weapons = {
 
         this.createWeaponButton("machine-gun", "Machine Gun", "machineGun", "140 Metal / 70 Energy");
         this.createWeaponButton("mega-cannon", "Mega Cannon", "megaCannon", "260 Metal / 130 Energy");
+        this.createWeaponButton("flak-cannon", "Flak Cannon", "flakCannon", "190 Metal / 95 Energy");
 
         let mineButton = document.getElementById("btn-mine");
 
@@ -139,11 +143,15 @@ var Weapons = window.Weapons = {
             button.innerHTML = label + "<small>" + costLabel + "</small>";
             button.title = weaponType === "machineGun"
                 ? "7 damage per shot • 0.12 second reload • hold to fire"
-                : "220 damage • 15 second reload • visible cooldown";
+                : weaponType === "megaCannon"
+                    ? "220 damage • 15 second reload • visible cooldown"
+                    : "Intercepts enemy bullets with proximity-fused explosions";
             const cannonButton = document.getElementById("btn-cannon");
             const previousButton = weaponType === "megaCannon"
                 ? document.getElementById("btn-machine-gun") || cannonButton
-                : cannonButton;
+                : weaponType === "flakCannon"
+                    ? document.getElementById("btn-mega-cannon") || cannonButton
+                    : cannonButton;
             if (previousButton && previousButton.parentElement) {
                 previousButton.insertAdjacentElement("afterend", button);
             } else {
@@ -178,7 +186,8 @@ var Weapons = window.Weapons = {
         const buttons = [
             ["btn-cannon", "cannon"],
             ["btn-machine-gun", "machineGun"],
-            ["btn-mega-cannon", "megaCannon"]
+            ["btn-mega-cannon", "megaCannon"],
+            ["btn-flak-cannon", "flakCannon"]
         ];
         for (const [id, type] of buttons) {
             const button = document.getElementById(id);
@@ -329,8 +338,8 @@ var Weapons = window.Weapons = {
             const localX=dx*Math.cos(angle)+dy*Math.sin(angle);
             const localY=-dx*Math.sin(angle)+dy*Math.cos(angle);
             const type=c.weaponType||"cannon";
-            const barrelLength=type==="megaCannon"?43:type==="machineGun"?27:32;
-            const barrelHeight=type==="megaCannon"?14:type==="machineGun"?7:10;
+            const barrelLength=type==="megaCannon"?43:type==="flakCannon"?38:type==="machineGun"?27:32;
+            const barrelHeight=type==="megaCannon"?14:type==="flakCannon"?16:type==="machineGun"?7:10;
             if (dx*dx+dy*dy <= 32*32 ||
                 (localX>=-10 && localX<=barrelLength+16 &&
                  Math.abs(localY)<=barrelHeight/2+18)) {
@@ -541,8 +550,8 @@ var Weapons = window.Weapons = {
             const angle = c.angle || 0;
             const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
             const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
-            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
-            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
+            const barrelLength = type === "megaCannon" ? 43 : type === "flakCannon" ? 38 : type === "machineGun" ? 27 : 32;
+            const barrelHeight = type === "megaCannon" ? 14 : type === "flakCannon" ? 16 : type === "machineGun" ? 7 : 10;
             return localX >= -2 && localX <= barrelLength + 4 &&
                 Math.abs(localY) <= barrelHeight / 2 + 2;
         });
@@ -660,7 +669,12 @@ var Weapons = window.Weapons = {
         projectile.isProjectile = true;
         projectile.damage = stats.damage;
         projectile.team = cannon.team;
+        projectile.weaponType = cannon.weaponType || "cannon";
         projectile.life = 20000;
+        if (projectile.weaponType === "flakCannon") {
+            projectile.flakFuse = stats.fuse || 1050;
+            projectile.blastRadius = stats.blastRadius || 76;
+        }
         projectile.displayRadius = Math.max(4, stats.radius);
         projectile.hasHit = false;
         projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
@@ -695,8 +709,32 @@ var Weapons = window.Weapons = {
             }
         }
 
+        for (const explosion of this.flakExplosions) explosion.life -= delta;
+        this.flakExplosions = this.flakExplosions.filter(explosion => explosion.life > 0);
+
         for (const projectile of [...this.projectiles]) {
             projectile.life -= delta;
+
+            // Flak shells detonate on hostile-fire proximity or when their
+            // short fuse expires. They only intercept bullets, not structures.
+            if (projectile.weaponType === "flakCannon") {
+                projectile.flakFuse -= delta;
+                const intercepted = this.projectiles.some(other =>
+                    other !== projectile &&
+                    other.team !== projectile.team &&
+                    other.weaponType !== "flakCannon" &&
+                    !other.hasHit &&
+                    Math.hypot(
+                        other.position.x - projectile.position.x,
+                        other.position.y - projectile.position.y
+                    ) <= 58
+                );
+                if (intercepted || projectile.flakFuse <= 0 || projectile.life <= 0) {
+                    this.detonateFlak(projectile);
+                }
+                projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
+                continue;
+            }
 
             // Matter sensors can occasionally miss fast, thin-beam contacts.
             // Sweep the bullet's movement segment against enemy joints/beams as
@@ -771,7 +809,48 @@ var Weapons = window.Weapons = {
         this.selectedCannon = this.selectedCannons[0] || null;
     },
 
+    detonateFlak(shell) {
+        if (!shell || shell.flakDetonated) return;
+        shell.flakDetonated = true;
+        const center = { x: shell.position.x, y: shell.position.y };
+        const radius = shell.blastRadius || 76;
+        const radiusSq = radius * radius;
+        this.flakExplosions.push({ x: center.x, y: center.y, radius, life: 280, maxLife: 280 });
+
+        // Hostile bullets caught in the blast are removed; friendly bullets
+        // and other flak shells remain untouched.
+        for (const target of [...this.projectiles]) {
+            if (target === shell || target.team === shell.team ||
+                target.weaponType === "flakCannon" || target.hasHit) continue;
+            const dx = target.position.x - center.x;
+            const dy = target.position.y - center.y;
+            if (dx * dx + dy * dy <= radiusSq) {
+                Matter.Composite.remove(Physics.world, target);
+                this.projectiles = this.projectiles.filter(item => item !== target);
+            }
+        }
+        Matter.Composite.remove(Physics.world, shell);
+        this.projectiles = this.projectiles.filter(item => item !== shell);
+    },
+
     draw(ctx) {
+        for (const explosion of this.flakExplosions) {
+            const progress = 1 - explosion.life / explosion.maxLife;
+            const radius = explosion.radius * (0.35 + progress * 0.65);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, explosion.life / explosion.maxLife);
+            ctx.beginPath();
+            ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 170, 65, .22)";
+            ctx.fill();
+            ctx.lineWidth = 4 * (1 - progress) + 1;
+            ctx.strokeStyle = "#ffcf70";
+            ctx.shadowColor = "#ff8b35";
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+            ctx.restore();
+        }
+
         if (this.linkMode) {
             ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(104,220,255,.72)";
             for (const link of this.links) { if (!this.cannons.includes(link.weapon) || !Building.struts.includes(link.door)) continue; const p = link.weapon.node.body.position, d = link.door; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo((d.a.body.position.x + d.b.body.position.x) / 2, (d.a.body.position.y + d.b.body.position.y) / 2); ctx.stroke(); }
@@ -814,9 +893,11 @@ var Weapons = window.Weapons = {
                 ? "#e2bd55"
                 : type === "megaCannon"
                     ? "#b85bdf"
-                    : (cannon.team === "enemy" ? "#e16b70" : "#8796a5");
-            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
-            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
+                    : type === "flakCannon"
+                        ? "#e58b3d"
+                        : (cannon.team === "enemy" ? "#e16b70" : "#8796a5");
+            const barrelLength = type === "megaCannon" ? 43 : type === "flakCannon" ? 38 : type === "machineGun" ? 27 : 32;
+            const barrelHeight = type === "megaCannon" ? 14 : type === "flakCannon" ? 16 : type === "machineGun" ? 7 : 10;
             ctx.fillRect(0, -barrelHeight / 2, barrelLength, barrelHeight);
             ctx.fillStyle = "#394653";
             ctx.fillRect(barrelLength - 5, -barrelHeight / 2 - 1, 8, barrelHeight + 2);
@@ -828,7 +909,7 @@ var Weapons = window.Weapons = {
                 const progress = Math.max(0, Math.min(1, cannon.cooldown / (cannon.cooldownMax || stats.cooldown)));
                 ctx.beginPath();
                 ctx.arc(pos.x, pos.y, 19, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-                ctx.strokeStyle = cannon.weaponType === "megaCannon" ? "#d98aff" : "#ffd166";
+                ctx.strokeStyle = cannon.weaponType === "megaCannon" ? "#d98aff" : cannon.weaponType === "flakCannon" ? "#ff9b4a" : "#ffd166";
                 ctx.lineWidth = 3;
                 ctx.stroke();
                 if (cannon.weaponType === "megaCannon") {
@@ -867,7 +948,9 @@ var Weapons = window.Weapons = {
 
         for (const projectile of this.projectiles) {
             if (projectile.hasHit) continue;
-            const color = projectile.team === "enemy" ? "#ff3b4f" : "#ffe066";
+            const color = projectile.weaponType === "flakCannon"
+                ? "#ff9b4a"
+                : projectile.team === "enemy" ? "#ff3b4f" : "#ffe066";
             const velocity = projectile.velocity || { x: 0, y: 0 };
             const speed = Math.hypot(velocity.x, velocity.y) || 1;
             const trailLength = Math.min(24, speed * 1.8);
