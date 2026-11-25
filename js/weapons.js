@@ -102,9 +102,7 @@ const Weapons = {
 
         const linkButton = document.getElementById("btn-link");
         if (linkButton) linkButton.onclick = () => {
-            const enable = !this.linkMode;
-            Building.utilityTool = null; Building.repairMode = false; Building.setDeleteMode(false); Building.updateToolbar();
-            this.clearSelectedTool(); this.setLinkMode(enable);
+            this.setLinkMode(!this.linkMode);
         };
         this.updateToolButtons();
 
@@ -201,18 +199,43 @@ const Weapons = {
         for (const door of Building.struts) if (door.isDoor && door.team === "player") Building.setDoorOpen(door, active.has(door));
     },
     setLinkMode(enabled) {
-        this.linkMode = !!enabled;
+        const next = !!enabled;
+
+        // Clear every other active action before enabling Link. Do not route
+        // this through a toggle that can accidentally turn Link straight back off.
+        this.selectedCannon = null;
+        this.selectedCannons = [];
+        this.selectedTool = null;
+        this.fireHeld = false;
+        this.mineDragging = false;
         this.linkSource = null;
-        this.selectedTool = this.linkMode ? "link" : null;
-        this.clearSelectedCannon();
+
         if (typeof Building !== "undefined") {
             Building.doorMaterial = null;
             Building.utilityTool = null;
             Building.repairMode = false;
+            Building.repairTarget = null;
             Building.deleteMode = false;
-            Building.updateToolbar();
+            Building.drag = null;
+            Building.doorModifierDrag = null;
+            if (Building.hideDoorConfirm) Building.hideDoorConfirm();
         }
+
+        this.linkMode = next;
+        this.selectedTool = next ? "link" : null;
+
+        if (typeof Building !== "undefined") Building.updateToolbar();
         this.updateToolButtons();
+
+        // Remove stale visual selection from any tool not covered by a mode.
+        document.querySelectorAll(".toolbar .tool").forEach(button => {
+            if (button.id !== "btn-link") button.classList.remove("active");
+        });
+        const linkButton = document.getElementById("btn-link");
+        if (linkButton) {
+            linkButton.classList.toggle("active", next);
+            linkButton.setAttribute("aria-pressed", String(next));
+        }
     },
     handleLinkPointerDown(x, y) {
         if (!this.linkMode) return false;
