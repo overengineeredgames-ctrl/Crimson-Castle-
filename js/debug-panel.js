@@ -20,6 +20,14 @@
                 candidateExists: !!(drag && drag.candidate),
                 candidateStillInStruts: !!(drag && drag.candidate && B.struts && B.struts.includes(drag.candidate)),
                 connectedBeamCount: drag && drag.connected ? drag.connected.length : 0,
+                startInputWorld: drag && drag.startInput ? {x:+drag.startInput.x.toFixed(1),y:+drag.startInput.y.toFixed(1)} : null,
+                selectedStartNode: drag && drag.node && drag.node.body ? {x:+drag.node.body.position.x.toFixed(1),y:+drag.node.body.position.y.toFixed(1)} : null,
+                candidateEndpoints: drag && drag.candidate ? {
+                    a: drag.candidate.a && drag.candidate.a.body ? {x:+drag.candidate.a.body.position.x.toFixed(1),y:+drag.candidate.a.body.position.y.toFixed(1)} : null,
+                    b: drag.candidate.b && drag.candidate.b.body ? {x:+drag.candidate.b.body.position.x.toFixed(1),y:+drag.candidate.b.body.position.y.toFixed(1)} : null,
+                    startIsA: !!(drag.node && drag.candidate.a === drag.node),
+                    startIsB: !!(drag.node && drag.candidate.b === drag.node)
+                } : null,
                 dragWorldPosition: drag ? {x:+drag.x.toFixed(1),y:+drag.y.toFixed(1)} : null,
                 confirmPanel: panel ? {
                     hidden:panel.hidden, display:getComputedStyle(panel).display,
