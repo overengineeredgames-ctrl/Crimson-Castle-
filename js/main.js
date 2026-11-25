@@ -1047,9 +1047,7 @@ var Game = window.Game = {
             this.panDrag = null;
 
             if (Weapons.sniperAimDrag) {
-                const cannon = Weapons.sniperAimDrag.cannon;
-                Weapons.sniperAimDrag = null;
-                Weapons.queueSniperFire(cannon);
+                Weapons.cancelSniperAim();
                 return;
             }
 

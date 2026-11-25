@@ -160,14 +160,14 @@ var Weapons = window.Weapons = {
                 "right:18px",
                 "bottom:22px",
                 "z-index:12000",
-                "width:44px",
-                "height:44px",
+                "width:58px",
+                "height:58px",
                 "padding:0",
                 "border:2px solid #a8eaff",
                 "border-radius:50%",
                 "background:linear-gradient(145deg,#168fc4,#07517e)",
                 "color:#fff",
-                "font:bold 10px Arial,sans-serif",
+                "font:bold 12px Arial,sans-serif",
                 "letter-spacing:.3px",
                 "box-shadow:0 2px 12px rgba(0,0,0,.5),0 0 12px rgba(64,200,255,.45)",
                 "display:none",
@@ -180,12 +180,15 @@ var Weapons = window.Weapons = {
         button.onclick = event => {
             event.preventDefault();
             event.stopPropagation();
-            const cannon = this.pendingSniperFire;
+            const selected = this.selectedCannons.length
+                ? this.selectedCannons
+                : (this.selectedCannon ? [this.selectedCannon] : []);
+            const cannon = selected.length === 1 && selected[0].weaponType === "sniper"
+                ? selected[0]
+                : null;
             if (!cannon || cannon.cooldown > 0 || !cannon.node || cannon.node.removed) return;
-            // Keep the aimed cannon armed after firing so the same control
-            // returns automatically when its reload finishes.
-            button.style.display = "none";
             this.fire(cannon);
+            this.updateSniperFireButton();
         };
         this.sniperFireButton = button;
     },
@@ -198,42 +201,28 @@ var Weapons = window.Weapons = {
         if (this.sniperFireButton) this.sniperFireButton.style.display = "none";
     },
 
-    queueSniperFire(cannon) {
-        this.hideSniperFireButton();
-        if (!cannon || cannon.team !== "player" || !cannon.node || cannon.node.removed) return;
-        this.pendingSniperFire = cannon;
-        this.sniperFireReadyToShow = false;
-        this.sniperFireTimer = setTimeout(() => {
-            this.sniperFireTimer = null;
-            if (this.pendingSniperFire !== cannon || !cannon.node || cannon.node.removed) return;
-            this.sniperFireReadyToShow = true;
-            if (!this.sniperFireButton) this.ensureSniperFireButton();
-            this.updateSniperFireButton();
-        }, 200);
-    },
-
     updateSniperFireButton() {
+        if (!this.sniperFireButton) this.ensureSniperFireButton();
         const button = this.sniperFireButton;
-        const cannon = this.pendingSniperFire;
-        if (!button || !cannon) return;
+        const selected = this.selectedCannons.length
+            ? this.selectedCannons
+            : (this.selectedCannon ? [this.selectedCannon] : []);
+        const cannon = selected.length === 1 ? selected[0] : null;
 
-        const stillSelected = this.selectedCannon === cannon ||
-            this.selectedCannons.includes(cannon);
-        if (!stillSelected || cannon.team !== "player" || !cannon.node || cannon.node.removed) {
-            this.hideSniperFireButton();
+        // Show the Fire control for as long as exactly one player Sniper is
+        // selected. Aiming and releasing no longer control the button's life.
+        if (!cannon || cannon.weaponType !== "sniper" ||
+            cannon.team !== "player" || !cannon.node || cannon.node.removed) {
+            button.style.display = "none";
+            button.disabled = false;
             return;
         }
 
         const remaining = Math.max(0, cannon.cooldown || 0);
         button.disabled = remaining > 0;
-        button.textContent = remaining > 0 ? remaining.toFixed(1) : "FIRE";
-        button.style.opacity = remaining > 0 ? "0.55" : "1";
-
-        // The control stays hidden during reload, then reappears once the
-        // cooldown has fully elapsed. It remains armed until deselection.
-        if (this.sniperFireReadyToShow && remaining <= 0) {
-            button.style.display = "flex";
-        }
+        button.textContent = remaining > 0 ? remaining.toFixed(1) + "s" : "FIRE";
+        button.style.opacity = remaining > 0 ? "0.7" : "1";
+        button.style.display = "flex";
     },
 
     createWeaponButton(id, label, weaponType, costLabel) {
@@ -349,6 +338,7 @@ var Weapons = window.Weapons = {
         this.groupSelectMode = false;
         const groupButton = document.querySelector('[data-mobile-action="group-select"]');
         if (groupButton) groupButton.classList.remove("active");
+        this.hideSniperFireButton();
         this.selectedTool = null;
         this.fireHeld = false;
         this.mineDragging = false;
@@ -719,16 +709,18 @@ var Weapons = window.Weapons = {
             this.lastCannonClick = 0;
             this.lastClickedCannon = null;
 
-            // A Sniper can be aimed in one continuous touch gesture:
-            // press directly on its body/barrel, drag to set the angle, release to fire.
+            // Selecting a Sniper immediately displays its persistent Fire control.
+            // Dragging from the cannon still adjusts aim; releasing never fires.
             if (clickedCannon.weaponType === "sniper" &&
                 this.selectedCannons.length === 1 &&
                 this.selectedCannons[0] === clickedCannon) {
                 this.sniperAimDrag = { cannon: clickedCannon };
                 this.handlePointerMove(x, y);
             } else {
+                this.sniperAimDrag = null;
                 this.handlePointerMove(x, y);
             }
+            this.updateSniperFireButton();
             return true;
         }
 
@@ -758,9 +750,8 @@ var Weapons = window.Weapons = {
             const cannon = this.sniperAimDrag.cannon;
             this.handlePointerMove(x, y);
             this.sniperAimDrag = null;
-            // Releasing the aim gesture only queues the shot. The player must
-            // tap the small Fire control that appears 200 ms later.
-            this.queueSniperFire(cannon);
+            // Keep the Fire control visible; the player fires with its button.
+            this.updateSniperFireButton();
             return true;
         }
         if (!this.mineDragging) return false;
@@ -803,7 +794,7 @@ var Weapons = window.Weapons = {
 
     cancelSniperAim() {
         this.sniperAimDrag = null;
-        this.hideSniperFireButton();
+        this.updateSniperFireButton();
     },
 
     spawnProjectile(cannon, shotAngle, stats) {
