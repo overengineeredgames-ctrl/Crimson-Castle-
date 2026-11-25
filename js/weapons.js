@@ -476,6 +476,8 @@ var Weapons = window.Weapons = {
     forceDeselectGuns() {
         // Hard-reset every state field that can keep a gun visually or
         // behaviorally selected. Preserve unrelated modes such as Link/Mine.
+        this.hideSniperFireButton();
+        this.sniperAimDrag = null;
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.groupSelectMode = false;

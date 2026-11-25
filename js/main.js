@@ -950,6 +950,9 @@ var Game = window.Game = {
             if (event.button !== 0) return;
 
             this.canvas.setPointerCapture(event.pointerId);
+            // Track the active canvas gesture so release is still handled if
+            // Android retargets the pointer outside the canvas or viewport.
+            this.activeCanvasPointerId = event.pointerId;
 
             if (Building.doorMaterial && Building.startDoorModifier(p.x, p.y)) return;
 
@@ -1013,8 +1016,12 @@ var Game = window.Game = {
         document.addEventListener("touchend", finishDoorPointer, { capture: true, passive: true });
         document.addEventListener("mouseup", finishDoorPointer, true);
 
-        // Mine placement gets first chance to handle pointer release.
-        this.canvas.addEventListener("pointerup", event => {
+        // Handle release at document level. Android may send the release
+        // outside the canvas after a finger leaves the visible game area.
+        document.addEventListener("pointerup", event => {
+            if (this.activeCanvasPointerId !== event.pointerId) return;
+            this.activeCanvasPointerId = null;
+
             if (this.panDrag) {
                 this.panDrag = null;
                 return;
@@ -1026,18 +1033,31 @@ var Game = window.Game = {
             if (Building.releaseDoorModifier()) return;
             if (Weapons.handlePointerUp(p.x, p.y)) return;
 
-            // FIX: Pass the actual release coordinates to Building.
+            // Pass the actual release coordinates to Building.
             Building.finishDrag(p.x, p.y);
-        });
+        }, true);
 
-        this.canvas.addEventListener("pointercancel", () => {
+        // Some mobile browsers emit pointercancel rather than pointerup when
+        // a touch leaves the viewport. Treat an active Sniper aim as released
+        // so the separate FIRE control is still presented.
+        document.addEventListener("pointercancel", event => {
+            if (this.activeCanvasPointerId !== event.pointerId) return;
+            this.activeCanvasPointerId = null;
             this.panDrag = null;
+
+            if (Weapons.sniperAimDrag) {
+                const cannon = Weapons.sniperAimDrag.cannon;
+                Weapons.sniperAimDrag = null;
+                Weapons.queueSniperFire(cannon);
+                return;
+            }
+
             Building.drag = null;
             Building.doorModifierDrag = null;
             Building.hideDoorConfirm();
             Weapons.cancelMineDrag();
             Weapons.cancelSniperAim();
-        });
+        }, true);
 
         // Mouse wheel zooms the battlefield only; the DOM HUD stays at 100%.
         // Shift + wheel and horizontal trackpads move the camera sideways.
