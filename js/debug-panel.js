@@ -29,14 +29,37 @@
             });
             const start = record.startNode, split = record.splitNode, end = record.endNode;
             const door = inspect(record.door), remainder = inspect(record.remainder);
-            const nodeConnections = (node) => B.struts.filter(s => !s.removed && (s.a === node || s.b === node))
-                .map(s => ({ isDoor: !!s.isDoor, otherNodeId: (s.a === node ? s.b : s.a).body.id }));
+            const round = value => Number.isFinite(value) ? +value.toFixed(2) : null;
+            const bodyState = body => body ? {
+                x: round(body.position.x), y: round(body.position.y),
+                vx: round(body.velocity.x), vy: round(body.velocity.y),
+                angle: round(body.angle), angularVelocity: round(body.angularVelocity),
+                isStatic: !!body.isStatic
+            } : null;
+            const nodeState = node => node && node.body ? {
+                id: node.body.id, removed: !!node.removed, inNodes: B.nodes.includes(node),
+                supported: !!node.supported, detached: !!node.detached,
+                body: bodyState(node.body),
+                connections: B.struts.filter(s => !s.removed && (s.a === node || s.b === node)).map(s => {
+                    const other = s.a === node ? s.b : s.a;
+                    const pa = s.a.body.position, pb = s.b.body.position;
+                    const actualLength = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+                    return {
+                        isDoor: !!s.isDoor, otherNodeId: other.body.id,
+                        otherBody: bodyState(other.body),
+                        actualLength: round(actualLength),
+                        constraintLength: round(s.constraint && s.constraint.length),
+                        lengthError: round(s.constraint ? actualLength - s.constraint.length : null),
+                        constraintInWorld: worldConstraints.includes(s.constraint)
+                    };
+                })
+            } : null;
             const result = {
                 stage, ageMs: Date.now() - record.createdAt,
                 nodes: {
-                    start: start && start.body ? { id:start.body.id, removed:!!start.removed, inNodes:B.nodes.includes(start), connections:nodeConnections(start) } : null,
-                    split: split && split.body ? { id:split.body.id, removed:!!split.removed, inNodes:B.nodes.includes(split), connections:nodeConnections(split) } : null,
-                    end: end && end.body ? { id:end.body.id, removed:!!end.removed, inNodes:B.nodes.includes(end), connections:nodeConnections(end) } : null
+                    start: nodeState(start),
+                    split: nodeState(split),
+                    end: nodeState(end)
                 },
                 originalBeam: {
                     stillInStruts:B.struts.includes(record.original),
