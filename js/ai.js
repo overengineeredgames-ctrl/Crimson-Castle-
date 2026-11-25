@@ -25,9 +25,9 @@ var AI = window.AI = {
         easy: {
             targetInterval: 1.1,
             repairInterval: 12,
-            buildInterval: 20,
+            buildInterval: 45,
             repairAmount: 2,
-            extraCannonTime: 32,
+            extraCannonTime: 75,
             maxCannons: 2,
             aimError: 0.52
         },
@@ -139,7 +139,7 @@ var AI = window.AI = {
 
         const nodes = {
             bl: Building.createNode(leftX, baseY, {
-                isFoundation: true, isBaseAnchor: true, team: "enemy"
+                isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
             }),
             br: Building.createNode(leftX + 160, baseY, {
                 isFoundation: true, isBaseAnchor: true, team: "enemy"
@@ -150,7 +150,7 @@ var AI = window.AI = {
             nodes[key] = Building.createNode(
                 leftX + offset[0],
                 baseY + offset[1],
-                { team: "enemy", material: "steel" }
+                { team: "enemy", material: this.difficulty === "easy" ? "wood" : "steel" }
             );
         }
 
@@ -158,7 +158,7 @@ var AI = window.AI = {
 
         for (const [a, b] of preset.edges) {
             if (nodes[a] && nodes[b]) {
-                Building.createStrut(nodes[a], nodes[b], { material: "steel" });
+                Building.createStrut(nodes[a], nodes[b], { material: this.difficulty === "easy" ? "wood" : "steel" });
             }
         }
 
@@ -637,7 +637,7 @@ var AI = window.AI = {
             Building.createStrut(
                 bestFoundation,
                 weakestNode,
-                { material: "steel" }
+                { material: this.difficulty === "easy" ? "wood" : "steel" }
             );
         }
     },
@@ -680,13 +680,13 @@ var AI = window.AI = {
         const recoveryNode = Building.createNode(
             position.x,
             Math.max(80, position.y - 110),
-            { team: "enemy", material: "steel" }
+            { team: "enemy", material: this.difficulty === "easy" ? "wood" : "steel" }
         );
 
         if (!recoveryNode) return;
 
         const support = Building.createStrut(foundation, recoveryNode, {
-            material: "steel"
+            material: this.difficulty === "easy" ? "wood" : "steel"
         });
 
         if (!support) {
@@ -859,12 +859,13 @@ var AI = window.AI = {
             return false;
         }
 
+        const buildMaterial = this.difficulty === "easy" ? "wood" : "steel";
         const created = { anchor };
         for (const [key, point] of Object.entries(plannedNodes)) {
             if (key === "anchor") continue;
             created[key] = Building.createNode(point.x, point.y, {
                 team: "enemy",
-                material: "steel"
+                material: buildMaterial
             });
             if (!created[key]) {
                 for (const node of Object.values(created)) {
@@ -877,7 +878,7 @@ var AI = window.AI = {
         const beams = [];
         for (const [a, b] of path.edges) {
             const beam = Building.createStrut(created[a], created[b], {
-                material: "steel"
+                material: buildMaterial
             });
             if (!beam) {
                 for (const node of Object.values(created)) {
