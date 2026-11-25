@@ -674,7 +674,12 @@ var Weapons = window.Weapons = {
         );
 
         projectile.isProjectile = true;
-        projectile.damage = stats.damage;
+        // Easy AI standard cannons deal slightly reduced damage.
+        // Player weapons and all other difficulty modes retain full damage.
+        projectile.damage = cannon.team === "enemy" &&
+            window.AI && window.AI.difficulty === "easy" && weaponType === "cannon"
+            ? Math.round(stats.damage * 0.85)
+            : stats.damage;
         projectile.team = cannon.team;
         projectile.weaponType = weaponType;
         projectile.life = 20000;
