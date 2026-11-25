@@ -6,6 +6,7 @@ const Weapons = {
     projectiles: [],
     selectedTool: null,
     selectedCannon: null,
+    links: [], linkMode: false, linkSource: null,
     selectedCannons: [],
     mouse: { x: 0, y: 0 },
     mineDragging: false,
@@ -31,6 +32,7 @@ const Weapons = {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.selectedTool = null;
+        this.links = []; this.linkMode = false; this.linkSource = null;
         this.selectedWeaponType = "cannon";
         this.fireHeld = false;
         this.mineDragging = false;
@@ -98,6 +100,12 @@ const Weapons = {
             this.updateToolButtons();
         };
 
+        const linkButton = document.getElementById("btn-link");
+        if (linkButton) linkButton.onclick = () => {
+            const enable = !this.linkMode;
+            Building.utilityTool = null; Building.repairMode = false; Building.setDeleteMode(false); Building.updateToolbar();
+            this.clearSelectedTool(); this.setLinkMode(enable);
+        };
         this.updateToolButtons();
 
         const startingNode = Building.nodes.find(node =>
@@ -168,18 +176,45 @@ const Weapons = {
         }
         const mineButton = document.getElementById("btn-mine");
         if (mineButton) mineButton.classList.toggle("active", this.selectedTool === "mine");
+        const linkButton = document.getElementById("btn-link");
+        if (linkButton) { linkButton.classList.toggle("active", this.linkMode); linkButton.setAttribute("aria-pressed", String(this.linkMode)); }
     },
 
     clearSelectedTool() {
-        this.selectedTool = null;
-        this.mineDragging = false;
-        this.updateToolButtons();
+        this.selectedTool = null; this.linkMode = false; this.linkSource = null; this.mineDragging = false;
+        this.syncLinkedDoors(); this.updateToolButtons();
+    },
+    getLinkedDoors(weapon) { return this.links.filter(link => link.weapon === weapon && link.door && Building.struts.includes(link.door) && link.door.isDoor).map(link => link.door); },
+    linkDoorToWeapon(weapon, door) {
+        if (!weapon || !door || !door.isDoor || !Building.struts.includes(door)) return false;
+        const i = this.links.findIndex(link => link.weapon === weapon && link.door === door);
+        if (i >= 0) { this.links.splice(i, 1); return false; }
+        this.links.push({ weapon, door }); return true;
+    },
+    removeLinksForDoor(door) { this.links = this.links.filter(link => link.door !== door); },
+    removeLinksForWeapon(weapon) { for (const door of this.getLinkedDoors(weapon)) Building.setDoorOpen(door, false); this.links = this.links.filter(link => link.weapon !== weapon); if (this.linkSource === weapon) this.linkSource = null; },
+    syncLinkedDoors() {
+        if (typeof Building === "undefined") return;
+        const selected = this.selectedCannons.length ? this.selectedCannons : (this.selectedCannon ? [this.selectedCannon] : []);
+        const active = new Set();
+        for (const weapon of selected) if (weapon.team === "player") for (const door of this.getLinkedDoors(weapon)) active.add(door);
+        for (const door of Building.struts) if (door.isDoor && door.team === "player") Building.setDoorOpen(door, active.has(door));
+    },
+    setLinkMode(enabled) { this.linkMode = !!enabled; this.linkSource = null; this.selectedTool = this.linkMode ? "link" : null; this.clearSelectedCannon(); this.updateToolButtons(); },
+    handleLinkPointerDown(x, y) {
+        if (!this.linkMode) return false;
+        const weapon = [...this.cannons].reverse().find(c => c.team === "player" && c.node && !c.node.removed && Math.hypot(c.node.body.position.x - x, c.node.body.position.y - y) <= 22);
+        if (weapon) { this.linkSource = weapon; Building.showPlacementMessage("Weapon selected — tap a door to link it."); return true; }
+        const door = [...Building.struts].reverse().find(d => d.isDoor && d.team === "player" && Building.pointToSegmentDistance(x, y, d.a.body.position, d.b.body.position) <= 22);
+        if (door && this.linkSource) { const added = this.linkDoorToWeapon(this.linkSource, door); Building.showPlacementMessage(added ? "Door linked." : "Door unlinked."); return true; }
+        if (door) Building.showPlacementMessage("Select a weapon first."); return !!door;
     },
 
     clearSelectedCannon() {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.fireHeld = false;
+        this.syncLinkedDoors();
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
     },
@@ -382,6 +417,7 @@ const Weapons = {
             }
 
             this.selectedCannon = this.selectedCannons[0] || null;
+            this.syncLinkedDoors();
             this.handlePointerMove(x, y);
             this.lastCannonClick = 0;
             this.lastClickedCannon = null;
@@ -522,9 +558,10 @@ const Weapons = {
             }
         }
 
-        this.cannons = this.cannons.filter(
-            c => c.node && !c.node.removed
-        );
+        const livingCannons = this.cannons.filter(c => c.node && !c.node.removed);
+        for (const cannon of this.cannons) if (!livingCannons.includes(cannon)) this.removeLinksForWeapon(cannon);
+        this.cannons = livingCannons;
+        this.links = this.links.filter(link => this.cannons.includes(link.weapon) && Building.struts.includes(link.door) && !link.door.a.removed && !link.door.b.removed);
 
         this.selectedCannons = this.selectedCannons.filter(cannon =>
             this.cannons.includes(cannon) &&
@@ -535,6 +572,13 @@ const Weapons = {
     },
 
     draw(ctx) {
+        if (this.linkMode) {
+            ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(104,220,255,.72)";
+            for (const link of this.links) { if (!this.cannons.includes(link.weapon) || !Building.struts.includes(link.door)) continue; const p = link.weapon.node.body.position, d = link.door; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo((d.a.body.position.x + d.b.body.position.x) / 2, (d.a.body.position.y + d.b.body.position.y) / 2); ctx.stroke(); }
+            ctx.setLineDash([]);
+            if (this.linkSource && this.linkSource.node && !this.linkSource.node.removed) { const p = this.linkSource.node.body.position; ctx.beginPath(); ctx.arc(p.x, p.y, 27, 0, Math.PI * 2); ctx.strokeStyle = "#ffe66d"; ctx.lineWidth = 3; ctx.stroke(); }
+            ctx.restore();
+        }
         for (const cannon of this.cannons) {
             if (!cannon.node || cannon.node.removed) continue;
 
