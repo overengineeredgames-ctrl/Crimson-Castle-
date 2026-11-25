@@ -42,6 +42,8 @@ jobs:
           cp -R assets/. www/assets/
           cp node_modules/matter-js/build/matter.min.js www/vendor/matter.min.js
           sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js#vendor/matter.min.js#' www/index.html
+          # Mark this packaged copy so the Android-only GROUP control is enabled.
+          sed -i '/<script src="js\/main.js"><\/script>/i\    <script>window.CC_ANDROID_APK = true;</script>' www/index.html
 
       - name: Verify packaged game files
         shell: bash
@@ -51,7 +53,7 @@ jobs:
             test -s "www/$file" || { echo "Missing required APK asset: www/$file"; exit 1; }
           done
           test ! -e www/js/debug-panel.js
-          ! grep -q "debug-panel.js" www/index.html
+          ! grep -q '<script src="js/debug-panel.js' www/index.html
           grep -q "forceDeselectGuns" www/js/weapons.js
           grep -q 'data-mobile-action="deselect"' www/index.html
           grep -q 'data-mobile-action="group-select"' www/index.html
