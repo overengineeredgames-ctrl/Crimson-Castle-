@@ -1,4 +1,4 @@
-const CACHE_NAME = "crimson-castle-v1.2.3";
+const CACHE_NAME = "crimson-castle-v1.2.4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -15,7 +15,8 @@ const APP_SHELL = [
   "./js/weapons.js",
   "./js/ai.js",
   "./js/updater-ui.js",
-  "./js/main.js"
+  "./js/main.js",
+  "./js/debug-panel.js"
 ];
 
 self.addEventListener("install", event => {
