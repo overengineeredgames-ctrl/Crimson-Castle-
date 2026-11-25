@@ -259,6 +259,7 @@ var Weapons = window.Weapons = {
             panel.hidden = true;
             panel.setAttribute("aria-label", "Flak Cannon settings");
             panel.style.cssText = "position:fixed;z-index:13000;right:16px;bottom:18px;width:min(310px,calc(100vw - 28px));padding:14px;border:1px solid #e58b3d;border-radius:10px;background:rgba(12,22,34,.97);color:#f4f7fb;box-shadow:0 8px 28px rgba(0,0,0,.55);font:13px Arial,sans-serif;box-sizing:border-box";
+            if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) panel.style.bottom = "58px";
             panel.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><strong style="flex:1;font-size:15px">FLAK CANNON SETTINGS</strong><button id="flak-settings-close" type="button" aria-label="Close settings" style="padding:4px 9px">×</button></div>' +
                 '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Control</span><button id="flak-auto-toggle" type="button"></button></div>' +
                 '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Detect enemy bullets</span><button id="flak-detect-toggle" type="button"></button></div>' +
