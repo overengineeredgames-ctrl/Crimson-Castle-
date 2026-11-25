@@ -1385,6 +1385,14 @@ const Building = {
             this.showPlacementMessage("A door already connects those joints");
             return false;
         }
+        const frameBeamExists = this.struts.some(strut =>
+            (strut.a === hingeNode && strut.b === endNode) ||
+            (strut.a === endNode && strut.b === hingeNode)
+        );
+        if (frameBeamExists) {
+            this.showPlacementMessage("Remove the beam between these joints first; doors fill openings");
+            return false;
+        }
         const cost = material.cost * 2;
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) return false;
