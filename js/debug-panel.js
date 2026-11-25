@@ -44,8 +44,8 @@
                 },
                 door,
                 remainder,
-                bothReplacementConnectionsValid: door.inStruts && door.constraintInWorld && door.endpointsPresent && door.constraintMatchesEndpoints &&
-                    remainder.inStruts && remainder.constraintInWorld && remainder.endpointsPresent && remainder.constraintMatchesEndpoints
+                bothReplacementConnectionsValid: door.inStruts && door.constraintInWorld && door.bodyInWorld && door.endpointsPresent && door.constraintMatchesEndpoints &&
+                    remainder.inStruts && remainder.constraintInWorld && remainder.bodyInWorld && remainder.endpointsPresent && remainder.constraintMatchesEndpoints
             };
             this.doorConversionWatch.push(result);
             if (this.doorConversionWatch.length > 12) this.doorConversionWatch.shift();
