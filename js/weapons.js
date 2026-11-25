@@ -209,6 +209,8 @@ const Weapons = {
         this.fireHeld = false;
         this.mineDragging = false;
         this.linkSource = null;
+        this.lastCannonClick = 0;
+        this.lastClickedCannon = null;
 
         if (typeof Building !== "undefined") {
             Building.doorMaterial = null;
@@ -230,7 +232,9 @@ const Weapons = {
 
         // Remove stale visual selection from any tool not covered by a mode.
         document.querySelectorAll(".toolbar .tool").forEach(button => {
-            if (button.id !== "btn-link") button.classList.remove("active");
+            if (button.id === "btn-link") return;
+            button.classList.remove("active", "selected", "is-selected");
+            if (button.hasAttribute("aria-pressed")) button.setAttribute("aria-pressed", "false");
         });
         const linkButton = document.getElementById("btn-link");
         if (linkButton) {
