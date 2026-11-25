@@ -836,15 +836,43 @@ var Game = window.Game = {
     setupMobileControls() {
         const controls = document.getElementById("mobile-controls");
         if (!controls) return;
-        // Handle the X control on pointerdown so Android touch input does not
-        // depend on a synthesized click event (which can be swallowed by overlays).
-        controls.addEventListener("pointerdown", event => {
-            const button = event.target.closest('[data-mobile-action="deselect"]');
+        // Listen at document capture level: this runs before canvas handlers and
+        // remains reliable even if an ancestor's delegated event path is disrupted.
+        // The button itself is resolved from the composed event path for Android.
+        document.addEventListener("pointerdown", event => {
+            const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+            const button = path.find(node =>
+                node instanceof Element && node.matches('[data-mobile-action="deselect"]')
+            ) || (event.target instanceof Element
+                ? event.target.closest('[data-mobile-action="deselect"]')
+                : null);
             if (!button || this.state !== "playing") return;
+
             event.preventDefault();
             event.stopPropagation();
+            const before = {
+                selectedCannon: !!Weapons.selectedCannon,
+                selectedCannons: Weapons.selectedCannons ? Weapons.selectedCannons.length : 0
+            };
             Weapons.clearSelectedCannon();
-        });
+            const after = {
+                selectedCannon: !!Weapons.selectedCannon,
+                selectedCannons: Weapons.selectedCannons ? Weapons.selectedCannons.length : 0
+            };
+            if (window.CCDebug) {
+                window.CCDebug.report(
+                    "MOBILE_DESELECT",
+                    (!after.selectedCannon && after.selectedCannons === 0) ? "PASS" : "FAIL",
+                    "X pointerdown handled; selected weapon state " +
+                        (after.selectedCannon || after.selectedCannons ? "remains active." : "cleared."),
+                    { before, after, buttonRect: (() => {
+                        const r = button.getBoundingClientRect();
+                        return { x: +r.x.toFixed(1), y: +r.y.toFixed(1),
+                            width: +r.width.toFixed(1), height: +r.height.toFixed(1) };
+                    })() }
+                );
+            }
+        }, true);
 
         controls.addEventListener("click", event => {
             const button = event.target.closest("[data-mobile-action]");
