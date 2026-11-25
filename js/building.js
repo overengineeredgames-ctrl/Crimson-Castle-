@@ -1,7 +1,7 @@
 
 "use strict";
 
-const Building = {
+var Building = window.Building = {
     nodes: [],
     struts: [],
     mines: [],
