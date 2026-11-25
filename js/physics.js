@@ -1,6 +1,6 @@
 "use strict";
 
-const Physics = {
+var Physics = window.Physics = {
     engine: null,
     world: null,
     ground: null,
