@@ -1432,6 +1432,13 @@ var Building = window.Building = {
             { team: beam.team, material: beam.material, isBeamSplit: true }
         );
 
+        // This node is inserted into an already-existing, connected beam.
+        // Inherit support from the original beam endpoints so the new joint
+        // is not briefly classified as an unsupported free-standing node.
+        if (splitNode) {
+            splitNode.supported = !!(startNode.supported || endNode.supported);
+        }
+
         if (!splitNode) {
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("Couldn't create the door split point. The original beam was kept.");
@@ -1456,7 +1463,10 @@ var Building = window.Building = {
             this.showPlacementMessage("Door split failed; the original beam remains intact.");
         } else {
             this.removeStrut(beam, false);
-            this.checkSupport();
+            // Replacing one connected beam with two collinear sections does
+            // not change the fort's support graph. Do not run the global
+            // debris/support pass here: custom builds can use construction
+            // anchors that are intentionally not treated as original bases.
             this.showPlacementMessage("Door placed; both beam sections and the fort remain connected.");
         }
         this.doorModifierDrag = null;
