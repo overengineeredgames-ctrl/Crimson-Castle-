@@ -409,52 +409,75 @@ var Building = window.Building = {
 
         if (duplicate) return null;
 
-        const constraint = Matter.Constraint.create({
-            bodyA: nodeA.body,
-            bodyB: nodeB.body,
-            length,
-            stiffness: material.stiffness,
-            damping: 0.15,
-            render: { visible: false }
-        });
-
-        // Keep the beam hitbox as a sensor. The Matter constraint is what
-        // physically connects the joints; making this rectangle solid causes
-        // it to collide with its own endpoint nodes and fight that constraint,
-        // pulling the fort apart or toward nearby joints/cores.
-        // Opposing-team construction collision is handled by canPlaceStrut().
+        const isDoor = !!options.isDoor;
+        const initialAngle = Math.atan2(b.y - a.y, b.x - a.x);
+        // Ordinary beams remain endpoint-to-endpoint structural constraints.
+        // A door instead uses a rigid, solid panel body pinned directly to its
+        // hinge node. Its far end is deliberately NOT constrained to the frame
+        // node, so it can swing without stretching a spring or pulling nodes apart.
         const beamBody = Matter.Bodies.rectangle(
             (a.x + b.x) / 2,
             (a.y + b.y) / 2,
             length,
             material.width,
             {
-                isStatic: true,
-                isSensor: true,
-                // Beam sensors detect projectile hits but never collide
-                // physically with joints, beams, or the opposing fort.
+                isStatic: false,
+                isSensor: !isDoor,
+                density: isDoor ? material.density : 0.001,
+                friction: isDoor ? 0.8 : 0,
+                frictionStatic: isDoor ? 1 : 0,
+                restitution: 0,
+                slop: 0.01,
                 collisionFilter: {
                     category: nodeA.team === "enemy" ? 0x0008 : 0x0004,
+                    // Door panels are solid against projectiles, but ignore
+                    // structural nodes and beams to avoid self-collision impulses.
                     mask: 0x0001,
                     group: 0
                 },
-                friction: 0,
-                restitution: 0,
-                angle: Math.atan2(b.y - a.y, b.x - a.x),
-                label: "fort-beam"
+                angle: initialAngle,
+                label: isDoor ? "fort-door-panel" : "fort-beam"
             }
         );
+
+        let constraint;
+        if (isDoor) {
+            constraint = Matter.Constraint.create({
+                bodyA: nodeA.body,
+                bodyB: beamBody,
+                pointA: { x: 0, y: 0 },
+                pointB: { x: -length / 2, y: 0 },
+                length: 0,
+                stiffness: 1,
+                damping: 0.2,
+                render: { visible: false }
+            });
+        } else {
+            constraint = Matter.Constraint.create({
+                bodyA: nodeA.body,
+                bodyB: nodeB.body,
+                length,
+                stiffness: material.stiffness,
+                damping: 0.15,
+                render: { visible: false }
+            });
+        }
 
         beamBody.isFortBeam = true;
         beamBody.team = nodeA.team;
         beamBody.fortLength = length;
+        if (isDoor) {
+            beamBody.isFortDoor = true;
+            beamBody.fortStrut = null;
+        }
 
-        const isDoor = !!options.isDoor;
         const strut = {
             a: nodeA,
             b: nodeB,
             constraint,
             body: beamBody,
+            hingeAngle: initialAngle,
+            doorLength: isDoor ? length : 0,
             material: materialName,
             length,
             health: material.maxHealth,
@@ -2110,30 +2133,37 @@ var Building = window.Building = {
                 continue;
             }
 
-            const centerX = (a.x + b.x) / 2;
-            const centerY = (a.y + b.y) / 2;
-            const angle = Math.atan2(b.y - a.y, b.x - a.x);
-
-            // Keep the solid collision rectangle aligned and sized to its
-            // endpoints as the structure moves under physics.
-            if (strut.body.fortLength && Math.abs(length - strut.body.fortLength) > 0.5) {
-                const scale = length / strut.body.fortLength;
-                Matter.Body.scale(strut.body, scale, 1);
-                strut.body.fortLength = length;
-            }
-
-            Matter.Body.setPosition(strut.body, {
-                x: centerX,
-                y: centerY
-            });
-
-            Matter.Body.setAngle(strut.body, angle);
             if (strut.isDoor) {
                 const target = strut.doorOpen ? 1 : 0;
                 strut.doorOpenAmount += (target - strut.doorOpenAmount) * Math.min(1, delta / 150);
-                // The hinged panel animates visually, but its structural constraint
-                // and beam hitbox remain active just like an ordinary beam.
-                strut.doorCollisionOpen = false;
+                if (Math.abs(target - strut.doorOpenAmount) < 0.002) strut.doorOpenAmount = target;
+                const swing = strut.doorOpenAmount * (strut.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
+                const angle = strut.hingeAngle + swing;
+                const half = (strut.doorLength || strut.length) / 2;
+                const centerX = a.x + Math.cos(angle) * half;
+                const centerY = a.y + Math.sin(angle) * half;
+
+                // Keep the rigid panel's hinge point exactly on the frame node.
+                // Unlike the old endpoint spring, this cannot stretch or leave
+                // a gap at the hinge when the door swings.
+                Matter.Body.setAngle(strut.body, angle);
+                Matter.Body.setPosition(strut.body, { x: centerX, y: centerY });
+                Matter.Body.setVelocity(strut.body, { x: 0, y: 0 });
+                Matter.Body.setAngularVelocity(strut.body, 0);
+                strut.doorCollisionOpen = strut.doorOpenAmount >= 0.9;
+            } else {
+                const centerX = (a.x + b.x) / 2;
+                const centerY = (a.y + b.y) / 2;
+                const angle = Math.atan2(b.y - a.y, b.x - a.x);
+
+                // Keep ordinary beam hitboxes aligned to their endpoints.
+                if (strut.body.fortLength && Math.abs(length - strut.body.fortLength) > 0.5) {
+                    const scale = length / strut.body.fortLength;
+                    Matter.Body.scale(strut.body, scale, 1);
+                    strut.body.fortLength = length;
+                }
+                Matter.Body.setPosition(strut.body, { x: centerX, y: centerY });
+                Matter.Body.setAngle(strut.body, angle);
             }
         }
     },
@@ -2163,9 +2193,10 @@ var Building = window.Building = {
         // and projectile hitbox stay in place to preserve fort structure.
     },
     drawDoor(ctx, door) {
-        const a = door.a.body.position, b = door.b.body.position;
-        const angle = Math.atan2(b.y - a.y, b.x - a.x), length = Math.hypot(b.x - a.x, b.y - a.y);
-        const material = this.settings(door.material), swing = door.doorOpenAmount * (door.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
+        const a = door.a.body.position;
+        const length = door.doorLength || door.length;
+        const angle = door.body.angle;
+        const material = this.settings(door.material);
         ctx.save(); if (door.debrisGroup) ctx.globalAlpha *= door.debrisGroup.alpha;
         // Faint gray seam marks the doorway's original beam position while
         // the panel swings away from it.
@@ -2178,7 +2209,7 @@ var Building = window.Building = {
             ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
             ctx.restore();
         }
-        ctx.translate(a.x, a.y); ctx.rotate(angle + swing); ctx.lineCap = "butt";
+        ctx.translate(a.x, a.y); ctx.rotate(angle); ctx.lineCap = "butt";
         ctx.strokeStyle = material.dark; ctx.lineWidth = door.width + 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
         ctx.strokeStyle = door.doorOpen ? "#d9e7f2" : material.color; ctx.lineWidth = Math.max(3, door.width - 2); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
         ctx.fillStyle = "#e6c16a"; ctx.beginPath(); ctx.arc(length - 8, 0, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
