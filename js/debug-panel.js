@@ -11,6 +11,55 @@
         panel: null,
         pointerState: { lastEvent: null, counts: {}, lastMoveLog: 0, activePointer: null },
         weaponState: { fireCalls: 0, projectileSpawnCalls: 0, lastFire: null, lastProjectile: null },
+        doorConversionWatch: [],
+        sampleDoorConversion(stage) {
+            const B = window.Building, record = B && B.lastDoorConversion;
+            if (!record) return null;
+            const worldConstraints = window.Matter && window.Physics && Physics.world
+                ? Matter.Composite.allConstraints(Physics.world) : [];
+            const inspect = (strut) => ({
+                inStruts: !!(B && B.struts && B.struts.includes(strut)),
+                constraintInWorld: !!(strut && strut.constraint && worldConstraints.includes(strut.constraint)),
+                bodyInWorld: !!(strut && strut.body && Matter.Composite.allBodies(Physics.world).includes(strut.body)),
+                endpointsPresent: !!(strut && strut.a && strut.b && B.nodes.includes(strut.a) && B.nodes.includes(strut.b)),
+                constraintMatchesEndpoints: !!(strut && strut.constraint &&
+                    ((strut.constraint.bodyA === strut.a.body && strut.constraint.bodyB === strut.b.body) ||
+                     (strut.constraint.bodyA === strut.b.body && strut.constraint.bodyB === strut.a.body))),
+                endpointIds: strut && strut.a && strut.b ? [strut.a.body.id, strut.b.body.id] : null
+            });
+            const start = record.startNode, split = record.splitNode, end = record.endNode;
+            const door = inspect(record.door), remainder = inspect(record.remainder);
+            const nodeConnections = (node) => B.struts.filter(s => !s.removed && (s.a === node || s.b === node))
+                .map(s => ({ isDoor: !!s.isDoor, otherNodeId: (s.a === node ? s.b : s.a).body.id }));
+            const result = {
+                stage, ageMs: Date.now() - record.createdAt,
+                nodes: {
+                    start: start && start.body ? { id:start.body.id, removed:!!start.removed, inNodes:B.nodes.includes(start), connections:nodeConnections(start) } : null,
+                    split: split && split.body ? { id:split.body.id, removed:!!split.removed, inNodes:B.nodes.includes(split), connections:nodeConnections(split) } : null,
+                    end: end && end.body ? { id:end.body.id, removed:!!end.removed, inNodes:B.nodes.includes(end), connections:nodeConnections(end) } : null
+                },
+                originalBeam: {
+                    stillInStruts:B.struts.includes(record.original),
+                    constraintInWorld:!!(record.original && record.original.constraint && worldConstraints.includes(record.original.constraint))
+                },
+                door,
+                remainder,
+                bothReplacementConnectionsValid: door.inStruts && door.constraintInWorld && door.endpointsPresent && door.constraintMatchesEndpoints &&
+                    remainder.inStruts && remainder.constraintInWorld && remainder.endpointsPresent && remainder.constraintMatchesEndpoints
+            };
+            this.doorConversionWatch.push(result);
+            if (this.doorConversionWatch.length > 12) this.doorConversionWatch.shift();
+            this.report("DOOR_CONNECTION_"+stage.toUpperCase().replace(/[^A-Z0-9]+/g,"_"),
+                result.bothReplacementConnectionsValid ? "PASS" : "FAIL",
+                "Door replacement connection check ("+stage+"): "+(result.bothReplacementConnectionsValid ? "both constraints present" : "one or more replacement connections missing"),
+                result);
+            return result;
+        },
+        watchDoorConversion() {
+            this.doorConversionWatch = [];
+            this.sampleDoorConversion("immediate");
+            [100, 500, 1500].forEach(delay => setTimeout(() => this.sampleDoorConversion(delay+"ms"), delay));
+        },
         doorDiagnostics() {
             const B = window.Building, G = window.Game, drag = B && B.doorModifierDrag;
             const panel = document.getElementById("door-confirm-actions");
@@ -92,7 +141,8 @@
                 linkSource: !!(W && W.linkSource),
                 cannons: W && W.cannons && W.cannons.length,
                 doors: B && B.struts ? B.struts.filter(s => s.isDoor && !s.removed).length : 0,
-                doorDiagnostics: this.doorDiagnostics()
+                doorDiagnostics: this.doorDiagnostics(),
+                doorConversionWatch: this.doorConversionWatch
             };
         },
 
@@ -230,6 +280,15 @@
             this.wrap(window.Building, "startDoorModifier", "DOOR_START");
             this.wrap(window.Building, "releaseDoorModifier", "DOOR_RELEASE");
             this.wrap(window.Building, "confirmDoorModifier", "DOOR_CONFIRM");
+            if (window.Building && typeof window.Building.confirmDoorModifier === "function") {
+                const originalConfirmDoor = window.Building.confirmDoorModifier;
+                const self = this;
+                window.Building.confirmDoorModifier = function (...args) {
+                    const result = originalConfirmDoor.apply(this, args);
+                    if (this.lastDoorConversion) self.watchDoorConversion();
+                    return result;
+                };
+            }
             this.installDoorEventDiagnostics();
             const confirm = document.getElementById("btn-confirm-door"), cancel = document.getElementById("btn-cancel-door");
             if (confirm) confirm.addEventListener("click", () => this.report("DOOR_CONFIRM_CLICK","INFO","Confirm button clicked.",this.doorDiagnostics()));
