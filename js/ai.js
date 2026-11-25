@@ -2,6 +2,7 @@
 
 var AI = window.AI = {
     initialized: false,
+    fortCreated: false,
 
     buildTimer: 0,
     repairTimer: 0,
@@ -120,6 +121,8 @@ var AI = window.AI = {
     activePreset: null,
 
     createEnemyFort() {
+        if (this.fortCreated) return;
+        this.fortCreated = true;
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
         const leftX = Math.round(worldWidth * 0.62);
         const baseY = Physics.terrainYAt(leftX) - Building.nodeRadius;
