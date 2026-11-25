@@ -154,7 +154,11 @@ var AI = window.AI = {
             );
         }
 
-        nodes.core = Building.createCore(leftX + 80, baseY - 90, "enemy");
+        nodes.core = Building.createNode(leftX + 80, baseY - 90, {
+            isCore: true,
+            team: "enemy",
+            material: this.difficulty === "easy" ? "wood" : "steel"
+        });
 
         for (const [a, b] of preset.edges) {
             if (nodes[a] && nodes[b]) {
