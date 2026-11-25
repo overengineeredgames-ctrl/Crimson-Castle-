@@ -590,8 +590,9 @@ const Weapons = {
         projectile.damage = stats.damage;
         projectile.team = cannon.team;
         projectile.life = 20000;
-        projectile.displayRadius = stats.radius;
+        projectile.displayRadius = Math.max(4, stats.radius);
         projectile.hasHit = false;
+        projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
 
         Matter.Composite.add(Physics.world, projectile);
 
@@ -625,6 +626,53 @@ const Weapons = {
 
         for (const projectile of [...this.projectiles]) {
             projectile.life -= delta;
+
+            // Matter sensors can occasionally miss fast, thin-beam contacts.
+            // Sweep the bullet's movement segment against enemy joints/beams as
+            // a reliable fallback so a fast projectile cannot tunnel through.
+            if (!projectile.hasHit && projectile.previousPosition) {
+                const from = projectile.previousPosition;
+                const to = projectile.position;
+                const hitRadius = (projectile.displayRadius || 4) + 7;
+                const pointDistance = (px, py, a, b) => {
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const lengthSq = dx * dx + dy * dy;
+                    const t = lengthSq ? Math.max(0, Math.min(1,
+                        ((px - a.x) * dx + (py - a.y) * dy) / lengthSq)) : 0;
+                    return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy));
+                };
+                const segmentsCross = (a, b, c, d) => {
+                    const cross = (p, q, r) => (q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
+                    const ab1 = cross(a,b,c), ab2 = cross(a,b,d);
+                    const cd1 = cross(c,d,a), cd2 = cross(c,d,b);
+                    return ab1 * ab2 <= 0 && cd1 * cd2 <= 0;
+                };
+                const segmentDistance = (a, b, c, d) => segmentsCross(a,b,c,d) ? 0 : Math.min(
+                    pointDistance(a.x,a.y,c,d), pointDistance(b.x,b.y,c,d),
+                    pointDistance(c.x,c.y,a,b), pointDistance(d.x,d.y,a,b)
+                );
+
+                const hitNode = Building.nodes.find(node =>
+                    !node.removed && node.team !== projectile.team &&
+                    pointDistance(node.body.position.x, node.body.position.y, from, to) <= hitRadius + 8
+                );
+                if (hitNode) {
+                    projectile.hasHit = true;
+                    Building.damageNode(hitNode.body, projectile.damage || 35);
+                } else {
+                    const hitBeam = Building.struts.find(strut =>
+                        !strut.removed && strut.team !== projectile.team &&
+                        strut.a && strut.b && !strut.a.removed && !strut.b.removed &&
+                        !(strut.isDoor && (strut.doorOpen || strut.doorCollisionOpen)) &&
+                        segmentDistance(from, to, strut.a.body.position, strut.b.body.position) <= hitRadius + (strut.width || 8) / 2
+                    );
+                    if (hitBeam) {
+                        projectile.hasHit = true;
+                        Building.damageStrut(hitBeam.body, projectile.damage || 35);
+                    }
+                }
+            }
+            projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
 
             if (
                 projectile.life <= 0 ||
@@ -735,20 +783,35 @@ const Weapons = {
 
         for (const projectile of this.projectiles) {
             if (projectile.hasHit) continue;
+            const color = projectile.team === "enemy" ? "#ff3b4f" : "#ffe066";
+            const velocity = projectile.velocity || { x: 0, y: 0 };
+            const speed = Math.hypot(velocity.x, velocity.y) || 1;
+            const trailLength = Math.min(24, speed * 1.8);
+
+            ctx.save();
+            ctx.globalAlpha = 0.95;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(2, (projectile.displayRadius || 4) * 0.9);
+            ctx.lineCap = "round";
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(
+                projectile.position.x - velocity.x / speed * trailLength,
+                projectile.position.y - velocity.y / speed * trailLength
+            );
+            ctx.lineTo(projectile.position.x, projectile.position.y);
+            ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(
-                projectile.position.x,
-                projectile.position.y,
-                projectile.displayRadius || 5,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.fillStyle =
-                projectile.team === "enemy" ? "#ff5555" : "#ffb347";
-
+            ctx.arc(projectile.position.x, projectile.position.y,
+                Math.max(4, projectile.displayRadius || 4), 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
             ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            ctx.restore();
         }
 
         // Mine drag preview.
