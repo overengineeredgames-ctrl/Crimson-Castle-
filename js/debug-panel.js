@@ -45,6 +45,8 @@
                 selectedTool: W && W.selectedTool,
                 selectedCannon: !!(W && W.selectedCannon),
                 selectedCannons: W && W.selectedCannons && W.selectedCannons.length,
+                selectedWeaponTool: W && W.selectedTool,
+                fireHeld: !!(W && W.fireHeld),
                 mobileDeselectButton: (() => {
                     const button = document.querySelector('#mobile-controls [data-mobile-action="deselect"]');
                     if (!button) return { exists: false };
