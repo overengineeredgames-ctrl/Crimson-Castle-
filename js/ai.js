@@ -476,7 +476,13 @@ const AI = {
 
             // Each cannon independently tracks the nearest valuable object.
             const target = this.findBestTarget(cannon);
-            if (!target) continue;
+            if (!target) {
+                if (cannon.doorCloseTimer > 0) {
+                    cannon.doorCloseTimer = Math.max(0, cannon.doorCloseTimer - deltaSeconds);
+                    if (cannon.doorCloseTimer === 0) for (const door of Weapons.getLinkedDoors(cannon)) Building.setDoorOpen(door, false);
+                }
+                continue;
+            }
 
             const from = cannon.node.body.position;
             const point = this.getTargetPoint(target);
