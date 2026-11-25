@@ -854,7 +854,9 @@ var Game = window.Game = {
                 selectedCannon: !!Weapons.selectedCannon,
                 selectedCannons: Weapons.selectedCannons ? Weapons.selectedCannons.length : 0
             };
-            Weapons.clearSelectedCannon();
+            const resetPassed = typeof Weapons.forceDeselectGuns === "function"
+                ? Weapons.forceDeselectGuns()
+                : (Weapons.clearSelectedCannon(), true);
             const after = {
                 selectedCannon: !!Weapons.selectedCannon,
                 selectedCannons: Weapons.selectedCannons ? Weapons.selectedCannons.length : 0
@@ -862,7 +864,7 @@ var Game = window.Game = {
             if (window.CCDebug) {
                 window.CCDebug.report(
                     "MOBILE_DESELECT",
-                    (!after.selectedCannon && after.selectedCannons === 0) ? "PASS" : "FAIL",
+                    (resetPassed && !after.selectedCannon && after.selectedCannons === 0) ? "PASS" : "FAIL",
                     "X pointerdown handled; selected weapon state " +
                         (after.selectedCannon || after.selectedCannons ? "remains active." : "cleared."),
                     { before, after, buttonRect: (() => {
