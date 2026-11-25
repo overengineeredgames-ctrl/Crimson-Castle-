@@ -1205,8 +1205,8 @@ const Building = {
             steelButton.classList.toggle("active", !this.deleteMode && this.material === "steel");
         }
 
-        if (woodButton) woodButton.classList.toggle("active", !this.deleteMode && !this.doorMaterial && this.material === "wood");
-        if (steelButton) steelButton.classList.toggle("active", !this.deleteMode && !this.doorMaterial && this.material === "steel");
+        if (woodButton) woodButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "wood");
+        if (steelButton) steelButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         if (woodDoorButton) woodDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "wood");
         if (steelDoorButton) steelDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "steel");
 
