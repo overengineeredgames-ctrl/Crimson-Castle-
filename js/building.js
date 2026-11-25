@@ -1192,31 +1192,32 @@ const Building = {
         const woodDoorButton = document.getElementById("btn-wood-door");
         const steelDoorButton = document.getElementById("btn-steel-door");
 
+        const linking = typeof Weapons !== "undefined" && Weapons.linkMode;
         for (const type of Object.keys(this.utilityDefinitions)) {
             const button = document.getElementById("btn-" + type);
-            if (button) button.classList.toggle("active", this.utilityTool === type);
+            if (button) button.classList.toggle("active", !linking && this.utilityTool === type);
         }
 
         if (woodButton) {
-            woodButton.classList.toggle("active", this.material === "wood");
+            woodButton.classList.toggle("active", !linking && this.material === "wood");
         }
 
         if (steelButton) {
-            steelButton.classList.toggle("active", !this.deleteMode && this.material === "steel");
+            steelButton.classList.toggle("active", !this.deleteMode && !linking && this.material === "steel");
         }
 
         if (woodButton) woodButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "wood");
         if (steelButton) steelButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "steel");
-        if (woodDoorButton) woodDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "wood");
-        if (steelDoorButton) steelDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "steel");
+        if (woodDoorButton) woodDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "wood");
+        if (steelDoorButton) steelDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "steel");
 
         if (deleteButton) {
-            deleteButton.classList.toggle("active", this.deleteMode);
+            deleteButton.classList.toggle("active", !linking && this.deleteMode);
             deleteButton.setAttribute("aria-pressed", String(this.deleteMode));
         }
 
         if (repairButton) {
-            repairButton.classList.toggle("active", this.repairMode);
+            repairButton.classList.toggle("active", !linking && this.repairMode);
             repairButton.setAttribute("aria-pressed", String(this.repairMode));
         }
     },
@@ -1266,38 +1267,69 @@ const Building = {
 
     startDoorModifier(x, y) {
         if (!this.doorMaterial) return false;
-        const node = this.getNearestNode(x, y, 28);
-        if (!node || node.team !== "player" || node.removed) { this.showPlacementMessage("Start by touching a joint."); return true; }
-        const connected = this.struts.filter(s => s.team === "player" && !s.isDoor && (s.a === node || s.b === node) && !s.removed);
-        if (!connected.length) { this.showPlacementMessage("That joint has no beam to modify."); return true; }
-        this.doorModifierDrag = { node, connected, candidate: null, x, y, released: false };
+        const node = this.getNearestNode(x, y, 38);
+        if (!node || node.team !== "player" || node.removed) {
+            this.showPlacementMessage("Touch a joint, then drag along one of its beams.");
+            return true;
+        }
+        const connected = this.struts.filter(s =>
+            s.team === "player" && !s.isDoor && !s.removed &&
+            (s.a === node || s.b === node) && s.a && s.b &&
+            !s.a.removed && !s.b.removed
+        );
+        if (!connected.length) {
+            this.showPlacementMessage("That joint has no beam to modify.");
+            return true;
+        }
+        this.doorModifierDrag = { node, connected, candidate: null, x, y, released: false, confirmReady: false };
         this.hideDoorConfirm();
+        this.showPlacementMessage("Drag from the joint along the beam, then release.");
         return true;
     },
     moveDoorModifier(x, y) {
         const drag = this.doorModifierDrag;
         if (!drag || drag.released) return;
-        drag.x = x; drag.y = y;
-        let best = 42, candidate = null;
+        drag.x = x;
+        drag.y = y;
+        let best = 58, candidate = null;
         for (const beam of drag.connected) {
-            if (!this.struts.includes(beam)) continue;
+            if (!this.struts.includes(beam) || !beam.a || !beam.b) continue;
             const distance = this.pointToSegmentDistance(x, y, beam.a.body.position, beam.b.body.position);
             if (distance < best) { best = distance; candidate = beam; }
         }
         drag.candidate = candidate;
+        if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
+        this.doorConfirmTimer = null;
+        const button = document.getElementById("btn-confirm-door");
+        if (button) button.hidden = true;
+        if (candidate) {
+            this.doorConfirmTimer = setTimeout(() => {
+                if (this.doorModifierDrag !== drag) return;
+                drag.confirmReady = true;
+                const confirm = document.getElementById("btn-confirm-door");
+                if (confirm) confirm.hidden = false;
+                this.showPlacementMessage("Beam selected. Release, then confirm the door.");
+            }, 1000);
+        }
     },
     releaseDoorModifier() {
         const drag = this.doorModifierDrag;
         if (!drag) return false;
         drag.released = true;
-        if (!drag.candidate) { this.showPlacementMessage("Drag along a beam connected to that joint."); this.doorModifierDrag = null; return true; }
-        this.showPlacementMessage("Preparing door placement…");
+        if (!drag.candidate || !this.struts.includes(drag.candidate)) {
+            this.showPlacementMessage("Start at a joint and drag directly along a connected beam.");
+            this.doorModifierDrag = null;
+            this.hideDoorConfirm();
+            return true;
+        }
         if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
         this.doorConfirmTimer = setTimeout(() => {
             if (this.doorModifierDrag !== drag) return;
+            drag.confirmReady = true;
             const button = document.getElementById("btn-confirm-door");
             if (button) button.hidden = false;
-        }, 1000);
+            this.showPlacementMessage("Confirm to replace the selected beam with a door.");
+        }, drag.confirmReady ? 0 : 1000);
         return true;
     },
     hideDoorConfirm() {
@@ -1308,7 +1340,7 @@ const Building = {
     },
     confirmDoorModifier() {
         const drag = this.doorModifierDrag, beam = drag && drag.candidate;
-        if (!drag || !drag.released || !beam || !this.struts.includes(beam)) return;
+        if (!drag || !drag.released || !drag.confirmReady || !beam || !this.struts.includes(beam)) return;
         const materialName = this.doorMaterial, material = this.settings(materialName);
         const resource = materialName === "wood" ? "wood" : "metal";
         if (!this.charge(material.cost, resource)) {
