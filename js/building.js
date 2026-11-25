@@ -2188,9 +2188,15 @@ var Building = window.Building = {
                 // Draw the live door preview above every battlefield object.
                 const doorDrag = this.doorModifierDrag;
                 const previewBeam = doorDrag && doorDrag.candidate;
-                if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
-                    const a = previewBeam.a.body.position;
-                    const b = previewBeam.b.body.position;
+                if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b && doorDrag.node) {
+                    // Preview from the exact joint the player touched, not
+                    // from the beam's arbitrary stored endpoint A.
+                    const startNode = doorDrag.node;
+                    const endNode = previewBeam.a === startNode ? previewBeam.b :
+                        previewBeam.b === startNode ? previewBeam.a : null;
+                    if (!endNode) return;
+                    const a = startNode.body.position;
+                    const b = endNode.body.position;
                     const dx = b.x - a.x, dy = b.y - a.y;
                     const lengthSq = dx * dx + dy * dy;
                     let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
