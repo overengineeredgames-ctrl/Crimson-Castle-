@@ -11,6 +11,7 @@ var Building = window.Building = {
     drag: null,
     doorMaterial: null,
     lastDoorConversion: null,
+    lastDoorConversionAttempt: null,
 
     repairMode: false,
     deleteMode: false,
@@ -71,6 +72,7 @@ var Building = window.Building = {
         this.drag = null;
         this.doorMaterial = null;
         this.lastDoorConversion = null;
+        this.lastDoorConversionAttempt = null;
         this.doorModifierDrag = null;
         this.doorConfirmTimer = null;
 
@@ -1408,16 +1410,40 @@ var Building = window.Building = {
     confirmDoorModifier() {
         this.lastDoorConversion = null;
         const drag = this.doorModifierDrag, beam = drag && drag.candidate;
-        if (!drag || !drag.released || !drag.confirmReady || !beam || !this.struts.includes(beam)) return;
+        this.lastDoorConversionAttempt = {
+            createdAt: Date.now(),
+            stage: "started",
+            reason: null,
+            doorCreated: false,
+            remainderCreated: false,
+            startNodeId: drag && drag.node && drag.node.body ? drag.node.body.id : null,
+            endNodeId: beam && (beam.a === (drag && drag.node) ? beam.b : beam.a) && (beam.a === (drag && drag.node) ? beam.b : beam.a).body
+                ? (beam.a === (drag && drag.node) ? beam.b : beam.a).body.id : null,
+            originalBeamLength: beam && beam.a && beam.b ? this.distance(beam.a.body.position, beam.b.body.position) : null,
+            resource: this.doorMaterial === "wood" ? "wood" : "metal",
+            balanceBefore: this.resources[this.doorMaterial === "wood" ? "wood" : "metal"]
+        };
+        const attempt = this.lastDoorConversionAttempt;
+        if (!drag || !drag.released || !drag.confirmReady || !beam || !this.struts.includes(beam)) {
+            attempt.stage = "rejected";
+            attempt.reason = "invalid_or_missing_drag_candidate";
+            return;
+        }
         const materialName = this.doorMaterial, material = this.settings(materialName);
         const resource = materialName === "wood" ? "wood" : "metal";
+        attempt.material = materialName;
+        attempt.cost = material.cost;
         if (!this.charge(material.cost, resource)) {
+            attempt.stage = "rejected";
+            attempt.reason = "insufficient_resources";
             this.showPlacementMessage("Not enough resources for that door.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
         }
 
         const startNode = drag.node;
         if (beam.a !== startNode && beam.b !== startNode) {
+            attempt.stage = "rejected";
+            attempt.reason = "beam_no_longer_connected_to_start_node";
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("That beam is no longer connected to the starting joint.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
@@ -1429,11 +1455,16 @@ var Building = window.Building = {
         const lenSq = dx * dx + dy * dy;
         let t = lenSq ? ((drag.x - p1.x) * dx + (drag.y - p1.y) * dy) / lenSq : 0;
         t = Math.max(0.08, Math.min(0.92, t));
+        attempt.splitRatio = t;
+        attempt.startPosition = { x: p1.x, y: p1.y };
+        attempt.endPosition = { x: p2.x, y: p2.y };
+        attempt.splitPosition = { x: p1.x + dx * t, y: p1.y + dy * t };
         const splitNode = this.createNode(
             p1.x + dx * t,
             p1.y + dy * t,
             { team: beam.team, material: beam.material, isBeamSplit: true }
         );
+        attempt.splitNodeCreated = !!splitNode;
 
         // This node is inserted into an already-existing, connected beam.
         // Inherit support from the original beam endpoints so the new joint
@@ -1443,6 +1474,8 @@ var Building = window.Building = {
         }
 
         if (!splitNode) {
+            attempt.stage = "failed";
+            attempt.reason = "split_node_creation_failed";
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("Couldn't create the door split point. The original beam was kept.");
             this.doorModifierDrag = null; this.hideDoorConfirm(); return;
@@ -1457,14 +1490,27 @@ var Building = window.Building = {
         const door = this.createStrut(startNode, splitNode, {
             material: materialName, isDoor: true, isBeamSplit: true
         });
+        attempt.doorCreated = !!door;
+        attempt.remainderCreated = !!remainder;
+        attempt.doorLength = this.distance(startNode.body.position, splitNode.body.position);
+        attempt.remainderLength = this.distance(splitNode.body.position, endNode.body.position);
+        attempt.doorMaxLength = this.settings(materialName).maxLength;
+        attempt.remainderMaxLength = this.settings(beam.material).maxLength;
 
         if (!door || !remainder) {
+            attempt.stage = "failed";
+            attempt.reason = !door && !remainder ? "both_replacement_struts_failed"
+                : (!door ? "door_strut_creation_failed" : "remainder_strut_creation_failed");
             if (door) this.removeStrut(door, false);
             if (remainder) this.removeStrut(remainder, false);
             this.removeNode(splitNode, false);
             this.resources[resource] += material.cost; this.updateHUD();
             this.showPlacementMessage("Door split failed; the original beam remains intact.");
         } else {
+            attempt.stage = "success";
+            attempt.reason = null;
+            attempt.doorId = door.body && door.body.id;
+            attempt.remainderId = remainder.body && remainder.body.id;
             // Keep object references for the debug panel so it can verify
             // both replacement constraints immediately and after physics steps.
             this.lastDoorConversion = {
