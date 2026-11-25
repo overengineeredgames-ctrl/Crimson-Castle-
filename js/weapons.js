@@ -223,6 +223,7 @@ const Weapons = {
 
         this.linkMode = next;
         this.selectedTool = next ? "link" : null;
+        this.syncLinkedDoors();
 
         if (typeof Building !== "undefined") Building.updateToolbar();
         this.updateToolButtons();
