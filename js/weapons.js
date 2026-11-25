@@ -277,19 +277,22 @@ var Weapons = window.Weapons = {
     handleLinkPointerDown(x, y) {
         if (!this.linkMode) return false;
 
-        // Once a weapon is chosen, prioritize doors so a nearby cannon's
-        // generous tap radius cannot steal the door tap.
+        // Link mode owns every pointer-down. Never let an unrecognized tap
+        // fall through to Building.startDrag(), which can begin a costly
+        // beam extrusion while the player is only trying to select a link.
         if (this.linkSource) {
             const door = this.findLinkDoorAtPoint(x, y);
             if (door) {
                 const added = this.linkDoorToWeapon(this.linkSource, door);
                 this.linkHoverDoor = null;
                 Building.showPlacementMessage(added ? "Door linked." : "Door unlinked.");
-                return true;
+            } else {
+                Building.showPlacementMessage("Tap a door to link it.");
             }
+            return true;
         }
 
-        // No source yet: find a player weapon with a compact, allocation-free hit test.
+        // Select a player weapon with a compact, allocation-free hit test.
         for (let i = this.cannons.length - 1; i >= 0; i--) {
             const c = this.cannons[i];
             if (c.team !== "player" || !c.node || c.node.removed) continue;
@@ -310,10 +313,8 @@ var Weapons = window.Weapons = {
             }
         }
 
-        const door = this.findLinkDoorAtPoint(x, y);
-        if (door) Building.showPlacementMessage("Select a weapon first.");
-        else Building.showPlacementMessage("Select a weapon first.");
-        return !!door;
+        Building.showPlacementMessage("Select a weapon first.");
+        return true;
     },
     clearSelectedCannon() {
         this.selectedCannon = null;
