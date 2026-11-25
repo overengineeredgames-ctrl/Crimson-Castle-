@@ -795,3 +795,24 @@ body.cc-theme-light #hud {
 
 /* Temporary debug overlay */
 #cc-debug-panel{position:fixed;z-index:99999;right:8px;top:8px;font:12px/1.35 monospace;color:#eaf4ff;pointer-events:none}#cc-debug-panel button{pointer-events:auto;background:#18334b;color:#fff;border:1px solid #6fa6cf;border-radius:6px;padding:7px 9px;font-weight:700}#cc-debug-toggle{background:#7b252b!important;border-color:#ff9a9a!important}#cc-debug-body{pointer-events:auto;width:min(92vw,560px);max-height:72vh;overflow:auto;background:rgba(7,15,25,.97);border:1px solid #75a8ce;border-radius:9px;padding:10px;box-shadow:0 8px 30px #000a}#cc-debug-body header{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}#cc-debug-body header b{flex:1}#cc-debug-body button{font-size:11px}#cc-debug-body pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:190px;overflow:auto;margin:8px 0;color:#d7e7f5;font:11px/1.35 monospace}#cc-debug-body summary{cursor:pointer;color:#9ed4ff}#cc-debug-body[hidden]{display:none!important}#cc-debug-body textarea{display:block;position:relative;z-index:1;pointer-events:auto;touch-action:pan-y;user-select:text;-webkit-user-select:text;width:100%;height:220px;max-height:35vh;margin-top:10px;padding:9px;border:1px solid #6fa6cf;border-radius:6px;background:#07111d;color:#eaf4ff;font:11px/1.35 monospace;white-space:pre;overflow:auto;}
+
+
+/* Compact door placement confirmation controls */
+#door-confirm-actions {
+    width: min(220px, calc(100vw - 48px));
+    min-height: 42px;
+    border-width: 1px;
+    border-radius: 8px;
+}
+#door-confirm-actions button {
+    min-height: 40px;
+    font-size: 12px;
+}
+#btn-confirm-door {
+    letter-spacing: .4px;
+}
+#btn-cancel-door {
+    flex-basis: 44px;
+    border-left-width: 1px !important;
+    font-size: 20px !important;
+}
