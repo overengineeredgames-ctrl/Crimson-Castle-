@@ -782,6 +782,8 @@ var Game = window.Game = {
 
     startGame() {
         AI.setDifficulty(this.difficulty);
+        // Build the enemy fort only after the player has chosen a difficulty.
+        if (!AI.fortCreated) AI.createEnemyFort();
 
         this.state = "playing";
         this.lastFrame = performance.now();
