@@ -19,6 +19,7 @@ var Weapons = window.Weapons = {
     cannonEnergyCost: 50,
     selectedWeaponType: "cannon",
     fireHeld: false,
+    sniperAimDrag: null,
     weaponStats: {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
@@ -41,6 +42,7 @@ var Weapons = window.Weapons = {
         this.links = []; this.linkMode = false; this.linkSource = null; this.linkHoverDoor = null; this.linkDoorTargets = [];
         this.selectedWeaponType = "cannon";
         this.fireHeld = false;
+        this.sniperAimDrag = null;
         this.mineDragging = false;
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
@@ -219,7 +221,7 @@ var Weapons = window.Weapons = {
     },
 
     clearSelectedTool() {
-        this.selectedTool = null; this.linkMode = false; this.linkSource = null; this.mineDragging = false;
+        this.selectedTool = null; this.linkMode = false; this.linkSource = null; this.mineDragging = false; this.sniperAimDrag = null;
         this.syncLinkedDoors(); this.updateToolButtons();
     },
     getLinkedDoors(weapon) { return this.links.filter(link => link.weapon === weapon && link.door && Building.struts.includes(link.door) && link.door.isDoor).map(link => link.door); },
@@ -398,6 +400,7 @@ var Weapons = window.Weapons = {
         const groupButton = document.querySelector('[data-mobile-action="group-select"]');
         if (groupButton) groupButton.classList.remove("active");
         this.fireHeld = false;
+        this.sniperAimDrag = null;
         this.syncLinkedDoors();
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
@@ -433,8 +436,15 @@ var Weapons = window.Weapons = {
 
         for (const cannon of selected) {
             if (!cannon.node || cannon.node.removed) continue;
+            if (cannon.weaponType === "sniper" &&
+                (!this.sniperAimDrag || this.sniperAimDrag.cannon !== cannon)) continue;
             const pos = cannon.node.body.position;
-            cannon.angle = Math.atan2(y - pos.y, x - pos.x);
+            let angle = Math.atan2(y - pos.y, x - pos.x);
+            if (cannon.weaponType === "sniper") {
+                // The player-side Sniper aims forward only, with a generous vertical arc.
+                angle = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02, angle));
+            }
+            cannon.angle = angle;
         }
     },
 
@@ -615,6 +625,12 @@ var Weapons = window.Weapons = {
             : (this.selectedCannon ? [this.selectedCannon] : []);
 
         if (selected.length) {
+            if (selected.length === 1 && selected[0].weaponType === "sniper") {
+                // Sniper uses press-drag-release: aim while held, fire only on release.
+                this.sniperAimDrag = { cannon: selected[0] };
+                this.handlePointerMove(x, y);
+                return true;
+            }
             this.handlePointerMove(x, y);
             this.fireHeld = selected.some(cannon => cannon.weaponType === "machineGun");
             for (const cannon of selected) this.fire(cannon);
@@ -626,6 +642,15 @@ var Weapons = window.Weapons = {
 
     handlePointerUp(x, y) {
         this.fireHeld = false;
+        if (this.sniperAimDrag) {
+            const cannon = this.sniperAimDrag.cannon;
+            this.handlePointerMove(x, y);
+            this.sniperAimDrag = null;
+            if (cannon && cannon.team === "player" && cannon.node && !cannon.node.removed) {
+                this.fire(cannon);
+            }
+            return true;
+        }
         if (!this.mineDragging) return false;
 
         this.mineDragging = false;
@@ -664,6 +689,10 @@ var Weapons = window.Weapons = {
         this.fireHeld = false;
     },
 
+    cancelSniperAim() {
+        this.sniperAimDrag = null;
+    },
+
     spawnProjectile(cannon, shotAngle, stats) {
         const start = cannon.node.body.position;
         const weaponType = cannon.weaponType || "cannon";
@@ -674,13 +703,15 @@ var Weapons = window.Weapons = {
             {
                 label: "cannon-projectile",
                 density: 0.003,
-                frictionAir: 0.002,
+                frictionAir: weaponType === "sniper" ? 0 : 0.002,
                 restitution: 0.1,
                 isSensor: true
             }
         );
 
         projectile.isProjectile = true;
+        // The Sniper projectile is a true straight-line shot, unaffected by gravity.
+        projectile.noGravity = weaponType === "sniper";
         // Easy AI standard cannons deal slightly reduced damage.
         // Player weapons and all other difficulty modes retain full damage.
         projectile.damage = cannon.team === "enemy" &&

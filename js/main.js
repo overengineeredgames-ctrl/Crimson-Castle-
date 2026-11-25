@@ -1036,6 +1036,7 @@ var Game = window.Game = {
             Building.doorModifierDrag = null;
             Building.hideDoorConfirm();
             Weapons.cancelMineDrag();
+            Weapons.cancelSniperAim();
         });
 
         // Mouse wheel zooms the battlefield only; the DOM HUD stays at 100%.

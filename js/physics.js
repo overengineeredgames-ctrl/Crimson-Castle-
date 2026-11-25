@@ -61,6 +61,17 @@ var Physics = window.Physics = {
         this.engine.gravity.y = CONFIG.GRAVITY || 1;
         this.engine.gravity.scale = CONFIG.GRAVITY_SCALE || 0.001;
 
+        // Bodies marked noGravity (the Sniper round) still use normal collision
+        // physics, but gravity is cancelled before each physics substep.
+        Matter.Events.on(this.engine, "beforeUpdate", () => {
+            const gravity = this.engine.gravity;
+            for (const body of this.world.bodies) {
+                if (!body.noGravity || body.isStatic || body.isSleeping) continue;
+                body.force.x -= body.mass * gravity.x * gravity.scale;
+                body.force.y -= body.mass * gravity.y * gravity.scale;
+            }
+        });
+
         // Improve physics stability.
         this.engine.positionIterations = 12;
         this.engine.velocityIterations = 10;
