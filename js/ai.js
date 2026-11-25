@@ -78,7 +78,6 @@ var AI = window.AI = {
         if (this.initialized) return;
 
         this.initialized = true;
-        this.createEnemyFort();
     },
 
     presetDefinitions: [
