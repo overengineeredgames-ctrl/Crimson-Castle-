@@ -239,6 +239,8 @@ var Weapons = window.Weapons = {
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.groupSelectMode = false;
+        const groupButton = document.querySelector('[data-mobile-action="group-select"]');
+        if (groupButton) groupButton.classList.remove("active");
         this.selectedTool = null;
         this.fireHeld = false;
         this.mineDragging = false;
