@@ -443,7 +443,29 @@ const AI = {
         return (Math.random() * 2 - 1) * maxError;
     },
 
-    updateCannons() {
+    ensureAIDoorForCannon(cannon) {
+        if (!cannon || cannon.team !== "enemy" || Weapons.getLinkedDoors(cannon).length) return;
+        const origin = cannon.node && cannon.node.body.position; if (!origin) return;
+        const nodes = Building.nodes.filter(n => n.team === "enemy" && !n.removed && !n.isCore && n !== cannon.node);
+        let best = null, scoreBest = Infinity;
+        for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j], p = a.body.position, q = b.body.position;
+            const length = Building.distance(p, q), cx = (p.x + q.x) / 2, cy = (p.y + q.y) / 2;
+            if (length < 42 || length > 165 || cx >= origin.x - 8 || Math.hypot(cx - origin.x, cy - origin.y) > 210) continue;
+            if (Building.struts.some(s => (s.a === a && s.b === b) || (s.a === b && s.b === a))) continue;
+            const score = Math.hypot(cx - (origin.x - 75), cy - origin.y); if (score < scoreBest) { scoreBest = score; best = [a, b]; }
+        }
+        let door = best ? Building.createStrut(best[0], best[1], { material: "steel", isDoor: true }) : null;
+        if (!door) {
+            const a = Building.createNode(origin.x - 92, origin.y - 38, { team: "enemy", material: "steel" });
+            const b = Building.createNode(origin.x - 92, origin.y + 38, { team: "enemy", material: "steel" });
+            if (a && b) { const sa = Building.createStrut(cannon.node, a, { material: "steel" }); const sb = Building.createStrut(cannon.node, b, { material: "steel" }); door = sa && sb ? Building.createStrut(a, b, { material: "steel", isDoor: true }) : null; }
+            if (!door) { if (a) Building.removeNode(a); if (b) Building.removeNode(b); return; } Building.checkSupport();
+        }
+        Weapons.linkDoorToWeapon(cannon, door);
+    },
+
+    updateCannons(deltaSeconds = 1 / 60) {
         for (const cannon of Weapons.cannons) {
             if (
                 cannon.team !== "enemy" ||
@@ -467,12 +489,15 @@ const AI = {
             const perfectAngle = this.calculateAim(cannon, target);
             cannon.angle = perfectAngle;
 
-            if (!cannon.targetInRange) continue;
-
-            if (cannon.cooldown <= 0) {
-                cannon.angle = perfectAngle + this.getRandomAimError();
-                Weapons.fire(cannon);
+            if (cannon.doorCloseTimer > 0) { cannon.doorCloseTimer = Math.max(0, cannon.doorCloseTimer - deltaSeconds); if (cannon.doorCloseTimer === 0) for (const door of Weapons.getLinkedDoors(cannon)) Building.setDoorOpen(door, false); }
+            if (!cannon.targetInRange || cannon.cooldown > 0) continue;
+            const doors = Weapons.getLinkedDoors(cannon);
+            if (doors.length) {
+                if (!cannon.doorTelegraphStarted) { for (const door of doors) Building.setDoorOpen(door, true); cannon.doorTelegraphStarted = true; cannon.doorTelegraph = 0.8; continue; }
+                cannon.doorTelegraph = Math.max(0, (cannon.doorTelegraph || 0) - deltaSeconds); if (cannon.doorTelegraph > 0) continue;
             }
+            cannon.angle = perfectAngle + this.getRandomAimError(); Weapons.fire(cannon);
+            if (doors.length) { cannon.doorTelegraphStarted = false; cannon.doorCloseTimer = 0.28; }
         }
     },
 
@@ -894,6 +919,7 @@ const AI = {
 
         this.ensureAtLeastOneCannon();
         this.buildExtraCannon();
-        this.updateCannons();
+        if (this.difficulty === "hard" || this.difficulty === "mega") for (const cannon of Weapons.cannons) if (cannon.team === "enemy") this.ensureAIDoorForCannon(cannon);
+        this.updateCannons(seconds);
     }
 };
