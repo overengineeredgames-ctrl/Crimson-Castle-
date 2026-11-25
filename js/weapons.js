@@ -614,9 +614,19 @@ var Weapons = window.Weapons = {
 
             this.selectedCannon = this.selectedCannons[0] || null;
             this.syncLinkedDoors();
-            this.handlePointerMove(x, y);
             this.lastCannonClick = 0;
             this.lastClickedCannon = null;
+
+            // A Sniper can be aimed in one continuous touch gesture:
+            // press directly on its body/barrel, drag to set the angle, release to fire.
+            if (clickedCannon.weaponType === "sniper" &&
+                this.selectedCannons.length === 1 &&
+                this.selectedCannons[0] === clickedCannon) {
+                this.sniperAimDrag = { cannon: clickedCannon };
+                this.handlePointerMove(x, y);
+            } else {
+                this.handlePointerMove(x, y);
+            }
             return true;
         }
 
