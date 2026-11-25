@@ -9,6 +9,7 @@ const Building = {
     installations: [],
     utilityTool: null,
     drag: null,
+    doorMaterial: null,
 
     repairMode: false,
     deleteMode: false,
@@ -67,6 +68,7 @@ const Building = {
         this.installations = [];
         this.utilityTool = null;
         this.drag = null;
+        this.doorMaterial = null;
 
         this.resources = {
             metal: CONFIG.STARTING_METAL || 500,
@@ -445,6 +447,7 @@ const Building = {
         beamBody.team = nodeA.team;
         beamBody.fortLength = length;
 
+        const isDoor = !!options.isDoor;
         const strut = {
             a: nodeA,
             b: nodeB,
@@ -456,8 +459,10 @@ const Building = {
             maxHealth: material.maxHealth,
             width: material.width,
             breakRatio: material.breakRatio,
-            team: nodeA.team
+            team: nodeA.team,
+            isDoor, doorOpen: false, doorOpenAmount: 0, doorCollisionOpen: false
         };
+        if (isDoor) { strut.maxHealth = Math.round(material.maxHealth * 0.72); strut.health = strut.maxHealth; beamBody.isFortDoor = true; beamBody.collisionFilter.mask = 0xffffffff; }
 
         beamBody.fortStrut = strut;
 
@@ -1107,11 +1112,14 @@ const Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const woodDoorButton = document.getElementById("btn-wood-door");
+        const steelDoorButton = document.getElementById("btn-steel-door");
         this.createUtilityButtons();
 
-        if (woodButton) {
-            woodButton.onclick = () => this.setMaterial("wood");
-        }
+        if (woodButton) woodButton.onclick = () => this.setMaterial("wood");
+        if (steelButton) steelButton.onclick = () => this.setMaterial("steel");
+        if (woodDoorButton) woodDoorButton.onclick = () => this.setDoorMaterial("wood");
+        if (steelDoorButton) steelDoorButton.onclick = () => this.setDoorMaterial("steel");
 
         if (steelButton) {
             steelButton.onclick = () => this.setMaterial("steel");
@@ -1134,9 +1142,16 @@ const Building = {
         this.updateToolbar();
     },
 
+    setDoorMaterial(material) {
+        if (material !== "wood" && material !== "steel") return;
+        this.doorMaterial = material; this.material = material; this.utilityTool = null; this.repairMode = false; this.repairTarget = null;
+        if (typeof Weapons !== "undefined") { Weapons.clearSelectedTool(); Weapons.clearSelectedCannon(); }
+        this.setDeleteMode(false); this.updateToolbar();
+    },
+
     setMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
-
+        this.doorMaterial = null;
         this.material = material;
         this.utilityTool = null;
         this.repairMode = false;
@@ -1152,6 +1167,7 @@ const Building = {
     setDeleteMode(enabled) {
         this.deleteMode = !!enabled;
         if (this.deleteMode) {
+            this.doorMaterial = null;
             this.utilityTool = null;
             this.repairMode = false;
             this.repairTarget = null;
@@ -1168,6 +1184,8 @@ const Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const woodDoorButton = document.getElementById("btn-wood-door");
+        const steelDoorButton = document.getElementById("btn-steel-door");
 
         for (const type of Object.keys(this.utilityDefinitions)) {
             const button = document.getElementById("btn-" + type);
@@ -1182,9 +1200,10 @@ const Building = {
             steelButton.classList.toggle("active", !this.deleteMode && this.material === "steel");
         }
 
-        if (woodButton) {
-            woodButton.classList.toggle("active", !this.deleteMode && this.material === "wood");
-        }
+        if (woodButton) woodButton.classList.toggle("active", !this.deleteMode && !this.doorMaterial && this.material === "wood");
+        if (steelButton) steelButton.classList.toggle("active", !this.deleteMode && !this.doorMaterial && this.material === "steel");
+        if (woodDoorButton) woodDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "wood");
+        if (steelDoorButton) steelDoorButton.classList.toggle("active", !this.deleteMode && this.doorMaterial === "steel");
 
         if (deleteButton) {
             deleteButton.classList.toggle("active", this.deleteMode);
@@ -1339,7 +1358,9 @@ const Building = {
     },
 
     finishBeam(nodeA, nodeB) {
-        const material = this.settings(this.material);
+        const isDoor = !!this.doorMaterial;
+        const materialName = this.doorMaterial || this.material;
+        const material = this.settings(materialName);
 
         if (!nodeA || !nodeB || nodeA === nodeB) {
             return false;
@@ -1354,7 +1375,7 @@ const Building = {
         const resource = this.buildingResource();
         if (!this.charge(material.cost, resource)) return false;
 
-        const strut = this.createStrut(nodeA, nodeB);
+        const strut = this.createStrut(nodeA, nodeB, { material: materialName, isDoor });
 
         if (!strut) {
             this.resources[resource] += material.cost;
@@ -1532,6 +1553,7 @@ const Building = {
     removeStrut(strut, updateSupport = true) {
         if (!strut) return;
 
+        if (strut.isDoor && typeof Weapons !== "undefined" && Weapons.removeLinksForDoor) Weapons.removeLinksForDoor(strut);
         Matter.Composite.remove(Physics.world, strut.constraint);
         Matter.Composite.remove(Physics.world, strut.body);
 
@@ -1922,6 +1944,12 @@ const Building = {
             });
 
             Matter.Body.setAngle(strut.body, angle);
+            if (strut.isDoor) {
+                const target = strut.doorOpen ? 1 : 0;
+                strut.doorOpenAmount += (target - strut.doorOpenAmount) * Math.min(1, delta / 150);
+                const openForCollision = strut.doorOpen || strut.doorOpenAmount > 0.12;
+                if (openForCollision !== strut.doorCollisionOpen) { strut.doorCollisionOpen = openForCollision; strut.body.collisionFilter.mask = openForCollision ? 0 : 0xffffffff; }
+            }
         }
     },
 
@@ -1943,6 +1971,21 @@ const Building = {
         }
     },
 
+    setDoorOpen(door, open) {
+        if (!door || !door.isDoor || !this.struts.includes(door)) return;
+        door.doorOpen = !!open;
+        if (door.doorOpen) { door.doorCollisionOpen = true; door.body.collisionFilter.mask = 0; }
+    },
+    drawDoor(ctx, door) {
+        const a = door.a.body.position, b = door.b.body.position;
+        const angle = Math.atan2(b.y - a.y, b.x - a.x), length = Math.hypot(b.x - a.x, b.y - a.y);
+        const material = this.settings(door.material), swing = door.doorOpenAmount * (door.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
+        ctx.save(); if (door.debrisGroup) ctx.globalAlpha *= door.debrisGroup.alpha;
+        ctx.translate(a.x, a.y); ctx.rotate(angle + swing); ctx.lineCap = "butt";
+        ctx.strokeStyle = material.dark; ctx.lineWidth = door.width + 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
+        ctx.strokeStyle = door.doorOpen ? "#d9e7f2" : material.color; ctx.lineWidth = Math.max(3, door.width - 2); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
+        ctx.fillStyle = "#e6c16a"; ctx.beginPath(); ctx.arc(length - 8, 0, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    },
     draw(ctx) {
         if (!ctx) return;
 
@@ -1950,6 +1993,7 @@ const Building = {
         this.drawEnclosedCells(ctx);
 
         for (const strut of this.struts) {
+            if (strut.isDoor) { this.drawDoor(ctx, strut); continue; }
             ctx.save();
             if (strut.debrisGroup) ctx.globalAlpha *= strut.debrisGroup.alpha;
             const a = strut.a.body.position;
