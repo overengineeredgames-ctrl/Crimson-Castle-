@@ -61,6 +61,17 @@ var Physics = window.Physics = {
         this.engine.gravity.y = CONFIG.GRAVITY || 1;
         this.engine.gravity.scale = CONFIG.GRAVITY_SCALE || 0.001;
 
+        // Bodies marked noGravity (the Sniper round) still use normal collision
+        // physics, but gravity is cancelled before each physics substep.
+        Matter.Events.on(this.engine, "beforeUpdate", () => {
+            const gravity = this.engine.gravity;
+            for (const body of this.world.bodies) {
+                if (!body.noGravity || body.isStatic || body.isSleeping) continue;
+                body.force.x -= body.mass * gravity.x * gravity.scale;
+                body.force.y -= body.mass * gravity.y * gravity.scale;
+            }
+        });
+
         // Improve physics stability.
         this.engine.positionIterations = 12;
         this.engine.velocityIterations = 10;
@@ -204,26 +215,8 @@ var Physics = window.Physics = {
         // Four smaller physics steps reduce tunnelling.
         const step = safeDelta / 4;
 
-        const gravity = this.engine.gravity;
-        const gravityScale = gravity.scale;
-
         for (let i = 0; i < 4; i++) {
-            // Matter applies gravity internally to every dynamic body. Apply
-            // that same force ourselves to ordinary bodies, then temporarily
-            // disable global gravity for this substep. Sniper rounds are the
-            // only bodies skipped, so their vertical velocity stays constant.
-            for (const body of this.world.bodies) {
-                if (body.isStatic || body.isSleeping || body.noGravity) continue;
-                body.force.x += body.mass * gravity.x * gravityScale;
-                body.force.y += body.mass * gravity.y * gravityScale;
-            }
-
-            gravity.scale = 0;
-            try {
-                Matter.Engine.update(this.engine, step);
-            } finally {
-                gravity.scale = gravityScale;
-            }
+            Matter.Engine.update(this.engine, step);
         }
     }
 };

@@ -21,6 +21,7 @@ var Weapons = window.Weapons = {
     fireHeld: false,
     sniperAimDrag: null,
     pendingSniperFire: null,
+    sniperFireReadyToShow: false,
     sniperFireTimer: null,
     sniperFireButton: null,
     weaponStats: {
@@ -181,7 +182,9 @@ var Weapons = window.Weapons = {
             event.stopPropagation();
             const cannon = this.pendingSniperFire;
             if (!cannon || cannon.cooldown > 0 || !cannon.node || cannon.node.removed) return;
-            this.hideSniperFireButton();
+            // Keep the aimed cannon armed after firing so the same control
+            // returns automatically when its reload finishes.
+            button.style.display = "none";
             this.fire(cannon);
         };
         this.sniperFireButton = button;
@@ -191,6 +194,7 @@ var Weapons = window.Weapons = {
         if (this.sniperFireTimer) clearTimeout(this.sniperFireTimer);
         this.sniperFireTimer = null;
         this.pendingSniperFire = null;
+        this.sniperFireReadyToShow = false;
         if (this.sniperFireButton) this.sniperFireButton.style.display = "none";
     },
 
@@ -198,11 +202,12 @@ var Weapons = window.Weapons = {
         this.hideSniperFireButton();
         if (!cannon || cannon.team !== "player" || !cannon.node || cannon.node.removed) return;
         this.pendingSniperFire = cannon;
+        this.sniperFireReadyToShow = false;
         this.sniperFireTimer = setTimeout(() => {
             this.sniperFireTimer = null;
             if (this.pendingSniperFire !== cannon || !cannon.node || cannon.node.removed) return;
+            this.sniperFireReadyToShow = true;
             if (!this.sniperFireButton) this.ensureSniperFireButton();
-            this.sniperFireButton.style.display = "flex";
             this.updateSniperFireButton();
         }, 200);
     },
@@ -210,11 +215,25 @@ var Weapons = window.Weapons = {
     updateSniperFireButton() {
         const button = this.sniperFireButton;
         const cannon = this.pendingSniperFire;
-        if (!button || button.style.display === "none" || !cannon) return;
+        if (!button || !cannon) return;
+
+        const stillSelected = this.selectedCannon === cannon ||
+            this.selectedCannons.includes(cannon);
+        if (!stillSelected || cannon.team !== "player" || !cannon.node || cannon.node.removed) {
+            this.hideSniperFireButton();
+            return;
+        }
+
         const remaining = Math.max(0, cannon.cooldown || 0);
         button.disabled = remaining > 0;
         button.textContent = remaining > 0 ? remaining.toFixed(1) : "FIRE";
         button.style.opacity = remaining > 0 ? "0.55" : "1";
+
+        // The control stays hidden during reload, then reappears once the
+        // cooldown has fully elapsed. It remains armed until deselection.
+        if (this.sniperFireReadyToShow && remaining <= 0) {
+            button.style.display = "flex";
+        }
     },
 
     createWeaponButton(id, label, weaponType, costLabel) {
