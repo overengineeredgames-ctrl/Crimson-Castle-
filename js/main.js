@@ -506,6 +506,8 @@ var Game = window.Game = {
                     Drag between joints to build beams<br>
                     Select Mine, then drag onto a joint to place it<br>
                     Mines cost 50 metal and generate 2 energy per second<br>
+                    Solar panels provide cheap steady power; water drillers need ground joints and power<br>
+                    Store drilled water, then use geothermal generators to turn water into high power<br>
                     Cannon: 100 metal / 50 energy<br>
                     Machine Gun: hold fire for rapid, light damage<br>
                     Mega Cannon: 220 damage with a 15-second reload<br>
@@ -1243,7 +1245,7 @@ var Game = window.Game = {
         );
 
         ctx.fillText(
-            "Mine / Metal Drill: ground only | Tree Mine: inside a box, produces wood | Windmill: open air | Battery: stores power",
+            "Metal / Water Drills: ground only | Solar + Wind: power | Water Storage: holds water | Geothermal: water to power",
             14,
             this.canvas.height - 58
         );
@@ -1271,23 +1273,42 @@ var Game = window.Game = {
         const drills = Building.installations.filter(item =>
             !item.removed && item.type === "drill"
         );
-        const drillPowerDemand = drills.length * Building.utilityDefinitions.drill.powerUse;
+        const waterDrills = Building.installations.filter(item =>
+            !item.removed && item.type === "waterDrill"
+        );
+        const geothermal = Building.installations.filter(item =>
+            !item.removed && item.type === "geothermal"
+        );
+        const activeGeothermal = Building.resources.water > 0 ? geothermal : [];
+        const metalPowerDemand = drills.length * Building.utilityDefinitions.drill.powerUse;
+        const waterPowerDemand = waterDrills.length * Building.utilityDefinitions.waterDrill.powerUse;
+        const geothermalPowerDemand = activeGeothermal.length * Building.utilityDefinitions.geothermal.powerUse;
+        const totalPowerDemand = metalPowerDemand + waterPowerDemand + geothermalPowerDemand;
         const storedEnergy = Math.max(0, Building.resources.energy);
         const availableEnergy = storedEnergy + production * seconds;
-        const requestedEnergy = drillPowerDemand * seconds;
-        const drillEfficiency = requestedEnergy > 0
+        const requestedEnergy = totalPowerDemand * seconds;
+        const powerEfficiency = requestedEnergy > 0
             ? Math.min(1, availableEnergy / requestedEnergy)
             : 1;
 
         Building.resources.energy = Math.max(0, Math.min(
             Building.getEnergyCapacity(),
-            availableEnergy - requestedEnergy * drillEfficiency
+            availableEnergy - requestedEnergy * powerEfficiency
         ));
 
         Building.resources.metal +=
             (CONFIG.METAL_GENERATION || 2) * seconds +
             drills.length * Building.utilityDefinitions.drill.drillRate *
-                drillEfficiency * seconds;
+                powerEfficiency * seconds;
+
+        Building.resources.water = Math.min(
+            Building.getWaterCapacity(),
+            Math.max(0, Building.resources.water) +
+                waterDrills.length * Building.utilityDefinitions.waterDrill.waterRate *
+                    powerEfficiency * seconds -
+                activeGeothermal.length * Building.utilityDefinitions.geothermal.waterUse *
+                    powerEfficiency * seconds
+        );
 
         const treeMines = Building.installations.filter(item =>
             !item.removed && item.type === "treeMine"
