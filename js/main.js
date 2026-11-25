@@ -850,10 +850,8 @@ var Game = window.Game = {
             else if (action === "pan-down") this.cameraOffsetY += panStep;
             else if (action === "zoom-in") this.setCameraZoomAt(centerX, this.cameraZoom * 1.18, centerY);
             else if (action === "zoom-out") this.setCameraZoomAt(centerX, this.cameraZoom / 1.18, centerY);
-            else if (action === "fire") {
-                const selected = this.selectedCannons.length ? this.selectedCannons :
-                    (this.selectedCannon ? [this.selectedCannon] : []);
-                for (const cannon of selected) Weapons.fire(cannon);
+            else if (action === "deselect") {
+                Weapons.clearSelectedCannon();
             } else if (action === "pause") this.togglePause();
             this.clampCamera();
         });
