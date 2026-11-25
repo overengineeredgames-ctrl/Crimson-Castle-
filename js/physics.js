@@ -146,7 +146,8 @@ var Physics = window.Physics = {
                     ? Building.nodes.find(node => node.body === target)
                     : null;
 
-                // Hit a building joint or core.
+                // Friendly joints remain pass-through, but every team's
+                // structural beams can stop projectiles.
                 if (targetNode) {
                     if (targetNode.team === bullet.team) continue;
 
@@ -161,9 +162,14 @@ var Physics = window.Physics = {
                     continue;
                 }
 
-                // Hit a beam.
+                // Closed doors block bullets from BOTH teams. A fully opened
+                // door creates a firing passage for either team; its structural
+                // constraint remains intact and the door can still be closed.
                 if (target.isFortBeam) {
-                    if (target.team === bullet.team) continue;
+                    const strut = target.fortStrut;
+                    if (target.isFortDoor && strut && strut.doorOpenAmount >= 0.9) {
+                        continue;
+                    }
 
                     bullet.hasHit = true;
 
