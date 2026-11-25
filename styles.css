@@ -777,3 +777,7 @@ body.cc-theme-light #hud {
         margin: 0 !important;
     }
 }
+
+
+#btn-confirm-door { position:fixed; z-index:80; left:50%; bottom:max(88px,calc(env(safe-area-inset-bottom) + 78px)); transform:translateX(-50%); min-width:150px; min-height:48px; padding:12px 20px; border:2px solid #8ce5ff; border-radius:10px; background:#17466b; color:#fff; font-size:16px; font-weight:900; box-shadow:0 4px 18px rgba(0,0,0,.4); touch-action:manipulation; }
+#btn-confirm-door[hidden] { display:none !important; }
