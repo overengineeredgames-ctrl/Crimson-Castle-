@@ -22,7 +22,7 @@ var Weapons = window.Weapons = {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
         megaCannon: { name: "Mega Cannon", damage: 220, cooldown: 15, speed: 10, radius: 9, metal: 260, energy: 130 },
-        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050, volleyCount: 7, spread: 0.42 }
+        flakCannon: { name: "Flak Cannon", damage: 0, cooldown: 2.1, speed: 11, radius: 7, metal: 190, energy: 95, blastRadius: 76, fuse: 1050, volleyCount: 11, spread: 0.72, burstInterval: 55 }
     },
     lastCannonClick: 0,
     lastClickedCannon: null,
@@ -646,64 +646,61 @@ var Weapons = window.Weapons = {
         this.fireHeld = false;
     },
 
-    fire(cannon) {
-        if (
-            !cannon ||
-            !cannon.node ||
-            cannon.node.removed ||
-            cannon.cooldown > 0
-        ) {
-            return;
-        }
-
+    spawnProjectile(cannon, shotAngle, stats) {
         const start = cannon.node.body.position;
-        const angle = cannon.angle;
+        const weaponType = cannon.weaponType || "cannon";
+        const projectile = Matter.Bodies.circle(
+            start.x + Math.cos(shotAngle) * 34,
+            start.y + Math.sin(shotAngle) * 34,
+            stats.radius,
+            {
+                label: "cannon-projectile",
+                density: 0.003,
+                frictionAir: 0.002,
+                restitution: 0.1,
+                isSensor: true
+            }
+        );
+
+        projectile.isProjectile = true;
+        projectile.damage = stats.damage;
+        projectile.team = cannon.team;
+        projectile.weaponType = weaponType;
+        projectile.life = 20000;
+        if (weaponType === "flakCannon") {
+            projectile.flakFuse = stats.fuse || 1050;
+            projectile.blastRadius = stats.blastRadius || 76;
+        }
+        projectile.displayRadius = Math.max(4, stats.radius);
+        projectile.hasHit = false;
+        projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
+
+        Matter.Composite.add(Physics.world, projectile);
+        Matter.Body.setVelocity(projectile, {
+            x: Math.cos(shotAngle) * stats.speed,
+            y: Math.sin(shotAngle) * stats.speed
+        });
+        this.projectiles.push(projectile);
+        return projectile;
+    },
+
+    fire(cannon) {
+        if (!cannon || !cannon.node || cannon.node.removed || cannon.cooldown > 0) return;
+
         const stats = this.weaponStats[cannon.weaponType] || this.weaponStats.cannon;
         const weaponType = cannon.weaponType || "cannon";
-        const volleyCount = weaponType === "flakCannon"
-            ? Math.max(1, stats.volleyCount || 7)
-            : 1;
-        const spread = weaponType === "flakCannon" ? (stats.spread || 0.42) : 0;
+        const angle = cannon.angle;
 
-        // Flak fires a fan of independent shells in one trigger pull. Each
-        // shell keeps the normal proximity fuse and blast interception logic.
-        for (let i = 0; i < volleyCount; i++) {
-            const offset = volleyCount === 1
-                ? 0
-                : -spread / 2 + spread * (i / (volleyCount - 1));
-            const shotAngle = angle + offset;
-            const projectile = Matter.Bodies.circle(
-                start.x + Math.cos(shotAngle) * 34,
-                start.y + Math.sin(shotAngle) * 34,
-                stats.radius,
-                {
-                    label: "cannon-projectile",
-                    density: 0.003,
-                    frictionAir: 0.002,
-                    restitution: 0.1,
-                    isSensor: true
-                }
+        if (weaponType === "flakCannon") {
+            // Emit a visible rapid burst of separate shells over several frames.
+            const count = Math.max(2, stats.volleyCount || 11);
+            const spread = stats.spread || 0.72;
+            cannon.flakBurstShots = Array.from({ length: count }, (_, i) =>
+                angle - spread / 2 + spread * (i / (count - 1))
             );
-
-            projectile.isProjectile = true;
-            projectile.damage = stats.damage;
-            projectile.team = cannon.team;
-            projectile.weaponType = weaponType;
-            projectile.life = 20000;
-            if (weaponType === "flakCannon") {
-                projectile.flakFuse = stats.fuse || 1050;
-                projectile.blastRadius = stats.blastRadius || 76;
-            }
-            projectile.displayRadius = Math.max(4, stats.radius);
-            projectile.hasHit = false;
-            projectile.previousPosition = { x: projectile.position.x, y: projectile.position.y };
-
-            Matter.Composite.add(Physics.world, projectile);
-            Matter.Body.setVelocity(projectile, {
-                x: Math.cos(shotAngle) * stats.speed,
-                y: Math.sin(shotAngle) * stats.speed
-            });
-            this.projectiles.push(projectile);
+            cannon.flakBurstTimer = 0;
+        } else {
+            this.spawnProjectile(cannon, angle, stats);
         }
 
         cannon.cooldownMax = stats.cooldown;
@@ -714,6 +711,18 @@ var Weapons = window.Weapons = {
         const seconds = delta / 1000;
 
         for (const cannon of this.cannons) {
+            if (cannon.flakBurstShots && cannon.flakBurstShots.length) {
+                cannon.flakBurstTimer = (cannon.flakBurstTimer || 0) - delta;
+                while (cannon.flakBurstTimer <= 0 && cannon.flakBurstShots.length) {
+                    const shotAngle = cannon.flakBurstShots.shift();
+                    this.spawnProjectile(cannon, shotAngle, this.weaponStats.flakCannon);
+                    cannon.flakBurstTimer += this.weaponStats.flakCannon.burstInterval || 55;
+                }
+                if (!cannon.flakBurstShots.length) {
+                    cannon.flakBurstShots = null;
+                    cannon.flakBurstTimer = 0;
+                }
+            }
             if (cannon.cooldown > 0) {
                 cannon.cooldown = Math.max(0, cannon.cooldown - seconds);
             }
