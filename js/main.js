@@ -939,6 +939,7 @@ var Game = window.Game = {
             if (event.button === 1) {
                 this.panDrag = { clientX: event.clientX, clientY: event.clientY };
                 this.canvas.setPointerCapture(event.pointerId);
+                this.activeCanvasPointerId = event.pointerId;
                 event.preventDefault();
                 return;
             }
