@@ -2196,23 +2196,23 @@ var Building = window.Building = {
         const a = door.a.body.position;
         const length = door.doorLength || door.length;
         const angle = door.body.angle;
-        const material = this.settings(door.material);
         ctx.save(); if (door.debrisGroup) ctx.globalAlpha *= door.debrisGroup.alpha;
-        // Faint gray seam marks the doorway's original beam position while
-        // the panel swings away from it.
-        if (door.doorOpenAmount > 0.015) {
-            ctx.save();
-            ctx.globalAlpha *= Math.min(0.48, door.doorOpenAmount * 0.48);
-            ctx.strokeStyle = "#9aa3ad";
-            ctx.lineWidth = 2;
-            ctx.lineCap = "butt";
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-            ctx.restore();
-        }
+        // Doors use a distinct dark timber finish so they are easy to identify
+        // against ordinary wood and steel fort beams.
         ctx.translate(a.x, a.y); ctx.rotate(angle); ctx.lineCap = "butt";
-        ctx.strokeStyle = material.dark; ctx.lineWidth = door.width + 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
-        ctx.strokeStyle = door.doorOpen ? "#d9e7f2" : material.color; ctx.lineWidth = Math.max(3, door.width - 2); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
-        ctx.fillStyle = "#e6c16a"; ctx.beginPath(); ctx.arc(length - 8, 0, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = "#24170f";
+        ctx.lineWidth = door.width + 3;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
+        ctx.strokeStyle = "#4a2d1d";
+        ctx.lineWidth = Math.max(3, door.width - 2);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
+        // A narrow warm highlight gives the dark door a wooden finish.
+        ctx.strokeStyle = "#765038";
+        ctx.lineWidth = Math.max(1, door.width * 0.16);
+        ctx.beginPath(); ctx.moveTo(3, -door.width * 0.18); ctx.lineTo(length - 5, -door.width * 0.18); ctx.stroke();
+        ctx.fillStyle = "#c49a59";
+        ctx.beginPath(); ctx.arc(length - 8, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
     },
     drawDoorPreview(ctx) {
         if (!ctx) return;
