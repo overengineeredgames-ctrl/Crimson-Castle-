@@ -1148,10 +1148,22 @@ const Building = {
 
     setDoorMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
-        this.doorMaterial = material; this.material = material; this.utilityTool = null; this.repairMode = false; this.repairTarget = null;
-        this.doorModifierDrag = null; this.hideDoorConfirm();
-        if (typeof Weapons !== "undefined") { Weapons.clearSelectedTool(); Weapons.clearSelectedCannon(); }
-        this.setDeleteMode(false); this.updateToolbar();
+        // Door mode is a modifier, not a normal wood/steel beam material.
+        // Keep the ordinary beam material untouched and make this the sole
+        // active construction action.
+        this.doorMaterial = material;
+        this.utilityTool = null;
+        this.repairMode = false;
+        this.repairTarget = null;
+        this.deleteMode = false;
+        this.drag = null;
+        this.doorModifierDrag = null;
+        this.hideDoorConfirm();
+        if (typeof Weapons !== "undefined") {
+            Weapons.clearSelectedTool();
+            Weapons.clearSelectedCannon();
+        }
+        this.updateToolbar();
     },
 
     setMaterial(material) {
@@ -1199,15 +1211,12 @@ const Building = {
         }
 
         if (woodButton) {
-            woodButton.classList.toggle("active", !linking && this.material === "wood");
+            woodButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "wood");
         }
 
         if (steelButton) {
-            steelButton.classList.toggle("active", !this.deleteMode && !linking && this.material === "steel");
+            steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         }
-
-        if (woodButton) woodButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "wood");
-        if (steelButton) steelButton.classList.toggle("active", !(typeof Weapons !== "undefined" && Weapons.linkMode) && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         if (woodDoorButton) woodDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "wood");
         if (steelDoorButton) steelDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "steel");
 
@@ -1459,8 +1468,13 @@ const Building = {
     },
 
     finishBeam(nodeA, nodeB) {
-        const isDoor = !!this.doorMaterial;
-        const materialName = this.doorMaterial || this.material;
+        // Doors may only be created by the joint-to-existing-beam modifier
+        // flow. Never let them fall through to normal beam construction.
+        if (this.doorMaterial) {
+            this.showPlacementMessage("Start at a joint and drag along an existing beam to place a door.");
+            return false;
+        }
+        const materialName = this.material;
         const material = this.settings(materialName);
 
         if (!nodeA || !nodeB || nodeA === nodeB) {
@@ -1476,7 +1490,7 @@ const Building = {
         const resource = this.buildingResource();
         if (!this.charge(material.cost, resource)) return false;
 
-        const strut = this.createStrut(nodeA, nodeB, { material: materialName, isDoor });
+        const strut = this.createStrut(nodeA, nodeB, { material: materialName });
 
         if (!strut) {
             this.resources[resource] += material.cost;
