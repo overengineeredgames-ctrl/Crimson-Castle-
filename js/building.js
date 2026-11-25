@@ -1143,6 +1143,12 @@ var Building = window.Building = {
 
         const confirmDoorButton = document.getElementById("btn-confirm-door");
         if (confirmDoorButton) confirmDoorButton.onclick = () => this.confirmDoorModifier();
+        const cancelDoorButton = document.getElementById("btn-cancel-door");
+        if (cancelDoorButton) cancelDoorButton.onclick = () => {
+            this.doorModifierDrag = null;
+            this.hideDoorConfirm();
+            this.showPlacementMessage("Door placement canceled.");
+        };
         this.updateToolbar();
     },
 
@@ -1309,14 +1315,14 @@ var Building = window.Building = {
         drag.candidate = candidate;
         if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
         this.doorConfirmTimer = null;
-        const button = document.getElementById("btn-confirm-door");
-        if (button) button.hidden = true;
+        const panel = document.getElementById("door-confirm-actions");
+        if (panel) panel.hidden = true;
         if (candidate) {
             this.doorConfirmTimer = setTimeout(() => {
                 if (this.doorModifierDrag !== drag) return;
                 drag.confirmReady = true;
-                const confirm = document.getElementById("btn-confirm-door");
-                if (confirm) confirm.hidden = false;
+                const panel = document.getElementById("door-confirm-actions");
+                if (panel) panel.hidden = false;
                 this.showPlacementMessage("Beam selected. Release, then confirm the door.");
             }, 500);
         }
@@ -1335,8 +1341,8 @@ var Building = window.Building = {
         this.doorConfirmTimer = setTimeout(() => {
             if (this.doorModifierDrag !== drag) return;
             drag.confirmReady = true;
-            const button = document.getElementById("btn-confirm-door");
-            if (button) button.hidden = false;
+            const panel = document.getElementById("door-confirm-actions");
+            if (panel) panel.hidden = false;
             this.showPlacementMessage("Confirm to replace the selected beam with a door.");
         }, drag.confirmReady ? 0 : 500);
         return true;
@@ -1344,8 +1350,8 @@ var Building = window.Building = {
     hideDoorConfirm() {
         if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
         this.doorConfirmTimer = null;
-        const button = document.getElementById("btn-confirm-door");
-        if (button) button.hidden = true;
+        const panel = document.getElementById("door-confirm-actions");
+        if (panel) panel.hidden = true;
     },
     confirmDoorModifier() {
         const drag = this.doorModifierDrag, beam = drag && drag.candidate;

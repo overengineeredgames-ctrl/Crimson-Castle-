@@ -76,7 +76,10 @@
         </div>
     </div>
     <div id="placement-message" role="status" aria-live="polite"></div>
-    <button id="btn-confirm-door" type="button" hidden>Confirm door?</button>
+    <div id="door-confirm-actions" hidden aria-label="Door placement actions">
+        <button id="btn-confirm-door" type="button">CONFIRM</button>
+        <button id="btn-cancel-door" type="button" aria-label="Cancel door placement">×</button>
+    </div>
     <canvas id="gameCanvas"></canvas>
 
     <nav id="mobile-controls" aria-label="Mobile game controls">
