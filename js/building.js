@@ -420,8 +420,13 @@ var Building = window.Building = {
             length,
             material.width,
             {
-                isStatic: true,
+                // Only door panels are kinematic. Ordinary beam hitboxes must
+                // remain dynamic so the existing fort physics is unchanged.
+                isStatic: isDoor,
                 isSensor: true,
+                density: 0.001,
+                friction: 0,
+                frictionStatic: 0,
                 restitution: 0,
                 slop: 0.01,
                 collisionFilter: {
