@@ -142,7 +142,8 @@
                 cannons: W && W.cannons && W.cannons.length,
                 doors: B && B.struts ? B.struts.filter(s => s.isDoor && !s.removed).length : 0,
                 doorDiagnostics: this.doorDiagnostics(),
-                doorConversionWatch: this.doorConversionWatch
+                doorConversionWatch: this.doorConversionWatch,
+                doorConversionAttempt: B && B.lastDoorConversionAttempt
             };
         },
 
@@ -285,6 +286,14 @@
                 const self = this;
                 window.Building.confirmDoorModifier = function (...args) {
                     const result = originalConfirmDoor.apply(this, args);
+                    const attempt = this.lastDoorConversionAttempt;
+                    if (attempt && attempt.createdAt && (!self.lastDoorAttemptReported || self.lastDoorAttemptReported !== attempt.createdAt)) {
+                        self.lastDoorAttemptReported = attempt.createdAt;
+                        self.report("DOOR_CONVERSION_ATTEMPT",
+                            attempt.stage === "success" ? "PASS" : "FAIL",
+                            "Door conversion attempt: " + attempt.stage + (attempt.reason ? " (" + attempt.reason + ")" : ""),
+                            attempt);
+                    }
                     if (this.lastDoorConversion) self.watchDoorConversion();
                     return result;
                 };
