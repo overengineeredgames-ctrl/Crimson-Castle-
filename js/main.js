@@ -859,6 +859,8 @@ const Game = {
 
             this.canvas.setPointerCapture(event.pointerId);
 
+            if (Building.doorMaterial && Building.startDoorModifier(p.x, p.y)) return;
+
             if (Building.deleteMode) {
                 Building.deleteAt(p.x, p.y);
                 return;
@@ -891,6 +893,7 @@ const Game = {
             }
 
             const p = this.mousePosition(event);
+            Building.moveDoorModifier(p.x, p.y);
             Building.setMousePosition(p.x, p.y);
             if (Building.repairMode) {
                 Building.repairMouse.x = p.x;
@@ -909,6 +912,7 @@ const Game = {
 
             const p = this.mousePosition(event);
 
+            if (Building.releaseDoorModifier()) return;
             if (Weapons.handlePointerUp(p.x, p.y)) return;
 
             // FIX: Pass the actual release coordinates to Building.
@@ -918,6 +922,8 @@ const Game = {
         this.canvas.addEventListener("pointercancel", () => {
             this.panDrag = null;
             Building.drag = null;
+            Building.doorModifierDrag = null;
+            Building.hideDoorConfirm();
             Weapons.cancelMineDrag();
         });
 
