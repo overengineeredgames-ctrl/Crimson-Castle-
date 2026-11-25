@@ -679,7 +679,7 @@ var Game = window.Game = {
     async loadVersionLabel() {
         // Use the packaged app version when Electron is available.
         // Keep the current project version as a useful fallback in development.
-        let version = "1.0.6";
+        let version = "1.0.7";
         try {
             if (window.ccUpdater && typeof window.ccUpdater.getVersion === "function") {
                 const appVersion = await window.ccUpdater.getVersion();
@@ -836,6 +836,33 @@ var Game = window.Game = {
     setupMobileControls() {
         const controls = document.getElementById("mobile-controls");
         if (!controls) return;
+
+        const groupButton = controls.querySelector('[data-mobile-action="group-select"]');
+        let isNativeAndroid = false;
+        try {
+            isNativeAndroid = !!(window.Capacitor &&
+                typeof window.Capacitor.isNativePlatform === "function" &&
+                window.Capacitor.isNativePlatform());
+        } catch (_) {}
+        if (groupButton) groupButton.hidden = !isNativeAndroid;
+
+        document.addEventListener("pointerdown", event => {
+            const target = event.target instanceof Element ? event.target.closest('[data-mobile-action="group-select"]') : null;
+            if (!target || !isNativeAndroid || this.state !== "playing") return;
+            event.preventDefault();
+            event.stopPropagation();
+            Weapons.groupSelectMode = true;
+            target.classList.add("active");
+        }, true);
+        const releaseGroupSelect = () => {
+            if (!Weapons.groupSelectMode) return;
+            Weapons.groupSelectMode = false;
+            if (groupButton) groupButton.classList.remove("active");
+        };
+        document.addEventListener("pointerup", releaseGroupSelect, true);
+        document.addEventListener("pointercancel", releaseGroupSelect, true);
+        window.addEventListener("blur", releaseGroupSelect);
+
         // Listen at document capture level: this runs before canvas handlers and
         // remains reliable even if an ancestor's delegated event path is disrupted.
         // The button itself is resolved from the composed event path for Android.
@@ -930,7 +957,7 @@ var Game = window.Game = {
 
             if (Weapons.linkMode && Weapons.handleLinkPointerDown(p.x, p.y)) return;
             if (Building.handleUtilityPointerDown(p.x, p.y)) return;
-            if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey)) return;
+            if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey || Weapons.groupSelectMode)) return;
 
             Building.startDrag(p.x, p.y);
         });
