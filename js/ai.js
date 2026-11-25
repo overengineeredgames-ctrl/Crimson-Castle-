@@ -142,7 +142,7 @@ var AI = window.AI = {
                 isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
             }),
             br: Building.createNode(leftX + 160, baseY, {
-                isFoundation: true, isBaseAnchor: true, team: "enemy"
+                isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
             })
         };
 
