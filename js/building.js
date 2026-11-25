@@ -69,6 +69,8 @@ const Building = {
         this.utilityTool = null;
         this.drag = null;
         this.doorMaterial = null;
+        this.doorModifierDrag = null;
+        this.doorConfirmTimer = null;
 
         this.resources = {
             metal: CONFIG.STARTING_METAL || 500,
@@ -1139,12 +1141,15 @@ const Building = {
             };
         }
 
+        const confirmDoorButton = document.getElementById("btn-confirm-door");
+        if (confirmDoorButton) confirmDoorButton.onclick = () => this.confirmDoorModifier();
         this.updateToolbar();
     },
 
     setDoorMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
         this.doorMaterial = material; this.material = material; this.utilityTool = null; this.repairMode = false; this.repairTarget = null;
+        this.doorModifierDrag = null; this.hideDoorConfirm();
         if (typeof Weapons !== "undefined") { Weapons.clearSelectedTool(); Weapons.clearSelectedCannon(); }
         this.setDeleteMode(false); this.updateToolbar();
     },
@@ -1257,6 +1262,67 @@ const Building = {
         }
 
         return closest;
+    },
+
+    startDoorModifier(x, y) {
+        if (!this.doorMaterial) return false;
+        const node = this.getNearestNode(x, y, 28);
+        if (!node || node.team !== "player" || node.removed) { this.showPlacementMessage("Start by touching a joint."); return true; }
+        const connected = this.struts.filter(s => s.team === "player" && !s.isDoor && (s.a === node || s.b === node) && !s.removed);
+        if (!connected.length) { this.showPlacementMessage("That joint has no beam to modify."); return true; }
+        this.doorModifierDrag = { node, connected, candidate: null, x, y, released: false };
+        this.hideDoorConfirm();
+        return true;
+    },
+    moveDoorModifier(x, y) {
+        const drag = this.doorModifierDrag;
+        if (!drag || drag.released) return;
+        drag.x = x; drag.y = y;
+        let best = 42, candidate = null;
+        for (const beam of drag.connected) {
+            if (!this.struts.includes(beam)) continue;
+            const distance = this.pointToSegmentDistance(x, y, beam.a.body.position, beam.b.body.position);
+            if (distance < best) { best = distance; candidate = beam; }
+        }
+        drag.candidate = candidate;
+    },
+    releaseDoorModifier() {
+        const drag = this.doorModifierDrag;
+        if (!drag) return false;
+        drag.released = true;
+        if (!drag.candidate) { this.showPlacementMessage("Drag along a beam connected to that joint."); this.doorModifierDrag = null; return true; }
+        this.showPlacementMessage("Preparing door placement…");
+        if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
+        this.doorConfirmTimer = setTimeout(() => {
+            if (this.doorModifierDrag !== drag) return;
+            const button = document.getElementById("btn-confirm-door");
+            if (button) button.hidden = false;
+        }, 1000);
+        return true;
+    },
+    hideDoorConfirm() {
+        if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
+        this.doorConfirmTimer = null;
+        const button = document.getElementById("btn-confirm-door");
+        if (button) button.hidden = true;
+    },
+    confirmDoorModifier() {
+        const drag = this.doorModifierDrag, beam = drag && drag.candidate;
+        if (!drag || !drag.released || !beam || !this.struts.includes(beam)) return;
+        const materialName = this.doorMaterial, material = this.settings(materialName);
+        const resource = materialName === "wood" ? "wood" : "metal";
+        if (!this.charge(material.cost, resource)) {
+            this.showPlacementMessage("Not enough resources for that door.");
+            this.doorModifierDrag = null; this.hideDoorConfirm(); return;
+        }
+        const a = beam.a, b = beam.b;
+        this.removeStrut(beam, false);
+        const door = this.createStrut(a, b, { material: materialName, isDoor: true });
+        if (!door) {
+            this.resources[resource] += material.cost; this.updateHUD();
+            this.showPlacementMessage("Couldn't place the door there.");
+        } else { this.checkSupport(); this.showPlacementMessage("Door placed."); }
+        this.doorModifierDrag = null; this.hideDoorConfirm();
     },
 
     startDrag(x, y, mode = "beam") {
