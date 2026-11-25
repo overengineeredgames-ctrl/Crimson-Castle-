@@ -203,11 +203,51 @@ const Weapons = {
     setLinkMode(enabled) { this.linkMode = !!enabled; this.linkSource = null; this.selectedTool = this.linkMode ? "link" : null; this.clearSelectedCannon(); this.updateToolButtons(); },
     handleLinkPointerDown(x, y) {
         if (!this.linkMode) return false;
-        const weapon = [...this.cannons].reverse().find(c => c.team === "player" && c.node && !c.node.removed && Math.hypot(c.node.body.position.x - x, c.node.body.position.y - y) <= 22);
-        if (weapon) { this.linkSource = weapon; Building.showPlacementMessage("Weapon selected — tap a door to link it."); return true; }
-        const door = [...Building.struts].reverse().find(d => d.isDoor && d.team === "player" && Building.pointToSegmentDistance(x, y, d.a.body.position, d.b.body.position) <= 22);
-        if (door && this.linkSource) { const added = this.linkDoorToWeapon(this.linkSource, door); Building.showPlacementMessage(added ? "Door linked." : "Door unlinked."); return true; }
-        if (door) Building.showPlacementMessage("Select a weapon first."); return !!door;
+
+        // Use a generous world-space hit area so doors remain tappable at
+        // the smaller camera zoom used on phones.
+        const weapon = [...this.cannons].reverse().find(c => {
+            if (c.team !== "player" || !c.node || c.node.removed) return false;
+            const p = c.node.body.position;
+            const dx = x - p.x, dy = y - p.y;
+            const angle = c.angle || 0;
+            const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
+            const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
+            const type = c.weaponType || "cannon";
+            const barrelLength = type === "megaCannon" ? 43 : type === "machineGun" ? 27 : 32;
+            const barrelHeight = type === "megaCannon" ? 14 : type === "machineGun" ? 7 : 10;
+            return Math.hypot(dx, dy) <= 32 ||
+                (localX >= -10 && localX <= barrelLength + 16 && Math.abs(localY) <= barrelHeight / 2 + 18);
+        });
+        if (weapon) {
+            this.linkSource = weapon;
+            Building.showPlacementMessage("Weapon selected — tap a door to link it.");
+            return true;
+        }
+
+        // The rendered leaf swings around endpoint A. Hit-test that same
+        // rotated segment, not just the closed-door anchor positions.
+        const door = [...Building.struts].reverse().find(d => {
+            if (!d.isDoor || d.team !== "player" || !d.a || !d.b ||
+                d.a.removed || d.b.removed) return false;
+            const a = d.a.body.position, b = d.b.body.position;
+            const baseAngle = Math.atan2(b.y - a.y, b.x - a.x);
+            const length = Math.hypot(b.x - a.x, b.y - a.y);
+            const swing = (d.doorOpenAmount || 0) * (d.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
+            const angle = baseAngle + swing;
+            const end = { x: a.x + Math.cos(angle) * length, y: a.y + Math.sin(angle) * length };
+            const closedDistance = Building.pointToSegmentDistance(x, y, a, b);
+            const openDistance = Building.pointToSegmentDistance(x, y, a, end);
+            return Math.min(closedDistance, openDistance) <= 48;
+        });
+        if (door && this.linkSource) {
+            const added = this.linkDoorToWeapon(this.linkSource, door);
+            Building.showPlacementMessage(added ? "Door linked." : "Door unlinked.");
+            return true;
+        }
+        if (door) Building.showPlacementMessage("Select a weapon first.");
+        else Building.showPlacementMessage(this.linkSource ? "Tap directly on a door to link it." : "Select a weapon first.");
+        return !!door;
     },
 
     clearSelectedCannon() {
