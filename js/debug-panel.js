@@ -45,6 +45,22 @@
                 selectedTool: W && W.selectedTool,
                 selectedCannon: !!(W && W.selectedCannon),
                 selectedCannons: W && W.selectedCannons && W.selectedCannons.length,
+                mobileDeselectButton: (() => {
+                    const button = document.querySelector('#mobile-controls [data-mobile-action="deselect"]');
+                    if (!button) return { exists: false };
+                    const r = button.getBoundingClientRect(), css = getComputedStyle(button);
+                    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                    const hit = document.elementFromPoint(cx, cy);
+                    return {
+                        exists: true, text: button.textContent.trim(),
+                        rect: { x: +r.x.toFixed(1), y: +r.y.toFixed(1),
+                            width: +r.width.toFixed(1), height: +r.height.toFixed(1) },
+                        display: css.display, visibility: css.visibility,
+                        pointerEvents: css.pointerEvents, zIndex: css.zIndex,
+                        hitTarget: hit ? (hit.id || hit.tagName) : null,
+                        hitIsButton: !!(hit && (hit === button || button.contains(hit)))
+                    };
+                })(),
                 linkSource: !!(W && W.linkSource),
                 cannons: W && W.cannons && W.cannons.length,
                 doors: B && B.struts ? B.struts.filter(s => s.isDoor && !s.removed).length : 0,
