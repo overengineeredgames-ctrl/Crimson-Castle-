@@ -345,11 +345,8 @@ var Weapons = window.Weapons = {
     handlePointerMove(x, y) {
         this.mouse.x = x;
         this.mouse.y = y;
-        if (this.linkMode && this.linkSource) {
-            this.linkHoverDoor = this.findLinkDoorAtPoint(x, y);
-        } else {
-            this.linkHoverDoor = null;
-        }
+        // Do not scan every building beam on pointer movement. Door hit
+        // testing happens only once on pointerdown, avoiding per-frame lag.
 
         const selected = this.selectedCannons.length
             ? this.selectedCannons
@@ -738,13 +735,7 @@ var Weapons = window.Weapons = {
                 const p = this.linkSource.node.body.position;
                 ctx.beginPath(); ctx.arc(p.x, p.y, 27, 0, Math.PI * 2);
                 ctx.strokeStyle = "#ffe66d"; ctx.lineWidth = 3; ctx.stroke();
-                const target = this.linkHoverDoor;
-                if (target && Building.struts.includes(target)) {
-                    const a=target.a.body.position, b=target.b.body.position;
-                    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo((a.x+b.x)/2,(a.y+b.y)/2);
-                    ctx.setLineDash([3,5]); ctx.strokeStyle="rgba(255,230,109,.95)";
-                    ctx.lineWidth=2.5; ctx.stroke(); ctx.setLineDash([]);
-                }
+
             }
             ctx.restore();
         }
