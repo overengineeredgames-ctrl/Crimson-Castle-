@@ -1106,10 +1106,7 @@ var Building = window.Building = {
         const renewablePower = this.installations.filter(item =>
             !item.removed && (item.type === "windmill" || item.type === "solar")
         ).reduce((sum,item) => sum + (item.output || 0),0);
-        const geothermalPower = this.installations.filter(item =>
-            !item.removed && item.type === "geothermal" && this.resources.water > 0
-        ).reduce((sum,item) => sum + this.utilityDefinitions.geothermal.output,0);
-        return minePower + renewablePower + geothermalPower;
+        return minePower + renewablePower;
     },
 
     addMine(node) {
