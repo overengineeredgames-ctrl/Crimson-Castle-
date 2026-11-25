@@ -858,10 +858,11 @@ const Game = {
                 return;
             }
 
+            if (Building.handleDoorPointerDown(p.x, p.y)) return;
             if (Building.handleUtilityPointerDown(p.x, p.y)) return;
             if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey)) return;
 
-            Building.startDrag(p.x, p.y);
+            Building.startDrag(p.x, p.y, Building.doorPlacementMode ? "door" : "beam");
         });
 
         this.canvas.addEventListener("pointermove", event => {
