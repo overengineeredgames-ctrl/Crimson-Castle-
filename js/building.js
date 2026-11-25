@@ -1141,6 +1141,9 @@ var Building = window.Building = {
             };
         }
 
+        const doorActions = document.getElementById("door-confirm-actions");
+        // Keep the controls outside transformed/clipped game layout containers.
+        if (doorActions && doorActions.parentElement !== document.body) document.body.appendChild(doorActions);
         const confirmDoorButton = document.getElementById("btn-confirm-door");
         if (confirmDoorButton) confirmDoorButton.onclick = () => this.confirmDoorModifier();
         const cancelDoorButton = document.getElementById("btn-cancel-door");
@@ -1282,12 +1285,17 @@ var Building = window.Building = {
 
     startDoorModifier(x, y) {
         if (!this.doorMaterial) return false;
-        // Resolve the closest usable player joint directly. The generic
-        // nearest-node helper can choose an overlapping enemy/hidden joint,
-        // which made some upper endpoints impossible to start from.
-        let node = null, nodeDistance = 54;
-        for (const candidate of this.nodes) {
-            if (candidate.removed || candidate.hidden || candidate.team !== "player") continue;
+        // Resolve a start joint from endpoints of live player beams.
+        // This avoids unrelated/overlapping nodes winning the hit test and
+        // gives the uppermost joints the same generous touch target.
+        const endpointSet = new Set();
+        for (const beam of this.struts) {
+            if (beam.team !== "player" || beam.isDoor || beam.removed || !beam.a || !beam.b) continue;
+            if (!beam.a.removed) endpointSet.add(beam.a);
+            if (!beam.b.removed) endpointSet.add(beam.b);
+        }
+        let node = null, nodeDistance = 92;
+        for (const candidate of endpointSet) {
             const p = candidate.body.position;
             const distance = Math.hypot(p.x - x, p.y - y);
             if (distance < nodeDistance) {
@@ -1318,7 +1326,7 @@ var Building = window.Building = {
         if (!drag || drag.released) return;
         drag.x = x;
         drag.y = y;
-        let best = 72, candidate = null;
+        let best = 100, candidate = null;
         for (const beam of drag.connected) {
             if (!this.struts.includes(beam) || !beam.a || !beam.b) continue;
             const distance = this.pointToSegmentDistance(x, y, beam.a.body.position, beam.b.body.position);
@@ -1328,7 +1336,10 @@ var Building = window.Building = {
         if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
         this.doorConfirmTimer = null;
         const panel = document.getElementById("door-confirm-actions");
-        if (panel) panel.hidden = true;
+        if (panel) {
+            panel.hidden = true;
+            panel.style.display = "none";
+        }
         if (candidate) {
             this.doorConfirmTimer = setTimeout(() => {
                 if (this.doorModifierDrag !== drag) return;
@@ -1344,23 +1355,25 @@ var Building = window.Building = {
         if (!drag) return false;
         if (drag.released) return true;
         drag.released = true;
+        if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
+        this.doorConfirmTimer = null;
         if (!drag.candidate || !this.struts.includes(drag.candidate)) {
             this.showPlacementMessage("Start at a joint and drag directly along a connected beam.");
             this.doorModifierDrag = null;
             this.hideDoorConfirm();
             return true;
         }
-        if (this.doorConfirmTimer) clearTimeout(this.doorConfirmTimer);
-        this.doorConfirmTimer = setTimeout(() => {
-            if (this.doorModifierDrag !== drag) return;
-            drag.confirmReady = true;
-            const panel = document.getElementById("door-confirm-actions");
-            if (panel) panel.hidden = false;
-            this.showPlacementMessage("Confirm to replace the selected beam with a door.");
-        }, drag.confirmReady ? 0 : 150);
-        // Show immediately as well; the delayed callback only finalizes readiness.
+        // Release is the definitive confirmation-ready transition. Do not
+        // make visibility depend on a timer after Android has ended touch.
+        drag.confirmReady = true;
         const panel = document.getElementById("door-confirm-actions");
-        if (panel) panel.hidden = false;
+        if (panel) {
+            panel.hidden = false;
+            panel.style.display = "flex";
+            panel.style.visibility = "visible";
+            panel.style.opacity = "1";
+        }
+        this.showPlacementMessage("Confirm to replace the selected beam with a door.");
         return true;
     },
     hideDoorConfirm() {

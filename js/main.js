@@ -929,11 +929,16 @@ var Game = window.Game = {
 
         // Keep touch interactions reliable even if the browser routes the
         // release outside the canvas after pointer capture is interrupted.
-        window.addEventListener("pointerup", () => {
+        const finishDoorPointer = () => {
             if (Building.doorModifierDrag && !Building.doorModifierDrag.released) {
                 Building.releaseDoorModifier();
             }
-        }, true);
+        };
+        // Listen at document level because Android may retarget a touch release
+        // after pointer capture or when the finger leaves the canvas.
+        document.addEventListener("pointerup", finishDoorPointer, true);
+        document.addEventListener("touchend", finishDoorPointer, { capture: true, passive: true });
+        document.addEventListener("mouseup", finishDoorPointer, true);
 
         // Mine placement gets first chance to handle pointer release.
         this.canvas.addEventListener("pointerup", event => {
