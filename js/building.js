@@ -1213,12 +1213,12 @@ const Building = {
 
         if (deleteButton) {
             deleteButton.classList.toggle("active", !linking && this.deleteMode);
-            deleteButton.setAttribute("aria-pressed", String(this.deleteMode));
+            deleteButton.setAttribute("aria-pressed", String(!linking && this.deleteMode));
         }
 
         if (repairButton) {
             repairButton.classList.toggle("active", !linking && this.repairMode);
-            repairButton.setAttribute("aria-pressed", String(this.repairMode));
+            repairButton.setAttribute("aria-pressed", String(!linking && this.repairMode));
         }
     },
 
