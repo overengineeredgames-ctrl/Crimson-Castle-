@@ -7,7 +7,7 @@ Crimson Castle is an in-development fortress-building and artillery game.
 Open the [GitHub Releases](https://github.com/overengineeredgames-ctrl/Crimson-Castle-/releases) page for available builds.
 
 - **WINDOWS:** Download the setup installer or portable ZIP.
-- **MOBILE:** An Android APK is built by the **Build Android APK** workflow. Run it from the GitHub Actions tab; the workflow also attaches the APK to the matching GitHub release.
+- **MOBILE:** The Android APK is built by the **Build Android APK** workflow. Run it from the GitHub Actions tab; the workflow also attaches the APK to the matching GitHub release. The public website and APK omit the debug panel; the desktop/Electron build retains it.
 
 ## Run from source (Windows)
 
@@ -42,7 +42,7 @@ The Android build bundles Matter.js locally so the game physics do not depend on
 ## Controls
 
 - **Build:** Select a building material, then drag from one joint to another.
-- **Weapons:** Select a weapon, click a cannon to select it, aim, then click to fire.
+- **Weapons:** Select a weapon, click a cannon to select it, aim, then click to fire. On Android, hold **GROUP** while tapping additional guns to aim/control them together; release **GROUP** when finished. Tap **✕** to clear all selected guns.
 - **Camera:** Use the mouse wheel to zoom, Shift + wheel or the left/right arrow keys to scroll, and middle-mouse drag to pan.
 - **Grid:** Press `G`.
 - **Repair:** Press `R`.
