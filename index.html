@@ -99,7 +99,8 @@
                 <button type="button" data-mobile-action="zoom-in" aria-label="Zoom in">+</button>
             </div>
         </div>
-        <button type="button" data-mobile-action="deselect" aria-label="Deselect selected gun">✕</button>
+        <button type="button" data-mobile-action="deselect" aria-label="Deselect all selected guns">✕</button>
+        <button type="button" data-mobile-action="group-select" aria-label="Hold to select multiple guns" title="Hold while selecting guns">GROUP</button>
         <button type="button" data-mobile-action="pause" aria-label="Pause game">Ⅱ</button>
     </nav>
 
@@ -114,7 +115,14 @@
     <script src="js/ai.js"></script>
     <script src="js/updater-ui.js"></script>
     <script src="js/main.js"></script>
-    <script src="js/debug-panel.js?v=1.4.3"></script>
+    <!-- Diagnostics are loaded only by the Electron desktop build. -->
+    <script>
+        if (window.ccUpdater) {
+            const debugScript = document.createElement("script");
+            debugScript.src = "js/debug-panel.js?v=1.4.3";
+            document.head.appendChild(debugScript);
+        }
+    </script>
 
     <script>
         if ("serviceWorker" in navigator) {
