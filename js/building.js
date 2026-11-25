@@ -2130,32 +2130,6 @@ var Building = window.Building = {
         this.drawGrid(ctx);
         this.drawEnclosedCells(ctx);
 
-        // Live door-size preview: highlight the exact beam section that
-        // will become the door while the player drags from a joint.
-        const doorDrag = this.doorModifierDrag;
-        const previewBeam = doorDrag && doorDrag.candidate;
-        if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
-            const a = previewBeam.a.body.position;
-            const b = previewBeam.b.body.position;
-            const dx = b.x - a.x, dy = b.y - a.y;
-            const lengthSq = dx * dx + dy * dy;
-            let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
-            t = Math.max(0.08, Math.min(0.92, t));
-            const endX = a.x + dx * t, endY = a.y + dy * t;
-            const previewMaterial = this.settings(this.doorMaterial || previewBeam.material);
-            ctx.save();
-            ctx.lineCap = "round";
-            ctx.shadowColor = previewMaterial.color;
-            ctx.shadowBlur = 12;
-            ctx.strokeStyle = "rgba(8, 16, 24, 0.9)";
-            ctx.lineWidth = Math.max(10, previewBeam.width + 7);
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
-            ctx.strokeStyle = previewMaterial.color;
-            ctx.lineWidth = Math.max(5, previewBeam.width - 1);
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
-            ctx.restore();
-        }
-
         for (const strut of this.struts) {
             if (strut.isDoor) { this.drawDoor(ctx, strut); continue; }
             ctx.save();
@@ -2240,6 +2214,45 @@ var Building = window.Building = {
                 ctx.lineTo(b.x, b.y);
                 ctx.stroke();
                 ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        // Draw the live door preview AFTER the original beam so it remains visible.
+        const doorDrag = this.doorModifierDrag;
+        const previewBeam = doorDrag && doorDrag.candidate;
+        if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
+            const a = previewBeam.a.body.position;
+            const b = previewBeam.b.body.position;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const lengthSq = dx * dx + dy * dy;
+            let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
+            t = Math.max(0.08, Math.min(0.92, t));
+            const endX = a.x + dx * t, endY = a.y + dy * t;
+            const angle = Math.atan2(dy, dx);
+            const previewMaterial = this.settings(this.doorMaterial || previewBeam.material);
+            ctx.save();
+            ctx.lineCap = "round";
+            ctx.shadowColor = "#37eaff";
+            ctx.shadowBlur = 18;
+            ctx.strokeStyle = "#07131f";
+            ctx.lineWidth = Math.max(14, previewBeam.width + 10);
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = "#36eaff";
+            ctx.lineWidth = Math.max(8, previewBeam.width + 3);
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+            ctx.setLineDash([]);
+            for (const p of [a, { x: endX, y: endY }]) {
+                ctx.fillStyle = "#ffffff";
+                ctx.strokeStyle = "#087f9c";
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             }
             ctx.restore();
         }
