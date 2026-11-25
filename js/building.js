@@ -464,7 +464,7 @@ var Building = window.Building = {
             team: nodeA.team,
             isDoor, doorOpen: false, doorOpenAmount: 0, doorCollisionOpen: false
         };
-        if (isDoor) { strut.maxHealth = Math.round(material.maxHealth * 0.72); strut.health = strut.maxHealth; beamBody.isFortDoor = true; beamBody.collisionFilter.mask = 0xffffffff; }
+        if (isDoor) { strut.maxHealth = Math.round(material.maxHealth * 0.72); strut.health = strut.maxHealth; beamBody.isFortDoor = true; }
 
         beamBody.fortStrut = strut;
 
@@ -2085,8 +2085,9 @@ var Building = window.Building = {
             if (strut.isDoor) {
                 const target = strut.doorOpen ? 1 : 0;
                 strut.doorOpenAmount += (target - strut.doorOpenAmount) * Math.min(1, delta / 150);
-                const openForCollision = strut.doorOpen || strut.doorOpenAmount > 0.12;
-                if (openForCollision !== strut.doorCollisionOpen) { strut.doorCollisionOpen = openForCollision; strut.body.collisionFilter.mask = openForCollision ? 0 : 0xffffffff; }
+                // The hinged panel animates visually, but its structural constraint
+                // and beam hitbox remain active just like an ordinary beam.
+                strut.doorCollisionOpen = false;
             }
         }
     },
@@ -2112,17 +2113,70 @@ var Building = window.Building = {
     setDoorOpen(door, open) {
         if (!door || !door.isDoor || !this.struts.includes(door)) return;
         door.doorOpen = !!open;
-        if (door.doorOpen) { door.doorCollisionOpen = true; door.body.collisionFilter.mask = 0; }
+        // Opening changes only the panel's appearance. The beam constraint
+        // and projectile hitbox stay in place to preserve fort structure.
     },
     drawDoor(ctx, door) {
         const a = door.a.body.position, b = door.b.body.position;
         const angle = Math.atan2(b.y - a.y, b.x - a.x), length = Math.hypot(b.x - a.x, b.y - a.y);
         const material = this.settings(door.material), swing = door.doorOpenAmount * (door.team === "enemy" ? -Math.PI / 2 : Math.PI / 2);
         ctx.save(); if (door.debrisGroup) ctx.globalAlpha *= door.debrisGroup.alpha;
+        // Faint gray seam marks the doorway's original beam position while
+        // the panel swings away from it.
+        if (door.doorOpenAmount > 0.015) {
+            ctx.save();
+            ctx.globalAlpha *= Math.min(0.48, door.doorOpenAmount * 0.48);
+            ctx.strokeStyle = "#9aa3ad";
+            ctx.lineWidth = 2;
+            ctx.lineCap = "butt";
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+            ctx.restore();
+        }
         ctx.translate(a.x, a.y); ctx.rotate(angle + swing); ctx.lineCap = "butt";
         ctx.strokeStyle = material.dark; ctx.lineWidth = door.width + 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
         ctx.strokeStyle = door.doorOpen ? "#d9e7f2" : material.color; ctx.lineWidth = Math.max(3, door.width - 2); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length, 0); ctx.stroke();
         ctx.fillStyle = "#e6c16a"; ctx.beginPath(); ctx.arc(length - 8, 0, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    },
+    drawDoorPreview(ctx) {
+        if (!ctx) return;
+                // Draw the live door preview above every battlefield object.
+                const doorDrag = this.doorModifierDrag;
+                const previewBeam = doorDrag && doorDrag.candidate;
+                if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
+                    const a = previewBeam.a.body.position;
+                    const b = previewBeam.b.body.position;
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const lengthSq = dx * dx + dy * dy;
+                    let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
+                    t = Math.max(0.08, Math.min(0.92, t));
+                    const endX = a.x + dx * t, endY = a.y + dy * t;
+                    const angle = Math.atan2(dy, dx);
+                    const previewMaterial = this.settings(this.doorMaterial || previewBeam.material);
+                    ctx.save();
+                    ctx.lineCap = "round";
+                    ctx.shadowColor = "#37eaff";
+                    ctx.shadowBlur = 18;
+                    ctx.strokeStyle = "#07131f";
+                    ctx.lineWidth = Math.max(14, previewBeam.width + 10);
+                    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+                    ctx.shadowBlur = 12;
+                    ctx.strokeStyle = "#36eaff";
+                    ctx.lineWidth = Math.max(8, previewBeam.width + 3);
+                    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([6, 4]);
+                    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
+                    ctx.setLineDash([]);
+                    for (const p of [a, { x: endX, y: endY }]) {
+                        ctx.fillStyle = "#ffffff";
+                        ctx.strokeStyle = "#087f9c";
+                        ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    }
+                    ctx.restore();
+                }
     },
     draw(ctx) {
         if (!ctx) return;
@@ -2218,44 +2272,6 @@ var Building = window.Building = {
             ctx.restore();
         }
 
-        // Draw the live door preview AFTER the original beam so it remains visible.
-        const doorDrag = this.doorModifierDrag;
-        const previewBeam = doorDrag && doorDrag.candidate;
-        if (doorDrag && previewBeam && this.struts.includes(previewBeam) && previewBeam.a && previewBeam.b) {
-            const a = previewBeam.a.body.position;
-            const b = previewBeam.b.body.position;
-            const dx = b.x - a.x, dy = b.y - a.y;
-            const lengthSq = dx * dx + dy * dy;
-            let t = lengthSq ? ((doorDrag.x - a.x) * dx + (doorDrag.y - a.y) * dy) / lengthSq : 0;
-            t = Math.max(0.08, Math.min(0.92, t));
-            const endX = a.x + dx * t, endY = a.y + dy * t;
-            const angle = Math.atan2(dy, dx);
-            const previewMaterial = this.settings(this.doorMaterial || previewBeam.material);
-            ctx.save();
-            ctx.lineCap = "round";
-            ctx.shadowColor = "#37eaff";
-            ctx.shadowBlur = 18;
-            ctx.strokeStyle = "#07131f";
-            ctx.lineWidth = Math.max(14, previewBeam.width + 10);
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
-            ctx.shadowBlur = 12;
-            ctx.strokeStyle = "#36eaff";
-            ctx.lineWidth = Math.max(8, previewBeam.width + 3);
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 2;
-            ctx.setLineDash([6, 4]);
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(endX, endY); ctx.stroke();
-            ctx.setLineDash([]);
-            for (const p of [a, { x: endX, y: endY }]) {
-                ctx.fillStyle = "#ffffff";
-                ctx.strokeStyle = "#087f9c";
-                ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            }
-            ctx.restore();
-        }
 
         for (const node of this.nodes) {
             ctx.save();
