@@ -117,6 +117,25 @@ var Game = window.Game = {
 
         if (!tabs.length || !toolbar) return;
 
+        // Enforce mutually exclusive tool modes at the toolbar boundary.
+        // Capture phase runs before individual button handlers, so even a
+        // weapon button whose handler is replaced later cannot leave Door mode active.
+        if (!toolbar.dataset.doorModeGuard) {
+            toolbar.dataset.doorModeGuard = "true";
+            toolbar.addEventListener("click", event => {
+                const tool = event.target.closest(".tool[data-tool-category]");
+                if (!tool || !toolbar.contains(tool)) return;
+                if (tool.dataset.toolCategory !== "weapons") return;
+                if (typeof Building === "undefined" || !Building.doorMaterial) return;
+
+                Building.doorMaterial = null;
+                Building.doorModifierDrag = null;
+                Building.drag = null;
+                if (Building.hideDoorConfirm) Building.hideDoorConfirm();
+                Building.updateToolbar();
+            }, true);
+        }
+
         this.activeToolTab = "build";
 
         this.selectToolTab = category => {
