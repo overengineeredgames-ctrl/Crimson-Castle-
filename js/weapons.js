@@ -344,6 +344,22 @@ var Weapons = window.Weapons = {
         Building.showPlacementMessage("Select a weapon first.");
         return true;
     },
+    forceDeselectGuns() {
+        // Hard-reset every state field that can keep a gun visually or
+        // behaviorally selected. Preserve unrelated modes such as Link/Mine.
+        this.selectedCannon = null;
+        this.selectedCannons = [];
+        this.fireHeld = false;
+        if (this.selectedTool === "cannon") this.selectedTool = null;
+        this.lastCannonClick = 0;
+        this.lastClickedCannon = null;
+        this.syncLinkedDoors();
+        this.updateToolButtons();
+        return !this.selectedCannon &&
+            this.selectedCannons.length === 0 &&
+            this.fireHeld === false &&
+            this.selectedTool !== "cannon";
+    },
     clearSelectedCannon() {
         this.selectedCannon = null;
         this.selectedCannons = [];
