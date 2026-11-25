@@ -161,6 +161,15 @@ const Physics = {
                     continue;
                 }
 
+                // Door panels are independent sensors and never constrain structural joints.
+                if (target.isFortDoor) {
+                    if (target.team === bullet.team) continue;
+                    bullet.hasHit = true;
+                    Building.damageDoor(target, bullet.damage || 35);
+                    Matter.Composite.remove(this.world, bullet);
+                    continue;
+                }
+
                 // Hit a beam.
                 if (target.isFortBeam) {
                     if (target.team === bullet.team) continue;
