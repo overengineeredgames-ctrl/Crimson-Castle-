@@ -87,6 +87,7 @@ var Weapons = window.Weapons = {
         this.createWeaponButton("mega-cannon", "Mega Cannon", "megaCannon", "260 Metal / 130 Energy");
         this.createWeaponButton("sniper", "Sniper", "sniper", "230 Metal / 115 Energy");
         this.createWeaponButton("flak-cannon", "Flak Cannon", "flakCannon", "190 Metal / 95 Energy");
+        this.ensureFlakSettingsUI();
 
         let mineButton = document.getElementById("btn-mine");
 
@@ -223,6 +224,101 @@ var Weapons = window.Weapons = {
         button.textContent = remaining > 0 ? remaining.toFixed(1) + "s" : "FIRE";
         button.style.opacity = remaining > 0 ? "0.7" : "1";
         button.style.display = "flex";
+    },
+
+    ensureFlakSettingsUI() {
+        let button = document.getElementById("btn-flak-settings");
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "btn-flak-settings";
+            button.type = "button";
+            button.className = "tool";
+            button.textContent = "Settings";
+            button.hidden = true;
+            button.title = "Configure the selected Flak Cannon";
+            const flakButton = document.getElementById("btn-flak-cannon");
+            if (flakButton && flakButton.parentElement) {
+                flakButton.insertAdjacentElement("afterend", button);
+            } else {
+                (document.querySelector(".toolbar") || document.body).appendChild(button);
+            }
+        }
+        button.onclick = () => {
+            const selected = this.selectedCannons.length ? this.selectedCannons :
+                (this.selectedCannon ? [this.selectedCannon] : []);
+            if (selected.length !== 1 || selected[0].weaponType !== "flakCannon") return;
+            const panel = document.getElementById("flak-settings-panel");
+            if (panel) panel.hidden = !panel.hidden;
+            this.refreshFlakSettingsUI();
+        };
+
+        let panel = document.getElementById("flak-settings-panel");
+        if (!panel) {
+            panel = document.createElement("section");
+            panel.id = "flak-settings-panel";
+            panel.hidden = true;
+            panel.setAttribute("aria-label", "Flak Cannon settings");
+            panel.style.cssText = "position:fixed;z-index:13000;right:16px;bottom:18px;width:min(310px,calc(100vw - 28px));padding:14px;border:1px solid #e58b3d;border-radius:10px;background:rgba(12,22,34,.97);color:#f4f7fb;box-shadow:0 8px 28px rgba(0,0,0,.55);font:13px Arial,sans-serif;box-sizing:border-box";
+            panel.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><strong style="flex:1;font-size:15px">FLAK CANNON SETTINGS</strong><button id="flak-settings-close" type="button" aria-label="Close settings" style="padding:4px 9px">×</button></div>' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Control</span><button id="flak-auto-toggle" type="button"></button></div>' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0"><span>Detect enemy bullets</span><button id="flak-detect-toggle" type="button"></button></div>' +
+                '<label for="flak-priority" style="display:block;margin-top:14px;font-weight:700">Target priority: <span id="flak-priority-value">50</span></label>' +
+                '<input id="flak-priority" type="range" min="0" max="100" step="1" value="50" style="width:100%;margin:9px 0;accent-color:#e58b3d">' +
+                '<div style="display:flex;justify-content:space-between;color:#b9c7d6;font-size:11px"><span>Nearest bullet</span><span>Fastest bullet</span></div>';
+            document.body.appendChild(panel);
+            panel.querySelector("#flak-settings-close").onclick = () => { panel.hidden = true; };
+            panel.querySelector("#flak-auto-toggle").onclick = () => {
+                const cannon = this.getSettingsFlakCannon();
+                if (!cannon) return;
+                cannon.autoDefense = !(cannon.autoDefense !== false);
+                this.refreshFlakSettingsUI();
+            };
+            panel.querySelector("#flak-detect-toggle").onclick = () => {
+                const cannon = this.getSettingsFlakCannon();
+                if (!cannon) return;
+                cannon.detectEnemyBullets = !(cannon.detectEnemyBullets !== false);
+                this.refreshFlakSettingsUI();
+            };
+            panel.querySelector("#flak-priority").oninput = event => {
+                const cannon = this.getSettingsFlakCannon();
+                if (!cannon) return;
+                cannon.targetPriority = Number(event.target.value);
+                this.refreshFlakSettingsUI();
+            };
+        }
+        this.refreshFlakSettingsUI();
+    },
+
+    getSettingsFlakCannon() {
+        const selected = this.selectedCannons.length ? this.selectedCannons :
+            (this.selectedCannon ? [this.selectedCannon] : []);
+        return selected.length === 1 && selected[0].team === "player" &&
+            selected[0].weaponType === "flakCannon" ? selected[0] : null;
+    },
+
+    refreshFlakSettingsUI() {
+        const button = document.getElementById("btn-flak-settings");
+        const panel = document.getElementById("flak-settings-panel");
+        if (!button || !panel) return;
+        const cannon = this.getSettingsFlakCannon();
+        button.hidden = !cannon;
+        if (!cannon) {
+            panel.hidden = true;
+            button.classList.remove("active");
+            return;
+        }
+        button.classList.toggle("active", !panel.hidden);
+        const auto = cannon.autoDefense !== false;
+        const detects = cannon.detectEnemyBullets !== false;
+        const autoButton = panel.querySelector("#flak-auto-toggle");
+        const detectButton = panel.querySelector("#flak-detect-toggle");
+        autoButton.textContent = auto ? "AUTO DEFENSE: ON" : "MANUAL CONTROL";
+        autoButton.setAttribute("aria-pressed", String(auto));
+        detectButton.textContent = detects ? "DETECTION: ON" : "DETECTION: OFF";
+        detectButton.setAttribute("aria-pressed", String(detects));
+        const priority = Math.max(0, Math.min(100, Number(cannon.targetPriority ?? 50)));
+        panel.querySelector("#flak-priority").value = String(priority);
+        panel.querySelector("#flak-priority-value").textContent = String(priority);
     },
 
     createWeaponButton(id, label, weaponType, costLabel) {
@@ -509,7 +605,10 @@ var Weapons = window.Weapons = {
             weaponType: this.weaponStats[weaponType] ? weaponType : "cannon",
             angle: team === "enemy" ? Math.PI : 0,
             cooldown: 0,
-            cooldownMax: stats.cooldown
+            cooldownMax: stats.cooldown,
+            autoDefense: true,
+            detectEnemyBullets: true,
+            targetPriority: 50
         };
 
         this.cannons.push(cannon);
@@ -721,6 +820,7 @@ var Weapons = window.Weapons = {
                 this.handlePointerMove(x, y);
             }
             this.updateSniperFireButton();
+            this.refreshFlakSettingsUI();
             return true;
         }
 
@@ -893,6 +993,7 @@ var Weapons = window.Weapons = {
         // This intentionally ignores buildings and every other weapon type.
         for (const cannon of this.cannons) {
             if (cannon.team !== "player" || cannon.weaponType !== "flakCannon" ||
+                cannon.autoDefense === false || cannon.detectEnemyBullets === false ||
                 !cannon.node || cannon.node.removed || cannon.cooldown > 0 ||
                 (cannon.flakBurstShots && cannon.flakBurstShots.length)) continue;
 
@@ -900,6 +1001,8 @@ var Weapons = window.Weapons = {
             const range = 900;
             let target = null;
             let targetDistance = Infinity;
+            let bestScore = Infinity;
+            const priority = Math.max(0, Math.min(100, Number(cannon.targetPriority ?? 50))) / 100;
 
             for (const projectile of this.projectiles) {
                 if (projectile.team === cannon.team ||
@@ -909,10 +1012,15 @@ var Weapons = window.Weapons = {
                 const dx = projectile.position.x - origin.x;
                 const dy = projectile.position.y - origin.y;
                 const distance = Math.hypot(dx, dy);
-                if (distance > range || distance >= targetDistance) continue;
+                if (distance > range) continue;
+                const velocity = projectile.velocity || { x: 0, y: 0 };
+                const speed = Math.min(20, Math.hypot(velocity.x, velocity.y)) / 20;
+                const score = (1 - priority) * (distance / range) + priority * (1 - speed);
+                if (score >= bestScore) continue;
 
                 target = projectile;
                 targetDistance = distance;
+                bestScore = score;
             }
 
             if (!target) continue;
@@ -1040,6 +1148,7 @@ var Weapons = window.Weapons = {
             !cannon.detached
         ).slice(0, 3);
         this.selectedCannon = this.selectedCannons[0] || null;
+        this.refreshFlakSettingsUI();
     },
 
     detonateFlak(shell) {
