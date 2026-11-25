@@ -1211,6 +1211,7 @@ var Game = window.Game = {
         this.drawBackground();
         Building.draw(ctx);
         Weapons.draw(ctx);
+        Building.drawDoorPreview(ctx);
 
         ctx.restore();
 
