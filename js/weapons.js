@@ -20,6 +20,9 @@ var Weapons = window.Weapons = {
     selectedWeaponType: "cannon",
     fireHeld: false,
     sniperAimDrag: null,
+    pendingSniperFire: null,
+    sniperFireTimer: null,
+    sniperFireButton: null,
     weaponStats: {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
@@ -43,6 +46,11 @@ var Weapons = window.Weapons = {
         this.selectedWeaponType = "cannon";
         this.fireHeld = false;
         this.sniperAimDrag = null;
+        this.pendingSniperFire = null;
+        if (this.sniperFireTimer) clearTimeout(this.sniperFireTimer);
+        this.sniperFireTimer = null;
+        this.ensureSniperFireButton();
+        this.hideSniperFireButton();
         this.mineDragging = false;
         this.lastCannonClick = 0;
         this.lastClickedCannon = null;
@@ -138,6 +146,77 @@ var Weapons = window.Weapons = {
         }
     },
 
+    ensureSniperFireButton() {
+        let button = document.getElementById("sniper-fire-confirm");
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "sniper-fire-confirm";
+            button.type = "button";
+            button.textContent = "FIRE";
+            button.setAttribute("aria-label", "Fire Sniper");
+            button.style.cssText = [
+                "position:fixed",
+                "right:18px",
+                "bottom:22px",
+                "z-index:12000",
+                "width:44px",
+                "height:44px",
+                "padding:0",
+                "border:2px solid #a8eaff",
+                "border-radius:50%",
+                "background:linear-gradient(145deg,#168fc4,#07517e)",
+                "color:#fff",
+                "font:bold 10px Arial,sans-serif",
+                "letter-spacing:.3px",
+                "box-shadow:0 2px 12px rgba(0,0,0,.5),0 0 12px rgba(64,200,255,.45)",
+                "display:none",
+                "align-items:center",
+                "justify-content:center",
+                "touch-action:manipulation"
+            ].join(";");
+            document.body.appendChild(button);
+        }
+        button.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const cannon = this.pendingSniperFire;
+            if (!cannon || cannon.cooldown > 0 || !cannon.node || cannon.node.removed) return;
+            this.hideSniperFireButton();
+            this.fire(cannon);
+        };
+        this.sniperFireButton = button;
+    },
+
+    hideSniperFireButton() {
+        if (this.sniperFireTimer) clearTimeout(this.sniperFireTimer);
+        this.sniperFireTimer = null;
+        this.pendingSniperFire = null;
+        if (this.sniperFireButton) this.sniperFireButton.style.display = "none";
+    },
+
+    queueSniperFire(cannon) {
+        this.hideSniperFireButton();
+        if (!cannon || cannon.team !== "player" || !cannon.node || cannon.node.removed) return;
+        this.pendingSniperFire = cannon;
+        this.sniperFireTimer = setTimeout(() => {
+            this.sniperFireTimer = null;
+            if (this.pendingSniperFire !== cannon || !cannon.node || cannon.node.removed) return;
+            if (!this.sniperFireButton) this.ensureSniperFireButton();
+            this.sniperFireButton.style.display = "flex";
+            this.updateSniperFireButton();
+        }, 200);
+    },
+
+    updateSniperFireButton() {
+        const button = this.sniperFireButton;
+        const cannon = this.pendingSniperFire;
+        if (!button || button.style.display === "none" || !cannon) return;
+        const remaining = Math.max(0, cannon.cooldown || 0);
+        button.disabled = remaining > 0;
+        button.textContent = remaining > 0 ? remaining.toFixed(1) : "FIRE";
+        button.style.opacity = remaining > 0 ? "0.55" : "1";
+    },
+
     createWeaponButton(id, label, weaponType, costLabel) {
         let button = document.getElementById("btn-" + id);
         if (!button) {
@@ -221,6 +300,7 @@ var Weapons = window.Weapons = {
     },
 
     clearSelectedTool() {
+        this.hideSniperFireButton();
         this.selectedTool = null; this.linkMode = false; this.linkSource = null; this.mineDragging = false; this.sniperAimDrag = null;
         this.syncLinkedDoors(); this.updateToolButtons();
     },
@@ -394,6 +474,7 @@ var Weapons = window.Weapons = {
             this.selectedTool !== "cannon";
     },
     clearSelectedCannon() {
+        this.hideSniperFireButton();
         this.selectedCannon = null;
         this.selectedCannons = [];
         this.groupSelectMode = false;
@@ -656,9 +737,9 @@ var Weapons = window.Weapons = {
             const cannon = this.sniperAimDrag.cannon;
             this.handlePointerMove(x, y);
             this.sniperAimDrag = null;
-            if (cannon && cannon.team === "player" && cannon.node && !cannon.node.removed) {
-                this.fire(cannon);
-            }
+            // Releasing the aim gesture only queues the shot. The player must
+            // tap the small Fire control that appears 200 ms later.
+            this.queueSniperFire(cannon);
             return true;
         }
         if (!this.mineDragging) return false;
@@ -701,6 +782,7 @@ var Weapons = window.Weapons = {
 
     cancelSniperAim() {
         this.sniperAimDrag = null;
+        this.hideSniperFireButton();
     },
 
     spawnProjectile(cannon, shotAngle, stats) {
@@ -794,6 +876,8 @@ var Weapons = window.Weapons = {
                 cannon.cooldown = Math.max(0, cannon.cooldown - seconds);
             }
         }
+
+        this.updateSniperFireButton();
 
         if (this.fireHeld) {
             const selected = this.selectedCannons.length
