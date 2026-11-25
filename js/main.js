@@ -1291,9 +1291,12 @@ var Game = window.Game = {
             ? Math.min(1, availableEnergy / requestedEnergy)
             : 1;
 
+        const geothermalOutput = activeGeothermal.length *
+            Building.utilityDefinitions.geothermal.output * powerEfficiency;
         Building.resources.energy = Math.max(0, Math.min(
             Building.getEnergyCapacity(),
-            availableEnergy - requestedEnergy * powerEfficiency
+            availableEnergy - requestedEnergy * powerEfficiency +
+                geothermalOutput * seconds
         ));
 
         Building.resources.metal +=
