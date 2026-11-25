@@ -161,6 +161,17 @@ const Game = {
             tab.title = tab.textContent.trim() + " (Q / E to switch tabs)";
         });
 
+        // Explicitly bind the BUILD door choices after the toolbar tabs
+        // initialize, so the buttons always activate the placement mode.
+        const woodDoor = document.getElementById("btn-wood-door");
+        const steelDoor = document.getElementById("btn-steel-door");
+        if (woodDoor) woodDoor.addEventListener("click", () => {
+            if (typeof Building !== "undefined") Building.setDoorMaterial("wood");
+        });
+        if (steelDoor) steelDoor.addEventListener("click", () => {
+            if (typeof Building !== "undefined") Building.setDoorMaterial("steel");
+        });
+
         this.selectToolTab("build");
     },
 
