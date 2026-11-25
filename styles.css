@@ -526,6 +526,9 @@ body.cc-theme-light #btn-battery.active { background:#c3e7e9; border-color:#4a9c
         transform: scale(.96);
     }
     #mobile-controls [data-mobile-action="deselect"] {
+        pointer-events: auto !important;
+        position: relative;
+        z-index: 2;
         min-width: 76px;
         background: #9b3e32;
         border-color: #e17b62;
