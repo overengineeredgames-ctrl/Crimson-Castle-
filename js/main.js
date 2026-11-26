@@ -83,6 +83,7 @@ var Game = window.Game = {
         this.clampCamera();
         Building.init();
         Weapons.init();
+        if (window.DrillBot) DrillBot.init();
         AI.init();
 
         this.createMenus();
@@ -1074,6 +1075,8 @@ var Game = window.Game = {
             // Android retargets the pointer outside the canvas or viewport.
             this.activeCanvasPointerId = event.pointerId;
 
+            if (window.DrillBot && DrillBot.handlePointerDown(p.x, p.y)) return;
+
             if (Building.selectMode) {
                 const station = [...Building.installations].reverse().find(item =>
                     !item.removed && item.type === "researchStation" &&
@@ -1512,6 +1515,7 @@ var Game = window.Game = {
         this.drawBackground();
         Building.draw(ctx);
         Weapons.draw(ctx);
+        if (window.DrillBot) DrillBot.draw(ctx);
         Building.drawDoorPreview(ctx);
 
         ctx.restore();
@@ -1529,6 +1533,7 @@ var Game = window.Game = {
             Physics.update(delta);
             Building.update(delta);
             Weapons.update(delta);
+            if (window.DrillBot) DrillBot.update(delta);
             AI.update(delta);
 
             this.updateEconomy(delta);
