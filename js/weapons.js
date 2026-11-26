@@ -493,6 +493,14 @@ var Weapons = window.Weapons = {
         ];
         for (const [id, type] of buttons) {
             const button = document.getElementById(id);
+            if (button && type === "flakCannon") {
+                button.disabled = !this.isResearched("flakCannon");
+                if (button.disabled) {
+                    button.title = "Research this weapon at a Research Station (40 Metal, 10 seconds)";
+                } else {
+                    button.title = "Intercepts enemy bullets with proximity-fused explosions";
+                }
+            }
             if (button) button.classList.toggle(
                 "active",
                 this.selectedTool === "cannon" && this.selectedWeaponType === type
