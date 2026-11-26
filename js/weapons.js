@@ -438,6 +438,7 @@ var Weapons = window.Weapons = {
                 button.appendChild(lockIcon);
             }
             const locked = !this.isResearched("flakCannon");
+            button.hidden = locked;
             lockIcon.hidden = !locked;
             lockIcon.setAttribute("aria-hidden", String(!locked));
             button.classList.toggle("research-locked", locked);
@@ -510,6 +511,8 @@ var Weapons = window.Weapons = {
             const button = document.getElementById(id);
             if (button && type === "flakCannon") {
                 const locked = !this.isResearched("flakCannon");
+                // Keep the Flak Cannon out of the Weapons tab until research completes.
+                button.hidden = locked;
                 let lockIcon = button.querySelector(".tool-lock-icon");
                 if (!lockIcon) {
                     lockIcon = document.createElement("span");
