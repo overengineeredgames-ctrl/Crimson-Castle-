@@ -857,6 +857,19 @@ body.cc-theme-light #btn-flak-cannon.active {
 #btn-flak-settings[hidden], #flak-settings-panel[hidden] { display: none !important; }
 
 
+/* Research-locked weapon indicator */
+.tool.research-locked { position: relative; }
+.tool-lock-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    font-size: 13px;
+    line-height: 1;
+    vertical-align: middle;
+}
+.tool-lock-icon[hidden] { display: none !important; }
+
 /* Research Station menu */
 .research-menu-overlay[hidden] { display: none !important; }
 .research-menu-overlay {
