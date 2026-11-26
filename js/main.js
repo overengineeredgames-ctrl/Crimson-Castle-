@@ -57,6 +57,35 @@ var Game = window.Game = {
         this.clampCamera();
     },
 
+    enterDrillBotCamera(bot) {
+        if (!this.drillBotCameraState) {
+            this.drillBotCameraState = { zoom: this.cameraZoom, x: this.cameraOffsetX, y: this.cameraOffsetY };
+        }
+        document.body.classList.add("cc-drill-bot-mode");
+        this.cameraZoom = this.isMobileViewport ? 0.32 : 0.55;
+        this.updateDrillBotCamera(bot);
+    },
+
+    updateDrillBotCamera(bot) {
+        if (!bot || !this.drillBotCameraState) return;
+        const visibleWidth = this.canvas.width / this.cameraZoom;
+        const visibleHeight = this.canvas.height / this.cameraZoom;
+        this.cameraOffsetX = bot.x - visibleWidth / 2;
+        this.cameraOffsetY = bot.y - visibleHeight / 2;
+        this.clampCamera();
+    },
+
+    exitDrillBotCamera() {
+        if (!this.drillBotCameraState) return;
+        const previous = this.drillBotCameraState;
+        this.drillBotCameraState = null;
+        document.body.classList.remove("cc-drill-bot-mode");
+        this.cameraZoom = previous.zoom;
+        this.cameraOffsetX = previous.x;
+        this.cameraOffsetY = previous.y;
+        this.clampCamera();
+    },
+
     init() {
         this.canvas = document.getElementById("gameCanvas");
 
@@ -1534,6 +1563,7 @@ var Game = window.Game = {
             Building.update(delta);
             Weapons.update(delta);
             if (window.DrillBot) DrillBot.update(delta);
+            if (window.DrillBot && DrillBot.bot) this.updateDrillBotCamera(DrillBot.bot);
             AI.update(delta);
 
             this.updateEconomy(delta);
