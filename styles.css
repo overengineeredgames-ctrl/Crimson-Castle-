@@ -85,6 +85,10 @@ html, body {
     color: #65dfff;
 }
 
+.research, #research-count {
+    color: #b9a6ff;
+}
+
 .wood,
 #wood-count {
     color: #a8d58b;
