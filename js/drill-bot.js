@@ -56,7 +56,12 @@ var DrillBot = window.DrillBot = {
         buildButton.textContent = "BUILD";
         buildButton.setAttribute("aria-label", "Build foundation and release Drill Bot");
         buildButton.addEventListener("click", () => this.buildAndRelease());
-        controls.prepend(buildButton, pad);
+        const botControlGroup = document.createElement("div");
+        botControlGroup.id = "drill-bot-control-group";
+        botControlGroup.setAttribute("role", "group");
+        botControlGroup.setAttribute("aria-label", "Drill Bot controls");
+        botControlGroup.append(buildButton, pad);
+        controls.prepend(botControlGroup);
         this.mobilePad = pad;
         pad.addEventListener("pointerdown", event => {
             const button = event.target.closest("[data-drill-direction]");
