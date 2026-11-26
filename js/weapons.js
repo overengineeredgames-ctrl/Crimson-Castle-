@@ -380,16 +380,8 @@ var Weapons = window.Weapons = {
     },
 
     ensureDrillBotButton() {
-        let button = document.getElementById("btn-drill-bot");
-        if (!button) {
-            button = document.createElement("button");
-            button.id = "btn-drill-bot";
-            button.type = "button";
-            button.className = "tool";
-            button.dataset.toolCategory = "bots";
-            button.innerHTML = 'Drill Bot<small>In development</small>';
-            (document.querySelector(".toolbar") || document.body).appendChild(button);
-        }
+        const button = document.getElementById("btn-drill-bot");
+        if (!button) return null;
         button.hidden = !this.isResearched("drillBot");
         button.disabled = true;
         button.title = "Drill Bot research is complete, but its deployment and digging mechanics are still in development.";
@@ -437,7 +429,10 @@ var Weapons = window.Weapons = {
         if (!hasActiveResearch && completed.length === 0) return;
         this.researchRefreshTimer += delta;
         if (completed.includes("flakCannon")) this.updateToolButtons();
-        if (completed.includes("drillBot")) this.ensureDrillBotButton();
+        if (completed.includes("drillBot")) {
+            this.ensureDrillBotButton();
+            if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "bots");
+        }
         if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         for (const projectId of completed) {
             const name = projectId === "flakCannon" ? "Flak Cannon" :
