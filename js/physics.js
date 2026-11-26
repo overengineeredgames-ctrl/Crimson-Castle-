@@ -79,7 +79,7 @@ var Physics = window.Physics = {
         this.engine.enableSleeping = false;
 
         // A wider battlefield gives both forts room to expand and fight.
-        this.worldWidth = Math.round(window.innerWidth * 3.2);
+        this.worldWidth = Math.round(window.innerWidth * 3.6);
         this.groundY = window.innerHeight * 0.82;
 
         const groundThickness = 160;
