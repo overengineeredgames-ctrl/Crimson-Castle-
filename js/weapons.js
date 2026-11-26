@@ -383,13 +383,15 @@ var Weapons = window.Weapons = {
         const button = document.getElementById("btn-drill-bot");
         if (!button) return null;
         button.hidden = !this.isResearched("drillBot");
-        button.disabled = true;
-        button.title = "Drill Bot research is complete, but its deployment and digging mechanics are still in development.";
-        button.onclick = () => {
-            if (window.Building && Building.showPlacementMessage) {
-                Building.showPlacementMessage("Drill Bot unlocked! Its deployment and digging controls are still in development.");
-            }
-        };
+        if (window.DrillBot) {
+            button.disabled = false;
+            button.title = "Select, then tap the ground to launch a Drill Bot";
+            button.querySelector("small").textContent = "Deploy • 70 Metal";
+            button.onclick = () => DrillBot.toggleDeploy();
+        } else {
+            button.disabled = true;
+            button.title = "Drill Bot mechanics are unavailable.";
+        }
         return button;
     },
 
