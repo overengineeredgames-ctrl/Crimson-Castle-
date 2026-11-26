@@ -952,3 +952,17 @@ body.cc-theme-light #drill-bot-build-button {
     border-color:#b58b38 !important;
     color:#39290d !important;
 }
+
+
+/* Keep the BUILD action grouped with the Drill Bot directional controls,
+   separate from the global camera/navigation controls. */
+#drill-bot-control-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    pointer-events: none;
+}
+#drill-bot-control-group[hidden] { display: none !important; }
+#drill-bot-control-group #drill-bot-build-button,
+#drill-bot-control-group #drill-bot-touch-pad { pointer-events: auto; }
