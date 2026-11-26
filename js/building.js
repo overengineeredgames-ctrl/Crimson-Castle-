@@ -1825,6 +1825,7 @@ var Building = window.Building = {
         }
         if (item.type === "solar") return inRect(-25, -30, 25, 16);
         if (item.type === "geothermal") return inRect(-24, -23, 24, 25);
+        if (item.type === "researchStation") return inRect(-25, -34, 25, 39);
         if (item.type === "windmill") {
             // Match the mast and hub, then test the three rotating blades
             // against the same local rectangles used by the renderer.
