@@ -30,7 +30,8 @@ var Building = window.Building = {
         metal: CONFIG.STARTING_METAL || 500,
         wood: 250,
         energy: CONFIG.STARTING_ENERGY || 100,
-        water: 0
+        water: 0,
+        research: 0
     },
 
     settings(material = this.material) {
@@ -77,7 +78,8 @@ var Building = window.Building = {
             metal: CONFIG.STARTING_METAL || 500,
             wood: 250,
             energy: CONFIG.STARTING_ENERGY || 100,
-            water: 0
+            water: 0,
+            research: 0
         };
 
         this.groundY = Physics.groundY;
@@ -775,7 +777,8 @@ var Building = window.Building = {
         solar: { name: "Solar Panel", metalCost: 65, energyCost: 0, output: 2 },
         battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 },
         waterTank: { name: "Water Storage", metalCost: 90, capacity: 300 },
-        geothermal: { name: "Geothermal Generator", metalCost: 190, waterUse: 6, powerUse: 1.25, output: 18 }
+        geothermal: { name: "Geothermal Generator", metalCost: 190, waterUse: 6, powerUse: 1.25, output: 18 },
+        researchStation: { name: "Research Station", metalCost: 180, researchRate: 0.5 }
     },
 
     createUtilityButtons() {
@@ -790,7 +793,8 @@ var Building = window.Building = {
             ["solar", "Solar Panel", "65 metal • +2 power/sec"],
             ["battery", "Battery", "90 metal • +300 energy storage"],
             ["waterTank", "Water Storage", "90 metal • +300 water storage"],
-            ["geothermal", "Geothermal Generator", "190 metal • uses 6 water/sec + 1.25 power/sec • +18 power/sec"]
+            ["geothermal", "Geothermal Generator", "190 metal • uses 6 water/sec + 1.25 power/sec • +18 power/sec"],
+            ["researchStation", "Research Station", "180 metal • generates research points"]
         ];
 
         for (const [type, label, detail] of definitions) {
@@ -2186,6 +2190,8 @@ var Building = window.Building = {
             waterElement.textContent = Math.floor(this.resources.water) +
                 " / " + Math.floor(this.getWaterCapacity());
         }
+        const researchElement = document.getElementById("research-count");
+        if (researchElement) researchElement.textContent = Math.floor(this.resources.research || 0);
     },
 
     setDoorOpen(door, open) {
@@ -2601,6 +2607,20 @@ var Building = window.Building = {
                 ctx.beginPath(); ctx.moveTo(-25,-5); ctx.lineTo(25,-5); ctx.stroke();
                 ctx.fillStyle = "#f7d36b"; ctx.beginPath(); ctx.arc(0,-29,7,0,Math.PI*2); ctx.fill();
                 ctx.fillStyle = "#7ce5ff"; ctx.font = "bold 9px Arial"; ctx.textAlign = "center"; ctx.fillText("+2⚡",0,25);
+            } else if (item.type === "researchStation") {
+                ctx.translate(x,y);
+                // Armored research console with a luminous blue glass chamber.
+                ctx.fillStyle = "#202d3b"; ctx.fillRect(-25,-19,50,39);
+                ctx.fillStyle = "#667b8d"; ctx.fillRect(-21,-23,42,7);
+                ctx.fillStyle = "#a9bac8"; ctx.fillRect(-18,-15,36,28);
+                ctx.fillStyle = "#243b52"; ctx.fillRect(-13,-11,26,20);
+                ctx.fillStyle = "#39c8f2"; ctx.fillRect(-9,-7,18,12);
+                ctx.fillStyle = "rgba(160,245,255,0.7)"; ctx.fillRect(-6,-5,5,8);
+                ctx.strokeStyle = "#8ceaff"; ctx.lineWidth = 2; ctx.strokeRect(-13,-11,26,20);
+                ctx.fillStyle = "#b43e4d"; ctx.fillRect(-8,-21,16,4);
+                ctx.fillStyle = "#d8e5ee"; ctx.fillRect(-3,-29,6,8);
+                ctx.fillStyle = "#65dcff"; ctx.beginPath(); ctx.arc(0,-31,3,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#d9f7ff"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.fillText("RESEARCH",0,31);
             } else if (item.type === "geothermal") {
                 ctx.translate(x,y);
                 ctx.fillStyle = "#343a43"; ctx.fillRect(-23,-20,46,42);
