@@ -50,7 +50,13 @@ var DrillBot = window.DrillBot = {
             button.textContent = symbol;
             pad.appendChild(button);
         });
-        controls.prepend(pad);
+        const buildButton = document.createElement("button");
+        buildButton.type = "button";
+        buildButton.id = "drill-bot-build-button";
+        buildButton.textContent = "BUILD";
+        buildButton.setAttribute("aria-label", "Build foundation and release Drill Bot");
+        buildButton.addEventListener("click", () => this.buildAndRelease());
+        controls.prepend(buildButton, pad);
         this.mobilePad = pad;
         pad.addEventListener("pointerdown", event => {
             const button = event.target.closest("[data-drill-direction]");
@@ -159,12 +165,10 @@ var DrillBot = window.DrillBot = {
             b.x += dx*this.speed*dt;
             b.y += dy*this.speed*dt;
             b.digDistance += this.speed*dt;
-            if (dy < -0.4 && b.digDistance >= 80 && !b.foundationBuilt) {
-                this.buildFoundation(b.x, b.y);
-                b.foundationBuilt = true;
-            }
             b.x = Math.max(18,Math.min(Physics.worldWidth-18,b.x));
-            b.y = Math.max(35,Math.min(Physics.groundY+150,b.y));
+            // The Drill Bot can tunnel below the surface, but can never rise into open air.
+            const surfaceY = Physics.terrainYAt(b.x);
+            b.y = Math.max(surfaceY + 10, Math.min(Physics.groundY+150,b.y));
         }
         if (b.fuel <= 0) {
             this.bot = null;
@@ -174,17 +178,27 @@ var DrillBot = window.DrillBot = {
         }
     },
 
+    buildAndRelease() {
+        if (!this.bot) return;
+        const b = this.bot;
+        if (!this.buildFoundation(b.x, b.y)) return;
+        this.bot = null;
+        this.keys = Object.create(null);
+        this.syncMobilePad();
+        Building.showPlacementMessage("Foundation built! Drill Bot released.");
+    },
+
     buildFoundation(x,y) {
         const size = 60;
         const pts = [[x-size/2,y-size/2],[x+size/2,y-size/2],[x+size/2,y+size/2],[x-size/2,y+size/2]];
         const nodes = pts.map(([px,py]) => Building.createNode(px,py,{team:"player",material:"steel",isFoundation:true}));
         if (nodes.some(node => !node)) {
             nodes.filter(Boolean).forEach(node => Building.removeNode(node,false));
-            Building.showPlacementMessage("The Drill Bot couldn't secure a foundation here.");
-            return;
+            Building.showPlacementMessage("The Drill Bot couldn't secure a foundation here. Move to a clear spot and try again.");
+            return false;
         }
         for (let i=0;i<4;i++) Building.createStrut(nodes[i],nodes[(i+1)%4],{material:"steel"});
-        Building.showPlacementMessage("Foundation secured! It will remain after the bot runs out of fuel.");
+        return true;
     },
 
     draw(ctx) {
