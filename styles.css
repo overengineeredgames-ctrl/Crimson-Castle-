@@ -966,3 +966,7 @@ body.cc-theme-light #drill-bot-build-button {
 #drill-bot-control-group[hidden] { display: none !important; }
 #drill-bot-control-group #drill-bot-build-button,
 #drill-bot-control-group #drill-bot-touch-pad { pointer-events: auto; }
+
+
+/* During Drill Bot operation, hide only camera pan and zoom controls. */
+body.cc-drill-bot-mode #mobile-controls .mobile-camera-pad { display: none !important; }
