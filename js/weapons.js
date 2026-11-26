@@ -233,7 +233,7 @@ var Weapons = window.Weapons = {
             button.id = "btn-flak-settings";
             button.type = "button";
             button.className = "tool";
-            button.dataset.toolCategory = "weapons";
+            button.dataset.toolCategory = "tools";
             button.textContent = "Flak Settings";
             button.hidden = true;
             button.title = "Configure the selected Flak Cannon";
@@ -323,7 +323,7 @@ var Weapons = window.Weapons = {
         if (!button || !panel) return;
         const cannon = this.getSettingsFlakCannon();
         // Keep Flak Settings visible in the Weapons toolbar at all times.
-        button.hidden = false;
+        button.hidden = !window.Game || window.Game.activeToolTab !== "tools";
         button.title = cannon
             ? "Configure the selected Flak Cannon"
             : "Select one player Flak Cannon to configure its settings";
