@@ -142,6 +142,11 @@ var Game = window.Game = {
             if (!tabs.some(tab => tab.dataset.toolTab === category)) return;
 
             this.activeToolTab = category;
+            if (category !== "tools") {
+                const flakPanel = document.getElementById("flak-settings-panel");
+                if (flakPanel) flakPanel.hidden = true;
+            }
+            if (window.Weapons && window.Weapons.refreshFlakSettingsUI) window.Weapons.refreshFlakSettingsUI();
             tabs.forEach(tab => {
                 const selected = tab.dataset.toolTab === category;
                 tab.classList.toggle("active", selected);
