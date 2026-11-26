@@ -1141,6 +1141,11 @@ var Game = window.Game = {
                 return;
             }
 
+            if (Building.upgradeMode) {
+                Building.upgradeBeamAt(p.x, p.y);
+                return;
+            }
+
             if (Weapons.linkMode && Weapons.handleLinkPointerDown(p.x, p.y)) return;
             if (Building.handleUtilityPointerDown(p.x, p.y)) return;
             if (Weapons.handlePointerDown(p.x, p.y, event.ctrlKey || Weapons.groupSelectMode)) return;
