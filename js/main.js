@@ -943,6 +943,31 @@ var Game = window.Game = {
         });
     },
 
+    renderResearchCategory(category) {
+        const panel = document.getElementById("research-menu");
+        if (!panel) return;
+        const projects = panel.querySelector(".research-projects");
+        if (!projects) return;
+        if (category === "weapons") {
+            projects.innerHTML = `
+                <h3>Weapon Research</h3>
+                <article class="research-project" data-project="flakCannon">
+                    <div><strong>Flak Cannon</strong><p>Unlocks the Flak Cannon weapon</p><small>40 Metal • 10 seconds</small></div>
+                    <button type="button" class="research-start" data-start-research="flakCannon">Research</button>
+                    <p class="research-project-status" aria-live="polite"></p>
+                </article>`;
+            projects.querySelector("[data-start-research='flakCannon']").addEventListener("click", () => {
+                Weapons.startResearch("flakCannon");
+                this.refreshResearchMenu();
+            });
+            this.refreshResearchMenu();
+        } else if (category === "buildings") {
+            projects.innerHTML = "<h3>Building Research</h3><p class='research-empty'>No building research projects are available yet.</p>";
+        } else {
+            projects.innerHTML = "<h3>Machinery Research</h3><p class='research-empty'>No machinery research projects are available yet.</p>";
+        }
+    },
+
     refreshResearchMenu() {
         const panel = document.getElementById("research-menu");
         if (!panel) return;
@@ -988,14 +1013,7 @@ var Game = window.Game = {
                         <button type="button" data-research-category="buildings">Buildings</button>
                         <button type="button" data-research-category="machinery">Machinery</button>
                     </div>
-                    <div class="research-projects">
-                        <h3>Projects</h3>
-                        <article class="research-project" data-project="flakCannon">
-                            <div><strong>Flak Cannon</strong><p>Unlocks the Flak Cannon weapon</p><small>40 Metal • 10 seconds</small></div>
-                            <button type="button" class="research-start" data-start-research="flakCannon">Research</button>
-                            <p class="research-project-status" aria-live="polite"></p>
-                        </article>
-                    </div>
+                    <div class="research-projects"></div>
                     <footer class="research-menu-footer"><span>Research generation: 0.5 points/sec per station</span><button type="button" class="research-done">Close</button></footer>
                 </div>`;
             document.body.appendChild(panel);
@@ -1008,15 +1026,12 @@ var Game = window.Game = {
                     panel.querySelectorAll("[data-research-category]").forEach(item =>
                         item.classList.toggle("selected", item === button)
                     );
+                    this.renderResearchCategory(button.dataset.researchCategory);
                 });
-            });
-            panel.querySelector("[data-start-research='flakCannon']").addEventListener("click", () => {
-                Weapons.startResearch("flakCannon");
-                this.refreshResearchMenu();
             });
         }
         panel.hidden = false;
-        this.refreshResearchMenu();
+        this.renderResearchCategory("weapons");
         panel.querySelector(".research-close").focus();
     },
 
