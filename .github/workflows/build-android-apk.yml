@@ -61,6 +61,13 @@ jobs:
           grep -q 'data-mobile-action="group-select"' www/index.html
           grep -q "groupSelectMode" www/js/weapons.js
           grep -q "updateSniperFireButton" www/js/weapons.js
+          grep -q "enterDrillBotCamera" www/js/main.js
+          grep -q "updateDrillBotCamera" www/js/main.js
+          grep -q "Game.enterDrillBotCamera" www/js/drill-bot.js
+          grep -q "Game.exitDrillBotCamera" www/js/drill-bot.js
+          grep -q "cc-drill-bot-mode" www/styles.css
+          grep -q "mobile-camera-pad" www/styles.css
+          grep -q "syncMobilePad" www/js/drill-bot.js
           VERSION=$(node -p "require('./package.json').version")
           echo "Verified Crimson Castle v${VERSION}: sniper fire control, Android group selection, deselect control, physics engine, manifest and assets; no APK debug panel."
 
