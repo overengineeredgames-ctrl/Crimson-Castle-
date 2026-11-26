@@ -1723,26 +1723,26 @@ var Building = window.Building = {
             return false;
         }
 
-        const cost = material.cost * 3;
+        // A node drag creates one direct beam to the destination.
+        // Do not add a raised midpoint or extra braces: those turn a simple
+        // beam placement into an unwanted triangular frame.
+        const cost = material.cost;
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) return false;
 
-        const middle = {
-            x: (start.x + end.x) / 2,
-            y: (start.y + end.y) / 2 - 35
-        };
-
         const groundNode = this.snapPointToGround(end, startNode.team);
+        const createdNode = !groundNode;
         const newNode = groundNode || this.createNode(end.x, end.y);
-        const diagonalNode = this.createNode(middle.x, middle.y);
 
-        const first = this.createStrut(startNode, diagonalNode);
-        const second = this.createStrut(diagonalNode, newNode);
-        const third = this.createStrut(startNode, newNode);
+        if (!newNode) {
+            this.resources[resource] += cost;
+            this.updateHUD();
+            return false;
+        }
 
-        if (!first || !second || !third) {
-            this.removeNode(newNode);
-            this.removeNode(diagonalNode);
+        const beam = this.createStrut(startNode, newNode);
+        if (!beam) {
+            if (createdNode) this.removeNode(newNode);
             this.resources[resource] += cost;
             this.updateHUD();
             return false;
