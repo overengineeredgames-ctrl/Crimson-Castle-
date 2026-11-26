@@ -9,6 +9,7 @@ var DrillBot = window.DrillBot = {
     speed: 72,
     digDistance: 0,
     mobilePad: null,
+    mobileControlGroup: null,
 
     init() {
         this.createMobilePad();
@@ -63,6 +64,7 @@ var DrillBot = window.DrillBot = {
         botControlGroup.append(buildButton, pad);
         controls.prepend(botControlGroup);
         this.mobilePad = pad;
+        this.mobileControlGroup = botControlGroup;
         pad.addEventListener("pointerdown", event => {
             const button = event.target.closest("[data-drill-direction]");
             if (!button || !this.bot) return;
@@ -92,7 +94,9 @@ var DrillBot = window.DrillBot = {
     },
 
     syncMobilePad() {
-        if (this.mobilePad) this.mobilePad.hidden = !(this.bot && Game.state === "playing");
+        const active = !!(this.bot && Game.state === "playing");
+        if (this.mobilePad) this.mobilePad.hidden = !active;
+        if (this.mobileControlGroup) this.mobileControlGroup.hidden = !active;
     },
 
     toggleDeploy() {
@@ -152,6 +156,7 @@ var DrillBot = window.DrillBot = {
             if (t >= 1) {
                 this.bot = { x:p.tx, y:p.ty, fuel:this.fuelSeconds, direction:"up", digDistance:0, foundationBuilt:false };
                 this.projectile = null;
+                Game.enterDrillBotCamera(this.bot);
                 this.syncMobilePad();
                 Building.showPlacementMessage("Drill Bot deployed! Use the on-screen arrows or WASD to dig.");
             }
@@ -178,6 +183,7 @@ var DrillBot = window.DrillBot = {
         if (b.fuel <= 0) {
             this.bot = null;
             this.keys = Object.create(null);
+            Game.exitDrillBotCamera();
             this.syncMobilePad();
             Building.showPlacementMessage("Drill Bot fuel depleted. Its foundation remains in place.");
         }
@@ -189,6 +195,7 @@ var DrillBot = window.DrillBot = {
         if (!this.buildFoundation(b.x, b.y)) return;
         this.bot = null;
         this.keys = Object.create(null);
+        Game.exitDrillBotCamera();
         this.syncMobilePad();
         Building.showPlacementMessage("Foundation built! Drill Bot released.");
     },
