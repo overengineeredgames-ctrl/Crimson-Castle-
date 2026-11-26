@@ -857,6 +857,9 @@ body.cc-theme-light #btn-flak-cannon.active {
 #btn-flak-settings[hidden], #flak-settings-panel[hidden] { display: none !important; }
 
 
+/* Hide the Flak Cannon weapon entry until its research is complete. */
+#btn-flak-cannon[hidden] { display: none !important; }
+
 /* Research-locked weapon indicator */
 .tool.research-locked { position: relative; }
 /* Render the lock on the weapon button itself so it cannot be lost if button markup is rebuilt. */
