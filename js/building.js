@@ -7,6 +7,8 @@ var Building = window.Building = {
     mines: [],
     debris: [],
     installations: [],
+    selectedInstallation: null,
+    selectMode: false,
     utilityTool: null,
     drag: null,
     doorMaterial: null,
@@ -815,8 +817,30 @@ var Building = window.Building = {
         }
     },
 
+    setSelectMode(enabled) {
+        this.selectMode = !!enabled;
+        this.selectedInstallation = null;
+        if (this.selectMode) {
+            this.utilityTool = null;
+            this.deleteMode = false;
+            this.repairMode = false;
+            this.repairTarget = null;
+            this.doorMaterial = null;
+            this.doorModifierDrag = null;
+            this.drag = null;
+            if (this.hideDoorConfirm) this.hideDoorConfirm();
+            if (typeof Weapons !== "undefined") {
+                if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+                if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
+            }
+        }
+        this.updateToolbar();
+    },
+
     setUtilityTool(type) {
         if (type && !this.utilityDefinitions[type]) return;
+        this.selectMode = false;
+        this.selectedInstallation = null;
         this.utilityTool = type;
         this.deleteMode = false;
         this.repairMode = false;
@@ -1187,6 +1211,8 @@ var Building = window.Building = {
         // Door mode is a modifier, not a normal wood/steel beam material.
         // Keep the ordinary beam material untouched and make this the sole
         // active construction action.
+        this.selectMode = false;
+        this.selectedInstallation = null;
         this.doorMaterial = material;
         this.utilityTool = null;
         this.repairMode = false;
@@ -1204,6 +1230,8 @@ var Building = window.Building = {
 
     setMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
+        this.selectMode = false;
+        this.selectedInstallation = null;
         this.doorMaterial = null;
         this.material = material;
         this.utilityTool = null;
@@ -1218,6 +1246,8 @@ var Building = window.Building = {
     },
 
     setDeleteMode(enabled) {
+        this.selectMode = false;
+        this.selectedInstallation = null;
         this.deleteMode = !!enabled;
         if (this.deleteMode) {
             this.doorMaterial = null;
@@ -1239,6 +1269,11 @@ var Building = window.Building = {
         const repairButton = document.getElementById("btn-repair");
         const woodDoorButton = document.getElementById("btn-wood-door");
         const steelDoorButton = document.getElementById("btn-steel-door");
+        const selectButton = document.getElementById("btn-select-tool");
+        if (selectButton) {
+            selectButton.classList.toggle("active", this.selectMode);
+            selectButton.setAttribute("aria-pressed", String(this.selectMode));
+        }
 
         const linking = typeof Weapons !== "undefined" && Weapons.linkMode;
         for (const type of Object.keys(this.utilityDefinitions)) {
@@ -1991,6 +2026,8 @@ var Building = window.Building = {
     },
 
     setRepairMode(enabled, difficulty = "normal") {
+        this.selectMode = false;
+        this.selectedInstallation = null;
         this.repairMode = !!enabled;
         this.repairTarget = null;
         if (this.repairMode) {
@@ -2629,6 +2666,17 @@ var Building = window.Building = {
                 ctx.fillStyle = "#f0b45b"; ctx.fillRect(-5,-25,10,9);
                 ctx.fillStyle = "#4bd5e8"; ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill();
                 ctx.fillStyle = "#e9faff"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.fillText("GEO",0,33);
+            }
+            if (this.selectedInstallation === item) {
+                ctx.save();
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = "rgba(255,255,255,0.9)";
+                ctx.shadowBlur = 12;
+                ctx.setLineDash([5, 3]);
+                ctx.strokeRect(-31, -40, 62, 82);
+                ctx.setLineDash([]);
+                ctx.restore();
             }
             ctx.restore();
         }
