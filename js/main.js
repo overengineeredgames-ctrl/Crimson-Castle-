@@ -994,7 +994,7 @@ var Game = window.Game = {
                 button.disabled = true;
                 status.textContent = (projectId === "drillBot" ? "Drill Bot" : "Flak Cannon") + " unlocked.";
             } else if (project.researching) {
-                button.textContent = "Researching…";
+                button.textContent = projectId === "drillBot" ? "🔒 Researching…" : "Researching…";
                 button.disabled = true;
                 status.textContent = "Progress: " + project.progress.toFixed(1) + " / " + project.duration + " seconds";
             } else {
