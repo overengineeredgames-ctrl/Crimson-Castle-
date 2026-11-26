@@ -189,6 +189,11 @@ var Game = window.Game = {
         // Explicitly bind the BUILD door choices after the toolbar tabs
         // initialize, so the buttons always activate the placement mode.
         const woodDoor = document.getElementById("btn-wood-door");
+        const selectTool = document.getElementById("btn-select-tool");
+        if (selectTool) selectTool.addEventListener("click", () => {
+            if (typeof Building !== "undefined") Building.setSelectMode(!Building.selectMode);
+        });
+
         const steelDoor = document.getElementById("btn-steel-door");
         if (woodDoor) woodDoor.addEventListener("click", () => {
             if (typeof Building !== "undefined") Building.setDoorMaterial("wood");
@@ -1004,6 +1009,16 @@ var Game = window.Game = {
             // Track the active canvas gesture so release is still handled if
             // Android retargets the pointer outside the canvas or viewport.
             this.activeCanvasPointerId = event.pointerId;
+
+            if (Building.selectMode) {
+                const station = [...Building.installations].reverse().find(item =>
+                    !item.removed && item.type === "researchStation" &&
+                    Building.installationHitTest(item, p.x, p.y)
+                );
+                Building.selectedInstallation = station || null;
+                Building.updateToolbar();
+                return;
+            }
 
             if (Building.doorMaterial && Building.startDoorModifier(p.x, p.y)) return;
 
