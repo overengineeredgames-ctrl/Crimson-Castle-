@@ -859,6 +859,17 @@ body.cc-theme-light #btn-flak-cannon.active {
 
 /* Research-locked weapon indicator */
 .tool.research-locked { position: relative; }
+/* Render the lock on the weapon button itself so it cannot be lost if button markup is rebuilt. */
+.tool.research-locked::after {
+    content: "🔒";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    font-size: 13px;
+    line-height: 1;
+    vertical-align: middle;
+}
 .tool-lock-icon {
     display: inline-flex;
     align-items: center;
