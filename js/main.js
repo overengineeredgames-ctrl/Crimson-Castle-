@@ -722,7 +722,7 @@ var Game = window.Game = {
     async loadVersionLabel() {
         // Use the packaged app version when Electron is available.
         // Keep the current project version as a useful fallback in development.
-        let version = "1.0.9";
+        let version = "1.0.10";
         try {
             if (window.ccUpdater && typeof window.ccUpdater.getVersion === "function") {
                 const appVersion = await window.ccUpdater.getVersion();
