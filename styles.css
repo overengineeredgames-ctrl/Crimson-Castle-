@@ -847,3 +847,7 @@ body.cc-theme-light #btn-flak-cannon.active {
     background: #f3d1b2;
     border-color: #bd7138;
 }
+
+
+/* Flak settings must remain absent outside the Tools tab, even if other UI styles change. */
+#btn-flak-settings[hidden], #flak-settings-panel[hidden] { display: none !important; }
