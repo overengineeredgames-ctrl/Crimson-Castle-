@@ -8,8 +8,10 @@ var DrillBot = window.DrillBot = {
     fuelSeconds: 22,
     speed: 72,
     digDistance: 0,
+    mobilePad: null,
 
     init() {
+        this.createMobilePad();
         const button = document.getElementById("btn-drill-bot");
         if (button) {
             button.disabled = false;
@@ -26,6 +28,60 @@ var DrillBot = window.DrillBot = {
         });
         document.addEventListener("keyup", event => { this.keys[event.key.toLowerCase()] = false; });
         window.addEventListener("blur", () => { this.keys = Object.create(null); });
+    },
+
+    createMobilePad() {
+        const controls = document.getElementById("mobile-controls");
+        if (!controls || this.mobilePad) return;
+        const pad = document.createElement("div");
+        pad.id = "drill-bot-touch-pad";
+        pad.setAttribute("role", "group");
+        pad.setAttribute("aria-label", "Drill Bot movement controls");
+        pad.hidden = true;
+        const directions = [
+            ["up", "▲", "Dig up"], ["left", "◀", "Move left"],
+            ["down", "▼", "Dig down"], ["right", "▶", "Move right"]
+        ];
+        directions.forEach(([direction, symbol, label]) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.dataset.drillDirection = direction;
+            button.setAttribute("aria-label", label);
+            button.textContent = symbol;
+            pad.appendChild(button);
+        });
+        controls.prepend(pad);
+        this.mobilePad = pad;
+        pad.addEventListener("pointerdown", event => {
+            const button = event.target.closest("[data-drill-direction]");
+            if (!button || !this.bot) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const direction = button.dataset.drillDirection;
+            this.keys["arrow" + direction] = true;
+            button.classList.add("active");
+            try { button.setPointerCapture(event.pointerId); } catch (_) {}
+        });
+        const release = event => {
+            const button = event.target instanceof Element ? event.target.closest("[data-drill-direction]") : null;
+            if (button) {
+                this.keys["arrow" + button.dataset.drillDirection] = false;
+                button.classList.remove("active");
+            }
+            // Clear all touch directions on cancellation or focus loss to avoid stuck movement.
+            if (event.type === "pointercancel") this.clearTouchDirections();
+        };
+        ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => pad.addEventListener(type, release));
+        window.addEventListener("blur", () => this.clearTouchDirections());
+    },
+
+    clearTouchDirections() {
+        ["arrowup", "arrowdown", "arrowleft", "arrowright"].forEach(key => { this.keys[key] = false; });
+        if (this.mobilePad) this.mobilePad.querySelectorAll("button").forEach(button => button.classList.remove("active"));
+    },
+
+    syncMobilePad() {
+        if (this.mobilePad) this.mobilePad.hidden = !(this.bot && Game.state === "playing");
     },
 
     toggleDeploy() {
@@ -85,7 +141,8 @@ var DrillBot = window.DrillBot = {
             if (t >= 1) {
                 this.bot = { x:p.tx, y:p.ty, fuel:this.fuelSeconds, direction:"up", digDistance:0, foundationBuilt:false };
                 this.projectile = null;
-                Building.showPlacementMessage("Drill Bot deployed! Use WASD or the arrow keys to dig.");
+                this.syncMobilePad();
+                Building.showPlacementMessage("Drill Bot deployed! Use the on-screen arrows or WASD to dig.");
             }
         }
         if (!this.bot) return;
@@ -112,6 +169,7 @@ var DrillBot = window.DrillBot = {
         if (b.fuel <= 0) {
             this.bot = null;
             this.keys = Object.create(null);
+            this.syncMobilePad();
             Building.showPlacementMessage("Drill Bot fuel depleted. Its foundation remains in place.");
         }
     },
@@ -136,7 +194,7 @@ var DrillBot = window.DrillBot = {
             ctx.beginPath(); ctx.moveTo(p.x-7,p.y); ctx.lineTo(p.x+7,p.y); ctx.moveTo(p.x,p.y-7); ctx.lineTo(p.x,p.y+7); ctx.stroke();
             ctx.restore();
         }
-        if (!this.bot) return;
+        if (!this.bot) { this.syncMobilePad(); return; }
         const b=this.bot;
         ctx.save(); ctx.translate(b.x,b.y);
         ctx.fillStyle="#263d4b"; ctx.strokeStyle="#76e6ff"; ctx.lineWidth=2;
