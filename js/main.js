@@ -938,6 +938,50 @@ var Game = window.Game = {
         });
     },
 
+    openResearchMenu() {
+        let panel = document.getElementById("research-menu");
+        if (!panel) {
+            panel = document.createElement("section");
+            panel.id = "research-menu";
+            panel.className = "research-menu-overlay";
+            panel.setAttribute("role", "dialog");
+            panel.setAttribute("aria-modal", "true");
+            panel.setAttribute("aria-labelledby", "research-menu-title");
+            panel.innerHTML = `
+                <div class="research-menu">
+                    <header class="research-menu-header">
+                        <div><p class="research-eyebrow">CRIMSON CASTLE</p><h2 id="research-menu-title">Research Station</h2></div>
+                        <button type="button" class="research-close" aria-label="Close research menu">×</button>
+                    </header>
+                    <p class="research-intro">Choose a field to explore.</p>
+                    <div class="research-categories" role="group" aria-label="Research categories">
+                        <button type="button" class="selected" data-research-category="weapons">Weapons</button>
+                        <button type="button" data-research-category="buildings">Buildings</button>
+                        <button type="button" data-research-category="machinery">Machinery</button>
+                    </div>
+                    <div class="research-projects">
+                        <h3>Projects</h3>
+                        <p class="research-empty">Project costs and research times will appear here as projects are added.</p>
+                    </div>
+                    <footer class="research-menu-footer"><span>Research generation: 0.5 points/sec per station</span><button type="button" class="research-done">Close</button></footer>
+                </div>`;
+            document.body.appendChild(panel);
+            const close = () => { panel.hidden = true; };
+            panel.querySelector(".research-close").addEventListener("click", close);
+            panel.querySelector(".research-done").addEventListener("click", close);
+            panel.addEventListener("click", event => { if (event.target === panel) close(); });
+            panel.querySelectorAll("[data-research-category]").forEach(button => {
+                button.addEventListener("click", () => {
+                    panel.querySelectorAll("[data-research-category]").forEach(item =>
+                        item.classList.toggle("selected", item === button)
+                    );
+                });
+            });
+        }
+        panel.hidden = false;
+        panel.querySelector(".research-close").focus();
+    },
+
     setupInput() {
         this.canvas.addEventListener("pointerdown", event => {
             if (this.state !== "playing") return;
@@ -962,6 +1006,19 @@ var Game = window.Game = {
             this.activeCanvasPointerId = event.pointerId;
 
             if (Building.doorMaterial && Building.startDoorModifier(p.x, p.y)) return;
+
+            // A placed Research Station is an interactive world object. Check
+            // it before utility placement so tapping it opens its menu instead.
+            if (!Building.deleteMode && !Building.repairMode && !Weapons.linkMode) {
+                const station = [...Building.installations].reverse().find(item =>
+                    !item.removed && item.type === "researchStation" &&
+                    Building.installationHitTest(item, p.x, p.y)
+                );
+                if (station) {
+                    this.openResearchMenu();
+                    return;
+                }
+            }
 
             if (Building.deleteMode) {
                 Building.deleteAt(p.x, p.y);
