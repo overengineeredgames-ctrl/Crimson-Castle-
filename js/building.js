@@ -14,6 +14,7 @@ var Building = window.Building = {
     doorMaterial: null,
 
     repairMode: false,
+    upgradeMode: false,
     deleteMode: false,
     repairTarget: null,
     repairMouse: { x: 0, y: 0 },
@@ -71,6 +72,9 @@ var Building = window.Building = {
         this.debris = [];
         this.installations = [];
         this.utilityTool = null;
+        this.upgradeMode = false;
+        this.repairMode = false;
+        this.deleteMode = false;
         this.drag = null;
         this.doorMaterial = null;
         this.doorModifierDrag = null;
@@ -1165,6 +1169,7 @@ var Building = window.Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const upgradeButton = document.getElementById("btn-upgrade");
         const woodDoorButton = document.getElementById("btn-wood-door");
         const steelDoorButton = document.getElementById("btn-steel-door");
         this.createUtilityButtons();
@@ -1180,6 +1185,10 @@ var Building = window.Building = {
 
         if (deleteButton) {
             deleteButton.onclick = () => this.setDeleteMode(!this.deleteMode);
+        }
+
+        if (upgradeButton) {
+            upgradeButton.onclick = () => this.setUpgradeMode(!this.upgradeMode);
         }
 
         if (repairButton) {
@@ -1214,6 +1223,7 @@ var Building = window.Building = {
         this.selectMode = false;
         this.selectedInstallation = null;
         this.doorMaterial = material;
+        this.upgradeMode = false;
         this.utilityTool = null;
         this.repairMode = false;
         this.repairTarget = null;
@@ -1234,6 +1244,7 @@ var Building = window.Building = {
         this.selectedInstallation = null;
         this.doorMaterial = null;
         this.material = material;
+        this.upgradeMode = false;
         this.utilityTool = null;
         this.repairMode = false;
         this.repairTarget = null;
@@ -1250,6 +1261,7 @@ var Building = window.Building = {
         this.selectedInstallation = null;
         this.deleteMode = !!enabled;
         if (this.deleteMode) {
+            this.upgradeMode = false;
             this.doorMaterial = null;
             this.utilityTool = null;
             this.repairMode = false;
@@ -1267,6 +1279,7 @@ var Building = window.Building = {
         const steelButton = document.getElementById("btn-steel");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
+        const upgradeButton = document.getElementById("btn-upgrade");
         const woodDoorButton = document.getElementById("btn-wood-door");
         const steelDoorButton = document.getElementById("btn-steel-door");
         const selectButton = document.getElementById("btn-select-tool");
@@ -1296,10 +1309,73 @@ var Building = window.Building = {
             deleteButton.setAttribute("aria-pressed", String(!linking && this.deleteMode));
         }
 
+        if (upgradeButton) {
+            upgradeButton.classList.toggle("active", !linking && this.upgradeMode);
+            upgradeButton.setAttribute("aria-pressed", String(!linking && this.upgradeMode));
+        }
+
         if (repairButton) {
             repairButton.classList.toggle("active", !linking && this.repairMode);
             repairButton.setAttribute("aria-pressed", String(!linking && this.repairMode));
         }
+    },
+
+    setUpgradeMode(enabled) {
+        this.selectMode = false;
+        this.selectedInstallation = null;
+        this.upgradeMode = !!enabled;
+        if (this.upgradeMode) {
+            this.doorMaterial = null;
+            this.deleteMode = false;
+            this.repairMode = false;
+            this.repairTarget = null;
+            this.utilityTool = null;
+            this.drag = null;
+            if (typeof Weapons !== "undefined") {
+                if (Weapons.clearSelectedTool) Weapons.clearSelectedTool();
+                if (Weapons.clearSelectedCannon) Weapons.clearSelectedCannon();
+            }
+        }
+        this.updateToolbar();
+    },
+
+    upgradeBeamAt(x, y) {
+        if (!this.upgradeMode) return false;
+        const beam = this.getStrutAtPoint(x, y, 30);
+        if (!beam) {
+            this.showPlacementMessage("Tap a wooden beam to upgrade it.");
+            return true;
+        }
+        if (beam.material !== "wood" || beam.isDoor || beam.debrisGroup) {
+            this.showPlacementMessage("Only regular wooden beams can be upgraded.");
+            return true;
+        }
+        const cost = Math.max(5, Math.min(10, Math.ceil(beam.length / 35)));
+        if (!this.canAfford(cost)) {
+            this.showPlacementMessage("Need " + cost + " metal to upgrade this beam.");
+            return true;
+        }
+        const oldHealthRatio = Math.max(0, Math.min(1, beam.health / beam.maxHealth));
+        const a = beam.a;
+        const b = beam.b;
+        this.removeStrut(beam, false);
+        const upgraded = this.createStrut(a, b, { material: "steel" });
+        if (!upgraded) {
+            const restored = this.createStrut(a, b, { material: "wood" });
+            if (restored) {
+                restored.health = Math.max(1, restored.maxHealth * oldHealthRatio);
+                this.showPlacementMessage("Upgrade couldn't be placed; wooden beam restored.");
+            } else {
+                this.showPlacementMessage("Upgrade failed and the original beam could not be restored. Please report this.");
+                this.checkSupport();
+            }
+            return true;
+        }
+        upgraded.health = Math.max(1, upgraded.maxHealth * oldHealthRatio);
+        this.resources.metal -= cost;
+        this.updateHUD();
+        this.showPlacementMessage("Beam upgraded to steel! -" + cost + " metal");
+        return true;
     },
 
     canAfford(amount) {
