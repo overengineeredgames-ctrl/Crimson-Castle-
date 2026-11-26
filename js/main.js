@@ -963,33 +963,48 @@ var Game = window.Game = {
             this.refreshResearchMenu();
         } else if (category === "buildings") {
             projects.innerHTML = "<h3>Building Research</h3><p class='research-empty'>No building research projects are available yet.</p>";
-        } else {
+        } else if (category === "machinery") {
             projects.innerHTML = "<h3>Machinery Research</h3><p class='research-empty'>No machinery research projects are available yet.</p>";
+        } else if (category === "bots") {
+            projects.innerHTML = `
+                <h3>Bot Research</h3>
+                <article class="research-project" data-project="drillBot">
+                    <div><strong>Drill Bot</strong><p>Unlocks the Drill Bot construction ability</p><small>70 Metal • 15 seconds</small></div>
+                    <button type="button" class="research-start" data-start-research="drillBot">🔒 Research</button>
+                    <p class="research-project-status" aria-live="polite"></p>
+                </article>`;
+            projects.querySelector("[data-start-research='drillBot']").addEventListener("click", () => {
+                Weapons.startResearch("drillBot");
+                this.refreshResearchMenu();
+            });
+            this.refreshResearchMenu();
         }
     },
 
     refreshResearchMenu() {
         const panel = document.getElementById("research-menu");
         if (!panel) return;
-        const project = Weapons.researchProjects.flakCannon;
-        const button = panel.querySelector("[data-start-research='flakCannon']");
-        const status = panel.querySelector(".research-project-status");
-        if (!button || !status) return;
-        if (project.unlocked) {
-            button.textContent = "Researched";
-            button.disabled = true;
-            status.textContent = "Flak Cannon unlocked.";
-        } else if (project.researching) {
-            button.textContent = "Researching…";
-            button.disabled = true;
-            status.textContent = "Progress: " + project.progress.toFixed(1) + " / " + project.duration + " seconds";
-        } else {
-            button.textContent = "Research";
-            button.disabled = Building.resources.metal < project.metalCost;
-            status.textContent = button.disabled
-                ? "Need " + project.metalCost + " Metal to begin."
-                : "Ready to research.";
-        }
+        panel.querySelectorAll("[data-start-research]").forEach(button => {
+            const projectId = button.dataset.startResearch;
+            const project = Weapons.researchProjects[projectId];
+            const status = button.closest(".research-project")?.querySelector(".research-project-status");
+            if (!project || !status) return;
+            if (project.unlocked) {
+                button.textContent = "Researched";
+                button.disabled = true;
+                status.textContent = (projectId === "drillBot" ? "Drill Bot" : "Flak Cannon") + " unlocked.";
+            } else if (project.researching) {
+                button.textContent = "Researching…";
+                button.disabled = true;
+                status.textContent = "Progress: " + project.progress.toFixed(1) + " / " + project.duration + " seconds";
+            } else {
+                button.textContent = projectId === "drillBot" ? "🔒 Research" : "Research";
+                button.disabled = Building.resources.metal < project.metalCost;
+                status.textContent = button.disabled
+                    ? "Need " + project.metalCost + " Metal to begin."
+                    : "Ready to research.";
+            }
+        });
     },
 
     openResearchMenu() {
@@ -1012,6 +1027,7 @@ var Game = window.Game = {
                         <button type="button" class="selected" data-research-category="weapons">Weapons</button>
                         <button type="button" data-research-category="buildings">Buildings</button>
                         <button type="button" data-research-category="machinery">Machinery</button>
+                        <button type="button" data-research-category="bots">Bots</button>
                     </div>
                     <div class="research-projects"></div>
                     <footer class="research-menu-footer"><span>Research generation: 0.5 points/sec per station</span><button type="button" class="research-done">Close</button></footer>
