@@ -1,12 +1,13 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "releaseDate": "2026-11-25T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.0.8",
-  "description": "Crimson Castle 1.0.8 is available.",
+  "title": "Crimson Castle 1.0.9",
+  "description": "Crimson Castle 1.0.9 is available.",
   "changes": [
+    "Added automatic control for the Flak Cannon.",
     "Removed the debug panel from the public website and Android APK; desktop diagnostics remain available.",
     "Added an Android hold-to-select control for selecting and aiming multiple guns together.",
     "Updated group selection to support any number of guns; the X control clears all selected guns.",
