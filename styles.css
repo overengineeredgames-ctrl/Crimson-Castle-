@@ -855,3 +855,38 @@ body.cc-theme-light #btn-flak-cannon.active {
 
 /* Flak settings must remain absent outside the Tools tab, even if other UI styles change. */
 #btn-flak-settings[hidden], #flak-settings-panel[hidden] { display: none !important; }
+
+
+/* Research Station menu */
+.research-menu-overlay[hidden] { display: none !important; }
+.research-menu-overlay {
+    position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center;
+    padding: 18px; background: rgba(4, 9, 16, .78); backdrop-filter: blur(5px);
+}
+.research-menu {
+    width: min(560px, 100%); color: #e8f4ff; background: linear-gradient(145deg, #1b2a3a, #101a27);
+    border: 1px solid #4b7894; border-radius: 14px; padding: 22px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.55);
+}
+.research-menu-header, .research-menu-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.research-eyebrow { margin:0 0 5px; color:#70dafa; font-size:10px; letter-spacing:2px; font-weight:800; }
+.research-menu h2 { margin:0; font-size:24px; }
+.research-close { border:0; background:transparent; color:#d9efff; font-size:30px; cursor:pointer; }
+.research-intro { color:#a9bfd0; margin:18px 0 12px; }
+.research-categories { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.research-categories button, .research-done {
+    border:1px solid #45657c; border-radius:8px; padding:11px 8px; color:#d9efff;
+    background:#22384b; font-weight:700; cursor:pointer;
+}
+.research-categories button.selected { color:#061521; background:#70dafa; border-color:#a8edff; }
+.research-projects { min-height:125px; margin:18px 0; padding:14px; border:1px solid #304b60; border-radius:9px; background:rgba(4,12,20,.35); }
+.research-projects h3 { margin:0 0 10px; font-size:15px; }
+.research-empty { color:#91a9bb; font-size:13px; line-height:1.5; }
+.research-menu-footer { border-top:1px solid #304b60; padding-top:14px; color:#91a9bb; font-size:12px; }
+.research-done { padding:9px 18px; }
+@media (max-width:480px) {
+    .research-menu { padding:16px; }
+    .research-menu h2 { font-size:20px; }
+    .research-categories { grid-template-columns:1fr; }
+    .research-menu-footer { align-items:flex-start; flex-direction:column; }
+}
