@@ -1352,6 +1352,12 @@ var Game = window.Game = {
         Building.resources.wood += treeMines.length *
             Building.utilityDefinitions.treeMine.woodRate * seconds;
 
+        const researchStations = Building.installations.filter(item =>
+            !item.removed && item.type === "researchStation"
+        );
+        Building.resources.research = (Building.resources.research || 0) +
+            researchStations.length * Building.utilityDefinitions.researchStation.researchRate * seconds;
+
         this.resourceTimer += delta;
         if (this.resourceTimer >= 250) {
             this.resourceTimer %= 250;
