@@ -214,4 +214,7 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --title "Crimson Castle v${VERSION}" --notes "Crimson Castle Android and desktop release."
           fi
-          gh release upload "$TAG" "${{ steps.apk.outputs.apk }}" --clobber
+          APK_NAME="${{ steps.apk.outputs.apk }}"
+          # Remove a previous asset with the same versioned filename before uploading.
+          gh release delete-asset "$TAG" "$APK_NAME" --yes 2>/dev/null || true
+          gh release upload "$TAG" "$APK_NAME"
