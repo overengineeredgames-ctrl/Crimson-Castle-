@@ -825,6 +825,7 @@ var Building = window.Building = {
         this.selectMode = !!enabled;
         this.selectedInstallation = null;
         if (this.selectMode) {
+            this.upgradeMode = false;
             this.utilityTool = null;
             this.deleteMode = false;
             this.repairMode = false;
@@ -846,6 +847,7 @@ var Building = window.Building = {
         this.selectMode = false;
         this.selectedInstallation = null;
         this.utilityTool = type;
+        this.upgradeMode = false;
         this.deleteMode = false;
         this.repairMode = false;
         this.repairTarget = null;
@@ -2107,6 +2109,7 @@ var Building = window.Building = {
         this.repairMode = !!enabled;
         this.repairTarget = null;
         if (this.repairMode) {
+            this.upgradeMode = false;
             this.doorMaterial = null;
             this.deleteMode = false;
             this.utilityTool = null;
