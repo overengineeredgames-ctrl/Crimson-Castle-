@@ -244,7 +244,7 @@ var Weapons = window.Weapons = {
         button.onclick = () => {
             if (!this.getSettingsFlakCannon()) return;
             const panel = document.getElementById("flak-settings-panel");
-            if (panel) panel.hidden = !panel.hidden;
+            if (panel) panel.dataset.open = panel.dataset.open === "true" ? "false" : "true";
             this.refreshFlakSettingsUI();
         };
 
@@ -253,6 +253,7 @@ var Weapons = window.Weapons = {
             panel = document.createElement("section");
             panel.id = "flak-settings-panel";
             panel.hidden = true;
+            panel.dataset.open = "false";
             panel.setAttribute("aria-label", "Flak Cannon settings");
             panel.style.cssText = "position:fixed;z-index:13000;right:12px;bottom:16px;width:min(340px,calc(100vw - 24px));max-height:75vh;overflow:auto;padding:14px;border:1px solid #e58b3d;border-radius:10px;background:rgba(12,22,34,.98);color:#f4f7fb;box-shadow:0 8px 28px rgba(0,0,0,.55);font:13px Arial,sans-serif;box-sizing:border-box";
             if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) panel.style.bottom = "58px";
@@ -263,8 +264,12 @@ var Weapons = window.Weapons = {
                 '<div style="font-weight:700;margin:16px 0 4px">Bullet types to target</div>' +
                 '<div id="flak-target-types"></div>' +
                 '<div style="color:#aebdca;font-size:11px;margin-top:10px">Priority is used to choose between detected bullet types. Higher percentages are preferred.</div>';
-            document.body.appendChild(panel);
-            panel.querySelector("#flak-settings-close").onclick = () => { panel.hidden = true; };
+            const shelf = document.querySelector(".tool-shelf");
+            (shelf || document.body).appendChild(panel);
+            panel.querySelector("#flak-settings-close").onclick = () => {
+                panel.dataset.open = "false";
+                this.refreshFlakSettingsUI();
+            };
             panel.querySelector("#flak-mode-auto").onclick = () => {
                 const cannon = this.getSettingsFlakCannon();
                 if (!cannon) return;
@@ -322,17 +327,20 @@ var Weapons = window.Weapons = {
         const panel = document.getElementById("flak-settings-panel");
         if (!button || !panel) return;
         const cannon = this.getSettingsFlakCannon();
-        // Keep Flak Settings visible in the Weapons toolbar at all times.
-        button.hidden = !window.Game || window.Game.activeToolTab !== "tools";
+        // The settings control and panel are available only while the Tools tab is active.
+        const inToolsTab = !!window.Game && window.Game.activeToolTab === "tools";
+        button.hidden = !inToolsTab;
+        panel.hidden = !inToolsTab || panel.dataset.open !== "true";
         button.title = cannon
             ? "Configure the selected Flak Cannon"
             : "Select one player Flak Cannon to configure its settings";
         if (!cannon) {
+            panel.dataset.open = "false";
             panel.hidden = true;
             button.classList.remove("active");
             return;
         }
-        button.classList.toggle("active", !panel.hidden);
+        button.classList.toggle("active", panel.dataset.open === "true" && inToolsTab);
         const auto = cannon.autoDefense !== false;
         panel.querySelector("#flak-mode-auto").classList.toggle("active", auto);
         panel.querySelector("#flak-mode-manual").classList.toggle("active", !auto);
