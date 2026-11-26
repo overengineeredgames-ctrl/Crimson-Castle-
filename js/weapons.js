@@ -241,6 +241,11 @@ var Weapons = window.Weapons = {
             if (flakButton && flakButton.parentElement) flakButton.insertAdjacentElement("afterend", button);
             else (document.querySelector(".toolbar") || document.body).appendChild(button);
         }
+        // Keep the control hidden until the Tools tab is explicitly selected.
+        button.hidden = true;
+        button.style.display = "none";
+        button.classList.add("tool");
+        button.dataset.toolCategory = "tools";
         button.onclick = () => {
             if (!this.getSettingsFlakCannon()) return;
             const panel = document.getElementById("flak-settings-panel");
@@ -264,8 +269,8 @@ var Weapons = window.Weapons = {
                 '<div style="font-weight:700;margin:16px 0 4px">Bullet types to target</div>' +
                 '<div id="flak-target-types"></div>' +
                 '<div style="color:#aebdca;font-size:11px;margin-top:10px">Priority is used to choose between detected bullet types. Higher percentages are preferred.</div>';
-            const shelf = document.querySelector(".tool-shelf");
-            (shelf || document.body).appendChild(panel);
+            // The floating panel belongs to the document, not the flex toolbar.
+            document.body.appendChild(panel);
             panel.querySelector("#flak-settings-close").onclick = () => {
                 panel.dataset.open = "false";
                 this.refreshFlakSettingsUI();
@@ -329,14 +334,19 @@ var Weapons = window.Weapons = {
         const cannon = this.getSettingsFlakCannon();
         // The settings control and panel are available only while the Tools tab is active.
         const inToolsTab = !!window.Game && window.Game.activeToolTab === "tools";
-        button.hidden = !inToolsTab;
-        panel.hidden = !inToolsTab || panel.dataset.open !== "true";
+        const showButton = inToolsTab;
+        const showPanel = inToolsTab && panel.dataset.open === "true" && !!cannon;
+        button.hidden = !showButton;
+        button.style.display = showButton ? "" : "none";
+        panel.hidden = !showPanel;
+        panel.style.display = showPanel ? "block" : "none";
         button.title = cannon
             ? "Configure the selected Flak Cannon"
             : "Select one player Flak Cannon to configure its settings";
         if (!cannon) {
             panel.dataset.open = "false";
             panel.hidden = true;
+            panel.style.display = "none";
             button.classList.remove("active");
             return;
         }
