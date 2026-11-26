@@ -25,7 +25,8 @@ var Weapons = window.Weapons = {
     sniperFireTimer: null,
     sniperFireButton: null,
     researchProjects: {
-        flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false }
+        flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
+        drillBot: { metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false }
     },
     researchRefreshTimer: 0,
     weaponStats: {
@@ -42,7 +43,8 @@ var Weapons = window.Weapons = {
     init() {
         this.cannons = [];
         this.researchProjects = {
-            flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false }
+            flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
+            drillBot: { metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false }
         };
         this.researchRefreshTimer = 0;
         this.projectiles = [];
@@ -396,18 +398,29 @@ var Weapons = window.Weapons = {
     },
 
     updateResearch(delta) {
-        const project = this.researchProjects.flakCannon;
-        if (!project || !project.researching) return;
-        project.progress = Math.min(project.duration, project.progress + delta / 1000);
+        const completed = [];
+        let hasActiveResearch = false;
+        for (const [projectId, project] of Object.entries(this.researchProjects)) {
+            if (!project || !project.researching) continue;
+            hasActiveResearch = true;
+            project.progress = Math.min(project.duration, project.progress + delta / 1000);
+            if (project.progress >= project.duration) {
+                project.progress = project.duration;
+                project.researching = false;
+                project.unlocked = true;
+                completed.push(projectId);
+            }
+        }
+        if (!hasActiveResearch && completed.length === 0) return;
         this.researchRefreshTimer += delta;
-        if (project.progress >= project.duration) {
-            project.progress = project.duration;
-            project.researching = false;
-            project.unlocked = true;
-            this.updateToolButtons();
-            if (window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
-            Building.showPlacementMessage("Research complete: Flak Cannon unlocked!");
-        } else if (this.researchRefreshTimer >= 200) {
+        if (completed.includes("flakCannon")) this.updateToolButtons();
+        if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
+        for (const projectId of completed) {
+            const name = projectId === "flakCannon" ? "Flak Cannon" :
+                projectId === "drillBot" ? "Drill Bot" : projectId;
+            Building.showPlacementMessage("Research complete: " + name + " unlocked!");
+        }
+        if (this.researchRefreshTimer >= 200) {
             this.researchRefreshTimer = 0;
             if (window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         }
