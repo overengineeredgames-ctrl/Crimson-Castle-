@@ -705,6 +705,7 @@ var Weapons = window.Weapons = {
 
     addCannon(node, team = "player", isAI = false, weaponType = "cannon") {
         if (!node || node.removed) return null;
+        if (team === "player" && weaponType === "flakCannon" && !this.isResearched("flakCannon")) return null;
         if (this.cannons.some(c => c.node === node)) return null;
         const stats = this.weaponStats[weaponType] || this.weaponStats.cannon;
         const cannon = {
@@ -762,6 +763,12 @@ var Weapons = window.Weapons = {
         }
 
         if (this.selectedTool === "cannon") {
+            if (this.selectedWeaponType === "flakCannon" && !this.isResearched("flakCannon")) {
+                if (window.Game && Game.openResearchMenu) Game.openResearchMenu();
+                Building.showPlacementMessage("Research the Flak Cannon first: 40 Metal and 10 seconds.");
+                this.clearSelectedTool();
+                return true;
+            }
             // Prefer a nearby player joint that does not already hold a cannon.
             // Ignore foundations, cores, enemy joints, and occupied mounts.
             let node = Building.nodes
