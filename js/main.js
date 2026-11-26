@@ -853,9 +853,9 @@ var Game = window.Game = {
         if (!controls) return;
 
         const groupButton = controls.querySelector('[data-mobile-action="group-select"]');
-        const isNativeAndroid = window.CC_ANDROID_APK === true;
+        // Group selection is useful on both the Android app and the mobile web version.
         let groupSelectPointerId = null;
-        if (groupButton) groupButton.hidden = !isNativeAndroid;
+        if (groupButton) groupButton.hidden = false;
 
         document.addEventListener("pointerdown", event => {
             const target = event.target instanceof Element ? event.target.closest('[data-mobile-action="group-select"]') : null;
