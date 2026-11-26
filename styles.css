@@ -917,3 +917,15 @@ body.cc-theme-light #btn-flak-cannon.active {
     .research-categories { grid-template-columns:1fr; }
     .research-menu-footer { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* Drill Bot thumb controls: only shown while a bot is active. */
+#drill-bot-touch-pad[hidden] { display:none !important; }
+#drill-bot-touch-pad { display:grid; grid-template-columns:repeat(3,46px); grid-template-rows:repeat(3,42px); gap:3px; padding:5px; border:1px solid #78dff5; border-radius:12px; background:rgba(7,18,30,.88); box-shadow:0 3px 14px #0008; pointer-events:auto; touch-action:none; }
+#drill-bot-touch-pad button { min-width:44px !important; min-height:40px !important; padding:3px !important; border:1px solid #75cde5 !important; border-radius:9px !important; background:#17435b !important; color:#f3fcff !important; font-size:19px !important; font-weight:900; touch-action:none !important; user-select:none; -webkit-user-select:none; }
+#drill-bot-touch-pad button[data-drill-direction="up"] { grid-column:2; grid-row:1; }
+#drill-bot-touch-pad button[data-drill-direction="left"] { grid-column:1; grid-row:2; }
+#drill-bot-touch-pad button[data-drill-direction="down"] { grid-column:2; grid-row:2; }
+#drill-bot-touch-pad button[data-drill-direction="right"] { grid-column:3; grid-row:2; }
+#drill-bot-touch-pad button.active, #drill-bot-touch-pad button:active { background:#267b9c !important; border-color:#a5f1ff !important; box-shadow:0 0 12px #50dfff99; }
+@media (max-width:900px), (pointer:coarse) { #drill-bot-touch-pad { margin-right:4px; } }
