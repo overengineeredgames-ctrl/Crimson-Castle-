@@ -427,6 +427,21 @@ var Weapons = window.Weapons = {
         button.classList.add("tool");
         button.dataset.toolCategory = "weapons";
         button.type = "button";
+        if (weaponType === "flakCannon") {
+            let lockIcon = button.querySelector(".tool-lock-icon");
+            if (!lockIcon) {
+                lockIcon = document.createElement("span");
+                lockIcon.className = "tool-lock-icon";
+                lockIcon.textContent = "🔒";
+                lockIcon.setAttribute("aria-label", "Locked — research required");
+                lockIcon.setAttribute("aria-hidden", "false");
+                button.appendChild(lockIcon);
+            }
+            const locked = !this.isResearched("flakCannon");
+            lockIcon.hidden = !locked;
+            lockIcon.setAttribute("aria-hidden", String(!locked));
+            button.classList.toggle("research-locked", locked);
+        }
         button.title = weaponType === "machineGun"
             ? "7 damage per shot • 0.12 second reload • hold to fire"
             : weaponType === "megaCannon"
@@ -494,7 +509,19 @@ var Weapons = window.Weapons = {
         for (const [id, type] of buttons) {
             const button = document.getElementById(id);
             if (button && type === "flakCannon") {
-                button.disabled = !this.isResearched("flakCannon");
+                const locked = !this.isResearched("flakCannon");
+                let lockIcon = button.querySelector(".tool-lock-icon");
+                if (!lockIcon) {
+                    lockIcon = document.createElement("span");
+                    lockIcon.className = "tool-lock-icon";
+                    lockIcon.textContent = "🔒";
+                    lockIcon.setAttribute("aria-label", "Locked — research required");
+                    button.appendChild(lockIcon);
+                }
+                lockIcon.hidden = !locked;
+                lockIcon.setAttribute("aria-hidden", String(!locked));
+                button.classList.toggle("research-locked", locked);
+                button.disabled = locked;
                 if (button.disabled) {
                     button.title = "Research this weapon at a Research Station (40 Metal, 10 seconds)";
                 } else {
