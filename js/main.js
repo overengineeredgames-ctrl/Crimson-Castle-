@@ -153,7 +153,7 @@ var Game = window.Game = {
             });
 
             toolbar.querySelectorAll(".tool").forEach(tool => {
-                tool.hidden = tool.dataset.toolCategory !== category;
+                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon")));
             });
 
             // Apply weapon-specific visibility after the general tab filter.
