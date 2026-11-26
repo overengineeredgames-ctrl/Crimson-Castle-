@@ -146,7 +146,6 @@ var Game = window.Game = {
                 const flakPanel = document.getElementById("flak-settings-panel");
                 if (flakPanel) flakPanel.hidden = true;
             }
-            if (window.Weapons && window.Weapons.refreshFlakSettingsUI) window.Weapons.refreshFlakSettingsUI();
             tabs.forEach(tab => {
                 const selected = tab.dataset.toolTab === category;
                 tab.classList.toggle("active", selected);
@@ -157,6 +156,8 @@ var Game = window.Game = {
                 tool.hidden = tool.dataset.toolCategory !== category;
             });
 
+            // Apply weapon-specific visibility after the general tab filter.
+            if (window.Weapons && window.Weapons.refreshFlakSettingsUI) window.Weapons.refreshFlakSettingsUI();
             if (scrollArea) scrollArea.scrollLeft = 0;
         };
 
