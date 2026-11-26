@@ -2,12 +2,17 @@ name: Publish Windows Release
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: [Build Android APK]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   publish-windows:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Build and publish Crimson Castle
     runs-on: windows-latest
     steps:
