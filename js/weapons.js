@@ -24,6 +24,10 @@ var Weapons = window.Weapons = {
     sniperFireReadyToShow: false,
     sniperFireTimer: null,
     sniperFireButton: null,
+    researchProjects: {
+        flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false }
+    },
+    researchRefreshTimer: 0,
     weaponStats: {
         cannon: { name: "Cannon", damage: 35, cooldown: 1.2, speed: 12, radius: 5, metal: 100, energy: 50 },
         machineGun: { name: "Machine Gun", damage: 7, cooldown: 0.12, speed: 14, radius: 3, metal: 140, energy: 70 },
@@ -37,6 +41,10 @@ var Weapons = window.Weapons = {
 
     init() {
         this.cannons = [];
+        this.researchProjects = {
+            flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false }
+        };
+        this.researchRefreshTimer = 0;
         this.projectiles = [];
         this.flakExplosions = [];
         this.selectedCannon = null;
@@ -368,6 +376,43 @@ var Weapons = window.Weapons = {
         }
     },
 
+    startResearch(projectId) {
+        const project = this.researchProjects[projectId];
+        if (!project || project.unlocked || project.researching) return false;
+        if (Building.resources.metal < project.metalCost) {
+            Building.showPlacementMessage("Research requires " + project.metalCost + " Metal.");
+            return false;
+        }
+        Building.resources.metal -= project.metalCost;
+        project.progress = 0;
+        project.researching = true;
+        Building.updateHUD();
+        if (window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
+        return true;
+    },
+
+    isResearched(projectId) {
+        return !!(this.researchProjects[projectId] && this.researchProjects[projectId].unlocked);
+    },
+
+    updateResearch(delta) {
+        const project = this.researchProjects.flakCannon;
+        if (!project || !project.researching) return;
+        project.progress = Math.min(project.duration, project.progress + delta / 1000);
+        this.researchRefreshTimer += delta;
+        if (project.progress >= project.duration) {
+            project.progress = project.duration;
+            project.researching = false;
+            project.unlocked = true;
+            this.updateToolButtons();
+            if (window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
+            Building.showPlacementMessage("Research complete: Flak Cannon unlocked!");
+        } else if (this.researchRefreshTimer >= 200) {
+            this.researchRefreshTimer = 0;
+            if (window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
+        }
+    },
+
     createWeaponButton(id, label, weaponType, costLabel) {
         let button = document.getElementById("btn-" + id);
         if (!button) {
@@ -405,7 +450,16 @@ var Weapons = window.Weapons = {
             (document.querySelector(".toolbar") || document.body).appendChild(button);
         }
 
+        button.disabled = weaponType === "flakCannon" && !this.isResearched("flakCannon");
+        button.title = weaponType === "flakCannon" && !this.isResearched("flakCannon")
+            ? "Research this weapon at a Research Station (40 Metal, 10 seconds)"
+            : button.title;
         button.onclick = () => {
+            if (weaponType === "flakCannon" && !this.isResearched("flakCannon")) {
+                if (window.Game && Game.openResearchMenu) Game.openResearchMenu();
+                Building.showPlacementMessage("Research the Flak Cannon at a Research Station first.");
+                return;
+            }
             const alreadySelected = this.selectedTool === "cannon" &&
                 this.selectedWeaponType === weaponType;
             if (typeof Building !== "undefined") {
@@ -1016,6 +1070,7 @@ var Weapons = window.Weapons = {
     },
 
     update(delta = 16.667) {
+        this.updateResearch(delta);
         const seconds = delta / 1000;
 
         for (const cannon of this.cannons) {
