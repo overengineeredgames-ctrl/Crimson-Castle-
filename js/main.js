@@ -943,6 +943,30 @@ var Game = window.Game = {
         });
     },
 
+    refreshResearchMenu() {
+        const panel = document.getElementById("research-menu");
+        if (!panel) return;
+        const project = Weapons.researchProjects.flakCannon;
+        const button = panel.querySelector("[data-start-research='flakCannon']");
+        const status = panel.querySelector(".research-project-status");
+        if (!button || !status) return;
+        if (project.unlocked) {
+            button.textContent = "Researched";
+            button.disabled = true;
+            status.textContent = "Flak Cannon unlocked.";
+        } else if (project.researching) {
+            button.textContent = "Researching…";
+            button.disabled = true;
+            status.textContent = "Progress: " + project.progress.toFixed(1) + " / " + project.duration + " seconds";
+        } else {
+            button.textContent = "Research";
+            button.disabled = Building.resources.metal < project.metalCost;
+            status.textContent = button.disabled
+                ? "Need " + project.metalCost + " Metal to begin."
+                : "Ready to research.";
+        }
+    },
+
     openResearchMenu() {
         let panel = document.getElementById("research-menu");
         if (!panel) {
@@ -966,7 +990,11 @@ var Game = window.Game = {
                     </div>
                     <div class="research-projects">
                         <h3>Projects</h3>
-                        <p class="research-empty">Project costs and research times will appear here as projects are added.</p>
+                        <article class="research-project" data-project="flakCannon">
+                            <div><strong>Flak Cannon</strong><p>Unlocks the Flak Cannon weapon</p><small>40 Metal • 10 seconds</small></div>
+                            <button type="button" class="research-start" data-start-research="flakCannon">Research</button>
+                            <p class="research-project-status" aria-live="polite"></p>
+                        </article>
                     </div>
                     <footer class="research-menu-footer"><span>Research generation: 0.5 points/sec per station</span><button type="button" class="research-done">Close</button></footer>
                 </div>`;
@@ -982,8 +1010,13 @@ var Game = window.Game = {
                     );
                 });
             });
+            panel.querySelector("[data-start-research='flakCannon']").addEventListener("click", () => {
+                Weapons.startResearch("flakCannon");
+                this.refreshResearchMenu();
+            });
         }
         panel.hidden = false;
+        this.refreshResearchMenu();
         panel.querySelector(".research-close").focus();
     },
 
@@ -1015,8 +1048,8 @@ var Game = window.Game = {
                     !item.removed && item.type === "researchStation" &&
                     Building.installationHitTest(item, p.x, p.y)
                 );
-                Building.selectedInstallation = station || null;
-                Building.updateToolbar();
+                if (station) this.openResearchMenu();
+                else Building.showPlacementMessage("Tap a Research Station to open its research menu.");
                 return;
             }
 
