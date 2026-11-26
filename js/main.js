@@ -859,7 +859,7 @@ var Game = window.Game = {
 
         document.addEventListener("pointerdown", event => {
             const target = event.target instanceof Element ? event.target.closest('[data-mobile-action="group-select"]') : null;
-            if (!target || !isNativeAndroid || this.state !== "playing") return;
+            if (!target || this.state !== "playing") return;
             event.preventDefault();
             event.stopPropagation();
             groupSelectPointerId = event.pointerId;
