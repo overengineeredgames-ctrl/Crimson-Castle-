@@ -1678,10 +1678,9 @@ var Game = window.Game = {
         const viewBottom = viewTop + viewHeight;
         const lightMode = this.preferences.theme === "light";
 
-        // Keep all background drawing clipped to the visible camera window.
-        // Previously the sky gradient spanned the entire 2,500px mountain
-        // height (and extra off-screen space), which could trigger canvas
-        // tiling/repetition artifacts on some browsers and GPUs.
+        // Clip in world coordinates after the camera transform. All sky and
+        // terrain fills are deliberately oversized so no polygon edge can
+        // appear as a horizontal seam when viewing very tall mountains.
         ctx.save();
         ctx.beginPath();
         ctx.rect(viewLeft, viewTop, viewWidth, viewHeight);
@@ -1694,50 +1693,57 @@ var Game = window.Game = {
         ctx.fillRect(viewLeft, viewTop, viewWidth, viewHeight);
 
         const points = Physics.terrainPoints || [];
-        if (points.length) {
-            // Draw the terrain silhouette only down to the visible viewport;
-            // there is no need to create a giant off-screen fill polygon.
+        if (points.length > 1) {
+            // Fill the complete land mass once. The old renderer filled the
+            // same terrain polygon twice with two different colors, which
+            // could expose a malformed closing edge on steep mountain slopes.
+            const fillBottom = Math.max(
+                viewBottom + viewHeight,
+                (Physics.groundY || canvasHeight * 0.82) + viewHeight
+            );
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
-            for (const point of points) ctx.lineTo(point.x, point.y);
-            ctx.lineTo(worldWidth, viewBottom);
-            ctx.lineTo(0, viewBottom);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.lineTo(worldWidth, fillBottom);
+            ctx.lineTo(0, fillBottom);
             ctx.closePath();
-            ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
+            ctx.fillStyle = lightMode ? "#896b4e" : "#896a48";
             ctx.fill();
 
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y + 9);
-            for (const point of points) ctx.lineTo(point.x, point.y + 9);
-            ctx.lineTo(worldWidth, viewBottom);
-            ctx.lineTo(0, viewBottom);
-            ctx.closePath();
-            ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
-            ctx.fill();
-
+            // A narrow green contour marks the surface without creating a
+            // second filled polygon over the entire mountain silhouette.
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
-            for (const point of points) ctx.lineTo(point.x, point.y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
             ctx.strokeStyle = lightMode ? "#648b50" : "#405c35";
             ctx.lineWidth = 5;
+            ctx.lineJoin = "round";
             ctx.stroke();
         }
 
-        // Distant ridgelines stay within the visible window instead of
-        // generating another full-world set of off-screen geometry.
+        // Keep the distant ridge detail anchored to world coordinates.
         ctx.save();
-        ctx.globalAlpha = 0.16;
+        ctx.globalAlpha = 0.12;
         ctx.strokeStyle = lightMode ? "#557b75" : "#c3e0ee";
         ctx.lineWidth = 2;
+        const ridgeStep = 55;
         for (let layer = 0; layer < 2; layer++) {
             ctx.beginPath();
-            const step = 55;
-            for (let x = Math.floor(viewLeft / step) * step; x <= viewRight + step; x += step) {
-                const y = canvasHeight * (0.55 + layer * 0.055) / zoom +
-                    viewTop + Math.sin(x * 0.0017 + layer * 2) * 24 +
+            let first = true;
+            for (let x = Math.floor(viewLeft / ridgeStep) * ridgeStep; x <= viewRight + ridgeStep; x += ridgeStep) {
+                const y = viewTop + viewHeight * (0.55 + layer * 0.055) +
+                    Math.sin(x * 0.0017 + layer * 2) * 24 +
                     Math.sin(x * 0.004 + layer) * 10;
-                if (x === Math.floor(viewLeft / step) * step) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+                if (first) {
+                    ctx.moveTo(x, y);
+                    first = false;
+                } else {
+                    ctx.lineTo(x, y);
+                }
             }
             ctx.stroke();
         }
