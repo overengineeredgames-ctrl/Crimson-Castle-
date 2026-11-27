@@ -25,8 +25,9 @@ var Weapons = window.Weapons = {
     sniperFireTimer: null,
     sniperFireButton: null,
     researchProjects: {
-        flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
-        drillBot: { metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false }
+        flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
+        drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
+            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
     },
     researchRefreshTimer: 0,
     weaponStats: {
@@ -43,8 +44,9 @@ var Weapons = window.Weapons = {
     init() {
         this.cannons = [];
         this.researchProjects = {
-            flakCannon: { metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
-            drillBot: { metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false }
+            flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
+            drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
+            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
         };
         this.researchRefreshTimer = 0;
         this.projectiles = [];
@@ -437,8 +439,7 @@ var Weapons = window.Weapons = {
         }
         if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         for (const projectId of completed) {
-            const name = projectId === "flakCannon" ? "Flak Cannon" :
-                projectId === "drillBot" ? "Drill Bot" : projectId;
+            const name = this.researchProjects[projectId]?.name || projectId;
             Building.showPlacementMessage("Research complete: " + name + " unlocked!");
         }
         if (this.researchRefreshTimer >= 200) {
