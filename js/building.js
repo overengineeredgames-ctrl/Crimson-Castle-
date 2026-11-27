@@ -539,7 +539,7 @@ var Building = window.Building = {
             const B = cliffPoint(lowerSurface);
             const C = { x: A.x + outward.x * bayDepth, y: A.y + outward.y * bayDepth };
             const D = { x: B.x + outward.x * bayDepth, y: B.y + outward.y * bayDepth };
-            const E = { x: C.x + downSlope.x * 38, y: C.y + downSlope.y * 38 };
+            const E = { x: (A.x + C.x) / 2 - downSlope.x * 38, y: (A.y + C.y) / 2 - downSlope.y * 38 };
 
             const cliffTop = this.createNode(A.x, A.y, { isFoundation: true, isBaseAnchor: true });
             const cliffFoot = this.createNode(B.x, B.y, { isFoundation: true, isBaseAnchor: true });
