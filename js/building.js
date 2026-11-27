@@ -787,7 +787,7 @@ var Building = window.Building = {
         waterTank: { name: "Water Storage", metalCost: 90, capacity: 300 },
         geothermal: { name: "Geothermal Generator", metalCost: 190, waterUse: 6, powerUse: 1.25, output: 18 },
         researchStation: { name: "Research Station", metalCost: 180, researchRate: 0.5 },
-        melter: { name: "Melter", metalCost: 180, energyCost: 0 }
+        melter: { name: "Melter", metalCost: 180, energyCost: 0, metalPerCycle: 1, energyPerCycle: 10, titaniumPerCycle: 0.5, cycleSeconds: 0.7 }
     },
 
     createUtilityButtons() {
@@ -804,7 +804,7 @@ var Building = window.Building = {
             ["waterTank", "Water Storage", "90 metal • +300 water storage"],
             ["geothermal", "Geothermal Generator", "190 metal • uses 6 water/sec + 1.25 power/sec • +18 power/sec"],
             ["researchStation", "Research Station", "180 metal • generates research points"],
-            ["melter", "Melter", "180 metal • processes metal into titanium (production coming next)"]
+            ["melter", "Melter", "180 metal • 1 metal + 10 energy → 0.5 titanium every 0.7 sec"]
         ];
 
         for (const [type, label, detail] of definitions) {
@@ -1129,14 +1129,18 @@ var Building = window.Building = {
             }
             if (item.type === "solar") item.output = this.utilityDefinitions.solar.output;
             if (item.type === "drill" || item.type === "waterDrill") item.angle += seconds * 7;
-            if (item.type === "melter" && item.operating) {
-                item.smokeTimer = (item.smokeTimer || 0) + seconds;
-                while (item.smokeTimer >= 2) {
-                    item.smokeTimer -= 2;
-                    item.smokePuffs = item.smokePuffs || [];
-                    for (let puff = 0; puff < 2; puff++) {
-                        item.smokePuffs.push({ x: puff === 0 ? -5 : 5, y: -47, vx: puff === 0 ? -5 : 5, vy: -17, life: 1.8, maxLife: 1.8, radius: 4 + Math.random() * 2 });
+            if (item.type === "melter") {
+                if (item.operating) {
+                    item.smokeTimer = (item.smokeTimer || 0) + seconds;
+                    while (item.smokeTimer >= 2) {
+                        item.smokeTimer -= 2;
+                        item.smokePuffs = item.smokePuffs || [];
+                        for (let puff = 0; puff < 2; puff++) {
+                            item.smokePuffs.push({ x: puff === 0 ? -5 : 5, y: -47, vx: puff === 0 ? -5 : 5, vy: -17, life: 1.8, maxLife: 1.8, radius: 4 + Math.random() * 2 });
+                        }
                     }
+                } else {
+                    item.smokeTimer = 0;
                 }
                 item.smokePuffs = (item.smokePuffs || []).filter(puff => {
                     puff.life -= seconds;
@@ -1339,7 +1343,7 @@ var Building = window.Building = {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         }
         if (titaniumButton) {
-            titaniumButton.querySelector("small").textContent = Math.floor(this.resources.titanium || 0) + " units";
+            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " units";
             titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
             titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
