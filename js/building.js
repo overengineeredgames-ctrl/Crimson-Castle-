@@ -786,7 +786,8 @@ var Building = window.Building = {
         battery: { name: "Battery", metalCost: 90, energyCost: 0, capacity: 300 },
         waterTank: { name: "Water Storage", metalCost: 90, capacity: 300 },
         geothermal: { name: "Geothermal Generator", metalCost: 190, waterUse: 6, powerUse: 1.25, output: 18 },
-        researchStation: { name: "Research Station", metalCost: 180, researchRate: 0.5 }
+        researchStation: { name: "Research Station", metalCost: 180, researchRate: 0.5 },
+        melter: { name: "Melter", metalCost: 180, energyCost: 0 }
     },
 
     createUtilityButtons() {
@@ -802,7 +803,8 @@ var Building = window.Building = {
             ["battery", "Battery", "90 metal • +300 energy storage"],
             ["waterTank", "Water Storage", "90 metal • +300 water storage"],
             ["geothermal", "Geothermal Generator", "190 metal • uses 6 water/sec + 1.25 power/sec • +18 power/sec"],
-            ["researchStation", "Research Station", "180 metal • generates research points"]
+            ["researchStation", "Research Station", "180 metal • generates research points"],
+            ["melter", "Melter", "180 metal • processes metal into titanium (production coming next)"]
         ];
 
         for (const [type, label, detail] of definitions) {
@@ -846,6 +848,10 @@ var Building = window.Building = {
 
     setUtilityTool(type) {
         if (type && !this.utilityDefinitions[type]) return;
+        if (type === "melter" && !(window.Weapons && Weapons.isResearched("melter"))) {
+            this.showPlacementMessage("Research the Melter in Machinery first.");
+            return;
+        }
         this.selectMode = false;
         this.selectedInstallation = null;
         this.utilityTool = type;
@@ -1079,6 +1085,9 @@ var Building = window.Building = {
             removed: false,
             angle: 0,
             phase: Math.random()*Math.PI*2,
+            operating: type === "melter",
+            smokeTimer: 0,
+            smokePuffs: [],
             windSpeed: 0.5,
             output: 0
         });
@@ -1120,6 +1129,23 @@ var Building = window.Building = {
             }
             if (item.type === "solar") item.output = this.utilityDefinitions.solar.output;
             if (item.type === "drill" || item.type === "waterDrill") item.angle += seconds * 7;
+            if (item.type === "melter" && item.operating) {
+                item.smokeTimer = (item.smokeTimer || 0) + seconds;
+                while (item.smokeTimer >= 2) {
+                    item.smokeTimer -= 2;
+                    item.smokePuffs = item.smokePuffs || [];
+                    for (let puff = 0; puff < 2; puff++) {
+                        item.smokePuffs.push({ x: puff === 0 ? -5 : 5, y: -47, vx: puff === 0 ? -5 : 5, vy: -17, life: 1.8, maxLife: 1.8, radius: 4 + Math.random() * 2 });
+                    }
+                }
+                item.smokePuffs = (item.smokePuffs || []).filter(puff => {
+                    puff.life -= seconds;
+                    puff.x += puff.vx * seconds;
+                    puff.y += puff.vy * seconds;
+                    puff.radius += seconds * 2.5;
+                    return puff.life > 0;
+                });
+            }
         }
     },
 
@@ -1953,6 +1979,7 @@ var Building = window.Building = {
         if (item.type === "solar") return inRect(-25, -30, 25, 16);
         if (item.type === "geothermal") return inRect(-24, -23, 24, 25);
         if (item.type === "researchStation") return inRect(-25, -34, 25, 39);
+        if (item.type === "melter") return inRect(-30, -39, 30, 29);
         if (item.type === "windmill") {
             // Match the mast and hub, then test the three rotating blades
             // against the same local rectangles used by the renderer.
@@ -2752,6 +2779,35 @@ var Building = window.Building = {
                 ctx.fillStyle = "#d8e5ee"; ctx.fillRect(-3,-29,6,8);
                 ctx.fillStyle = "#65dcff"; ctx.beginPath(); ctx.arc(0,-31,3,0,Math.PI*2); ctx.fill();
                 ctx.fillStyle = "#d9f7ff"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.fillText("RESEARCH",0,31);
+            } else if (item.type === "melter") {
+                ctx.translate(x,y);
+                // Two soft chimney puffs rise and fade while the furnace is running.
+                for (const puff of (item.smokePuffs || [])) {
+                    ctx.save();
+                    ctx.globalAlpha *= Math.max(0, puff.life / puff.maxLife) * 0.55;
+                    ctx.fillStyle = "#aeb8c0";
+                    ctx.beginPath();
+                    ctx.arc(puff.x, puff.y, puff.radius, 0, Math.PI * 2);
+                    ctx.arc(puff.x - puff.radius * 0.65, puff.y + 1, puff.radius * 0.68, 0, Math.PI * 2);
+                    ctx.arc(puff.x + puff.radius * 0.65, puff.y + 1, puff.radius * 0.72, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                // Stone-and-iron furnace body, sized as a medium utility building.
+                ctx.fillStyle = "#33343a"; ctx.fillRect(-30,-21,60,50);
+                ctx.fillStyle = "#77736b"; ctx.fillRect(-27,-18,54,43);
+                ctx.fillStyle = "#514d49"; ctx.fillRect(-23,-14,46,35);
+                ctx.fillStyle = "#272c33"; ctx.fillRect(-16,-12,32,29);
+                ctx.fillStyle = "#ef7b32"; ctx.fillRect(-12,-8,24,21);
+                ctx.fillStyle = "#ffd078"; ctx.fillRect(-7,-4,14,12);
+                ctx.fillStyle = "#20252b"; ctx.fillRect(-20,-25,40,7);
+                ctx.fillStyle = "#777f86"; ctx.fillRect(-7,-48,14,25);
+                ctx.fillStyle = "#343b43"; ctx.fillRect(-11,-51,22,5);
+                ctx.fillStyle = "#4bd5e8";
+                ctx.fillRect(-27,-7,5,19); ctx.fillRect(22,-7,5,19);
+                ctx.fillRect(-24,-17,7,4); ctx.fillRect(17,-17,7,4);
+                ctx.fillStyle = "#a9c4cf"; ctx.fillRect(-30,25,60,5);
+                ctx.fillStyle = "#d8e5ee"; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.fillText("MELTER",0,40);
             } else if (item.type === "geothermal") {
                 ctx.translate(x,y);
                 ctx.fillStyle = "#343a43"; ctx.fillRect(-23,-20,46,42);
