@@ -985,7 +985,11 @@ var Game = window.Game = {
             // Construct the existing battlefield only after explicit selection.
             this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
             const visibleWorldWidth = this.canvas.width / this.cameraZoom;
-            this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
+            // Start at the left edge on Mountain so the relocated player fort
+            // and its mountain are actually in view; other maps stay centered.
+            this.cameraOffsetX = this.selectedMap === "mountain"
+                ? 0
+                : Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
             this.cameraOffsetY = this.isMobileViewport ? -this.canvas.height * 0.75 : 0;
             this.clampCamera();
 
