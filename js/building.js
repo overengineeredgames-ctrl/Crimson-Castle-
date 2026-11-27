@@ -506,9 +506,9 @@ var Building = window.Building = {
 
     createStartingFort() {
         if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
-            // Rebuilt Mountain fort: construct both bays in a local rotated
-            // frame. The mountain edge is the left wall; the lower edge of
-            // the first bay is a continuous, two-anchor foundation.
+            // Mountain fort: one rectangular bay in a local rotated frame.
+            // The mountain edge is the left wall; the lower edge is a
+            // continuous, two-anchor foundation.
             const mountainWidth = Physics.worldWidth * 0.065;
             const leftMountainPeak = Physics.worldWidth * 0.08;
             const mountX = leftMountainPeak + mountainWidth * 0.55;
@@ -547,15 +547,13 @@ var Building = window.Building = {
                 y: surface.y + outward.y * (clearance + across) + upSlope.y * up
             });
 
-            // Four corners of bay one and four corners of bay two.
+            // Four corners of the single rectangular bay.
             const A = pointAt(upperSurface, 0, 0);          // mountain / top
             const B = pointAt(lowerSurface, 0, 0);          // mountain / bottom
-            const C = pointAt(upperSurface, bayWidth, 0);   // bay one / top
-            const D = pointAt(lowerSurface, bayWidth, 0);   // bay one / bottom
-            const E = pointAt(upperSurface, bayWidth * 2, 0);
-            const F = pointAt(lowerSurface, bayWidth * 2, 0);
+            const C = pointAt(upperSurface, bayWidth, 0);   // outer / top
+            const D = pointAt(lowerSurface, bayWidth, 0);   // outer / bottom
 
-            // The two lower corners form the actual base of the first box.
+            // Both lower corners anchor the continuous bottom foundation.
             // The upper mountain corner is deliberately NOT a foundation.
             const mountainTop = this.createNode(A.x, A.y);
             const mountainBottom = this.createNode(B.x, B.y, {
@@ -567,19 +565,12 @@ var Building = window.Building = {
                 isFoundation: true,
                 isBaseAnchor: true
             });
-            const secondOuterTop = this.createNode(E.x, E.y);
-            const secondOuterBottom = this.createNode(F.x, F.y);
 
-            // Bay one: mountain-side beam, top, outer wall, and grounded base.
+            // One complete box: mountain-side wall, top, outer wall, base.
             this.createStrut(mountainTop, mountainBottom);
             this.createStrut(mountainTop, firstOuterTop);
             this.createStrut(firstOuterTop, firstOuterBottom);
             this.createStrut(firstOuterBottom, mountainBottom);
-
-            // Bay two shares bay one's outer wall and keeps its own rectangle.
-            this.createStrut(firstOuterTop, secondOuterTop);
-            this.createStrut(secondOuterTop, secondOuterBottom);
-            this.createStrut(secondOuterBottom, firstOuterBottom);
 
             // A centered support rail carries the core inside the first box.
             const railTopPoint = {
@@ -604,10 +595,6 @@ var Building = window.Building = {
             );
             this.createStrut(railTop, core);
             this.createStrut(railBottom, core);
-
-            // Keep the second bay braced without changing its outer rectangle.
-            this.createStrut(firstOuterTop, secondOuterBottom);
-            this.createStrut(firstOuterBottom, secondOuterTop);
 
             this.checkSupport();
             return;
