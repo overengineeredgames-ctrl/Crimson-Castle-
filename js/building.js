@@ -572,29 +572,16 @@ var Building = window.Building = {
             this.createStrut(firstOuterTop, firstOuterBottom);
             this.createStrut(firstOuterBottom, mountainBottom);
 
-            // A centered support rail carries the core inside the first box.
-            const railTopPoint = {
-                x: (A.x + C.x) / 2,
-                y: (A.y + C.y) / 2
-            };
-            const railBottomPoint = {
-                x: (B.x + D.x) / 2,
-                y: (B.y + D.y) / 2
-            };
-            const railTop = this.createNode(railTopPoint.x, railTopPoint.y);
-            const railBottom = this.createNode(railBottomPoint.x, railBottomPoint.y);
-            this.createStrut(mountainTop, railTop);
-            this.createStrut(railTop, firstOuterTop);
-            this.createStrut(mountainBottom, railBottom);
-            this.createStrut(railBottom, firstOuterBottom);
-            this.createStrut(railTop, railBottom);
-
+            // Put the core at the center of the box and connect it directly
+            // to all four corners. No loose intermediate rail joints.
             const core = this.createCore(
-                (railTopPoint.x + railBottomPoint.x) / 2,
-                (railTopPoint.y + railBottomPoint.y) / 2
+                (A.x + C.x + B.x + D.x) / 4,
+                (A.y + C.y + B.y + D.y) / 4
             );
-            this.createStrut(railTop, core);
-            this.createStrut(railBottom, core);
+            this.createStrut(mountainTop, core);
+            this.createStrut(mountainBottom, core);
+            this.createStrut(firstOuterTop, core);
+            this.createStrut(firstOuterBottom, core);
 
             this.checkSupport();
             return;
