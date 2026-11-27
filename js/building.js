@@ -530,7 +530,7 @@ var Building = window.Building = {
             let outward = { x: downSlope.y, y: -downSlope.x };
             if (outward.x < 0) outward = { x: -outward.x, y: -outward.y };
 
-            const clearance = this.nodeRadius + 12;
+            const clearance = this.nodeRadius + 4;
             const cliffPoint = surface => ({
                 x: surface.x + outward.x * clearance,
                 y: surface.y + outward.y * clearance
