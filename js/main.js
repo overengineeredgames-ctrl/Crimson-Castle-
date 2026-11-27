@@ -957,9 +957,9 @@ var Game = window.Game = {
     loadSelectedMap(mapId) {
         if (mapId !== "base" && mapId !== "mountain") return;
 
-        // If the player returns to the menu after a battle, reuse the already
-        // loaded Base Map instead of initializing a second physics world.
-        if (this.mapInitialized) {
+        // Reuse the current world only when the player selects the map
+        // that is already loaded. A different selection must rebuild the world.
+        if (this.mapInitialized && this.selectedMap === mapId) {
             AI.setDifficulty(this.difficulty);
             if (AI.fortCreated && AI.fortDifficulty !== this.difficulty) {
                 AI.resetEnemyFort();
