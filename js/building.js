@@ -1746,7 +1746,6 @@ var Building = window.Building = {
             this.showPlacementMessage("Start at a joint and drag along an existing beam to place a door.");
             return false;
         }
-        const materialName = this.material;
         const material = this.settings(materialName);
 
         if (!nodeA || !nodeB || nodeA === nodeB) {
@@ -1759,7 +1758,9 @@ var Building = window.Building = {
         );
 
         if (length > material.maxLength) return false;
-        const resource = this.buildingResource();
+        const resource = materialName === "wood"
+            ? "wood"
+            : materialName === "titanium" ? "titanium" : "metal";
         const buildCost = materialName === "titanium"
             ? length / this.gridSize
             : material.cost;
@@ -1842,7 +1843,6 @@ var Building = window.Building = {
             sourceStrut.team !== "player"
         ) return false;
 
-        const materialName = this.material;
         const material = this.settings(materialName);
         const a = sourceStrut.a.body.position;
         const b = sourceStrut.b.body.position;
