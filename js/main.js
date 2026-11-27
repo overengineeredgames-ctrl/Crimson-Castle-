@@ -1668,8 +1668,13 @@ var Game = window.Game = {
         const ctx = this.ctx;
         const w = Physics.worldWidth || this.canvas.width;
         const h = this.canvas.height;
-        const top = -this.canvas.height;
-        const bottom = (Physics.groundY || h * 0.82) + 300;
+        const zoom = Math.max(0.01, this.cameraZoom || 1);
+        const cameraTop = (this.cameraOffsetY || 0) - h / zoom - 500;
+        const cameraBottom = (this.cameraOffsetY || 0) + h / zoom + 500;
+        const terrain = Physics.terrainPoints || [];
+        const terrainTop = terrain.length ? Math.min(...terrain.map(point => point.y)) - h : -h;
+        const top = Math.min(-h * 8, cameraTop, terrainTop);
+        const bottom = Math.max((Physics.groundY || h * 0.82) + 300, cameraBottom);
         const lightMode = this.preferences.theme === "light";
         const sky = ctx.createLinearGradient(0, top, 0, bottom);
         sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
