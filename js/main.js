@@ -183,7 +183,7 @@ var Game = window.Game = {
             });
 
             toolbar.querySelectorAll(".tool").forEach(tool => {
-                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot"))) || (tool.id === "btn-titanium" && !(window.Weapons && Weapons.isResearched("titanium"))) || (tool.id === "btn-melter" && !(window.Weapons && Weapons.isResearched("melter")));
+                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot"))) || (tool.id === "btn-melter" && !(window.Weapons && Weapons.isResearched("melter")));
             });
 
             // Apply weapon-specific visibility after the general tab filter.
@@ -994,15 +994,7 @@ var Game = window.Game = {
         } else if (category === "buildings") {
             projects.innerHTML = `
                 <h3>Building Research</h3>
-                <article class="research-project" data-project="titanium">
-                    <div><strong>Titanium</strong><p>Unlocks the ability to produce titanium building material. A Melter will still be required to process metal into usable titanium beam length.</p><small>120 Metal • 20 seconds</small></div>
-                    <button type="button" class="research-start" data-start-research="titanium">Research</button>
-                    <p class="research-project-status" aria-live="polite"></p>
-                </article>`;
-            projects.querySelector("[data-start-research='titanium']").addEventListener("click", () => {
-                Weapons.startResearch("titanium");
-                this.refreshResearchMenu();
-            });
+                <p class="research-empty">No building research projects are available yet.</p>`;
             this.refreshResearchMenu();
         } else if (category === "machinery") {
             projects.innerHTML = `
@@ -1118,23 +1110,23 @@ var Game = window.Game = {
                         <div><p class="research-eyebrow">MACHINERY CONTROL</p><h2 id="melter-menu-title">Melter</h2></div>
                         <button type="button" class="research-close" aria-label="Close Melter menu">×</button>
                     </header>
-                    <p class="research-intro">Choose how much Metal this Melter should process.</p>
+                    <p class="research-intro">Queue Metal for this Melter to process over time. Each completed cycle adds Titanium to your stored resource total.</p>
                     <div class="melter-controls">
                         <label class="melter-amount">
                             <span>Metal to use</span>
                             <input id="melter-metal-input" type="number" min="1" step="1" value="1" inputmode="numeric">
                         </label>
                         <div class="melter-output" aria-live="polite">
-                            <span>Titanium after smelting</span>
+                            <span>Titanium added to storage</span>
                             <strong id="melter-titanium-preview">0.5</strong>
-                            <small>units of Titanium</small>
+                            <small>Stored Titanium • 1 per steel beam upgrade</small>
                         </div>
                     </div>
                     <div class="melter-energy-line"><span>Energy needed:</span><strong id="melter-energy-needed">10</strong></div>
                     <div class="melter-energy-line"><span>Time needed:</span><strong id="melter-time-needed">0.7 sec</strong></div>
                     <p class="melter-status" id="melter-menu-status">Ready to smelt.</p>
                     <footer class="research-menu-footer">
-                        <span>0.7 sec per Metal • 10 Energy per Metal</span>
+                        <span>0.5 Titanium per Metal • 10 Energy per Metal • 0.7 sec per cycle</span>
                         <button type="button" class="research-done melter-start">Start smelting</button>
                     </footer>
                 </div>`;
