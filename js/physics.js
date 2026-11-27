@@ -36,9 +36,14 @@ var Physics = window.Physics = {
             // Mountain Map: much taller, wider 2500px peaks placed where the starting camera
             // can see their inner faces. The outer edges still climb toward the walls.
             // Keep the main fort-building zones comparatively clear.
+            // Center each mountain peak beneath the matching starting fortress.
+            // Both peaks use the same height and width so the forts begin at
+            // nearly identical elevations without changing their spawn positions.
+            const playerFortCenter = (this.worldWidth - window.innerWidth) / 2 + 180;
+            const enemyFortCenter = this.worldWidth * 0.68 + 80;
             const sideHills = mapId === "mountain"
-                ? 2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.08) / (this.worldWidth * 0.065), 2)) +
-                  2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.92) / (this.worldWidth * 0.065), 2))
+                ? 2150 * Math.exp(-Math.pow((x - playerFortCenter) / (this.worldWidth * 0.065), 2)) +
+                  2150 * Math.exp(-Math.pow((x - enemyFortCenter) / (this.worldWidth * 0.065), 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
