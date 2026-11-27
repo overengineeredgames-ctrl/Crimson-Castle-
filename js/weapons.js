@@ -27,7 +27,6 @@ var Weapons = window.Weapons = {
     researchProjects: {
         flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
         drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
-            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false },
             melter: { name: "Melter", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
     },
     researchRefreshTimer: 0,
@@ -47,7 +46,6 @@ var Weapons = window.Weapons = {
         this.researchProjects = {
             flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
             drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
-            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false },
             melter: { name: "Melter", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
         };
         this.researchRefreshTimer = 0;
@@ -438,10 +436,6 @@ var Weapons = window.Weapons = {
         if (completed.includes("drillBot")) {
             this.ensureDrillBotButton();
             if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "bots");
-        }
-        if (completed.includes("titanium") && window.Building && Building.updateToolbar) {
-            Building.updateToolbar();
-            if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "build");
         }
         if (completed.includes("melter") && window.Game && Game.selectToolTab) {
             Game.selectToolTab("utilities");
