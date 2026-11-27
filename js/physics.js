@@ -39,7 +39,7 @@ var Physics = window.Physics = {
             // Center each mountain peak beneath the matching starting fortress.
             // Both peaks use the same height and width so the forts begin at
             // nearly identical elevations without changing their spawn positions.
-            const mountainWidth = this.worldWidth * 0.065;
+            const mountainWidth = this.worldWidth * 0.045;
             const halfHeightOffset = mountainWidth * 0.833;
             const playerFortCenter = (this.worldWidth - window.innerWidth) / 2 + 180;
             const enemyFortCenter = this.worldWidth * 0.68 + 80;
