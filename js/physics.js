@@ -41,9 +41,14 @@ var Physics = window.Physics = {
             // nearly identical elevations without changing their spawn positions.
             const playerFortCenter = (this.worldWidth - window.innerWidth) / 2 + 180;
             const enemyFortCenter = this.worldWidth * 0.68 + 80;
+            // Give each starting fortress a broad, level summit to stand on.
+            // The plateau keeps both foundation nodes on the upper mountain
+            // instead of letting one edge sit lower on the steep slope.
+            const summitDistance = center => Math.max(0, Math.abs(x - center) - 180);
+            const mountainWidth = this.worldWidth * 0.065;
             const sideHills = mapId === "mountain"
-                ? 2150 * Math.exp(-Math.pow((x - playerFortCenter) / (this.worldWidth * 0.065), 2)) +
-                  2150 * Math.exp(-Math.pow((x - enemyFortCenter) / (this.worldWidth * 0.065), 2))
+                ? 2150 * Math.exp(-Math.pow(summitDistance(playerFortCenter) / mountainWidth, 2)) +
+                  2150 * Math.exp(-Math.pow(summitDistance(enemyFortCenter) / mountainWidth, 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
