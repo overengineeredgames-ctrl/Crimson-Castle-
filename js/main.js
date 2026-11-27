@@ -183,7 +183,7 @@ var Game = window.Game = {
             });
 
             toolbar.querySelectorAll(".tool").forEach(tool => {
-                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot")));
+                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot"))) || (tool.id === "btn-titanium" && !(window.Weapons && Weapons.isResearched("titanium")));
             });
 
             // Apply weapon-specific visibility after the general tab filter.
