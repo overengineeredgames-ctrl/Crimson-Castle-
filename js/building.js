@@ -1056,7 +1056,7 @@ var Building = window.Building = {
 
         // All utilities occupy physical space. Keep a generous gap so they
         // cannot stack on top of one another inside a box or on the ground.
-        const footprint = type === "windmill" ? 42 : type === "solar" ? 36 : 34;
+        const footprint = type === "melter" ? 50 : type === "windmill" ? 42 : type === "solar" ? 36 : 34;
         const overlapping = this.installations.some(item =>
             !item.removed && Math.hypot(item.x-mountX,item.y-mountY) < footprint + 30
         );
