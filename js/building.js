@@ -1797,7 +1797,7 @@ var Building = window.Building = {
         const cost = material.cost;
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
-                "Not enough " + (resource === "wood" ? "wood" : resource === "titanium" ? "titanium" : "metal") + " to build this beam."
+                "Not enough " + (resource === "wood" ? "wood" : "metal") + " to build this beam."
             );
             return false;
         }
@@ -1873,7 +1873,7 @@ var Building = window.Building = {
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
-                "Not enough " + (resource === "wood" ? "wood" : resource === "titanium" ? "titanium" : "metal") +
+                "Not enough " + (resource === "wood" ? "wood" : "metal") +
                 " to build this box."
             );
             return false;
