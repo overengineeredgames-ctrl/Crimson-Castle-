@@ -183,7 +183,7 @@ var Game = window.Game = {
             });
 
             toolbar.querySelectorAll(".tool").forEach(tool => {
-                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot"))) || (tool.id === "btn-titanium" && !(window.Weapons && Weapons.isResearched("titanium")));
+                tool.hidden = tool.dataset.toolCategory !== category || (tool.id === "btn-flak-cannon" && !(window.Weapons && Weapons.isResearched("flakCannon"))) || (tool.id === "btn-drill-bot" && !(window.Weapons && Weapons.isResearched("drillBot"))) || (tool.id === "btn-titanium" && !(window.Weapons && Weapons.isResearched("titanium"))) || (tool.id === "btn-melter" && !(window.Weapons && Weapons.isResearched("melter")));
             });
 
             // Apply weapon-specific visibility after the general tab filter.
@@ -1005,7 +1005,18 @@ var Game = window.Game = {
             });
             this.refreshResearchMenu();
         } else if (category === "machinery") {
-            projects.innerHTML = "<h3>Machinery Research</h3><p class='research-empty'>No machinery research projects are available yet.</p>";
+            projects.innerHTML = `
+                <h3>Machinery Research</h3>
+                <article class="research-project" data-project="melter">
+                    <div><strong>Melter</strong><p>Unlocks a medium-sized industrial furnace that will process Metal into Titanium using Energy.</p><small>120 Metal • 20 seconds</small></div>
+                    <button type="button" class="research-start" data-start-research="melter">Research</button>
+                    <p class="research-project-status" aria-live="polite"></p>
+                </article>`;
+            projects.querySelector("[data-start-research='melter']").addEventListener("click", () => {
+                Weapons.startResearch("melter");
+                this.refreshResearchMenu();
+            });
+            this.refreshResearchMenu();
         } else if (category === "bots") {
             projects.innerHTML = `
                 <h3>Bot Research</h3>
@@ -1033,7 +1044,7 @@ var Game = window.Game = {
             if (project.unlocked) {
                 button.textContent = "Researched";
                 button.disabled = true;
-                status.textContent = (project.name || (projectId === "drillBot" ? "Drill Bot" : "Flak Cannon")) + " unlocked.";
+                status.textContent = (project.name || (projectId === "drillBot" ? "Drill Bot" : projectId === "melter" ? "Melter" : "Flak Cannon")) + " unlocked.";
             } else if (project.researching) {
                 button.textContent = projectId === "drillBot" ? "🔒 Researching…" : "Researching…";
                 button.disabled = true;
