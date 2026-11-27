@@ -1666,65 +1666,82 @@ var Game = window.Game = {
 
     drawBackground() {
         const ctx = this.ctx;
-        const w = Physics.worldWidth || this.canvas.width;
-        const h = this.canvas.height;
+        const worldWidth = Physics.worldWidth || this.canvas.width;
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
         const zoom = Math.max(0.01, this.cameraZoom || 1);
-        const cameraTop = (this.cameraOffsetY || 0) - h / zoom - 500;
-        const cameraBottom = (this.cameraOffsetY || 0) + h / zoom + 500;
-        const terrain = Physics.terrainPoints || [];
-        const terrainTop = terrain.length ? Math.min(...terrain.map(point => point.y)) - h : -h;
-        const top = Math.min(-h * 8, cameraTop, terrainTop);
-        const bottom = Math.max((Physics.groundY || h * 0.82) + 300, cameraBottom);
+        const viewLeft = this.cameraX || 0;
+        const viewTop = this.cameraOffsetY || 0;
+        const viewWidth = canvasWidth / zoom;
+        const viewHeight = canvasHeight / zoom;
+        const viewRight = viewLeft + viewWidth;
+        const viewBottom = viewTop + viewHeight;
         const lightMode = this.preferences.theme === "light";
-        const sky = ctx.createLinearGradient(0, top, 0, bottom);
+
+        // Keep all background drawing clipped to the visible camera window.
+        // Previously the sky gradient spanned the entire 2,500px mountain
+        // height (and extra off-screen space), which could trigger canvas
+        // tiling/repetition artifacts on some browsers and GPUs.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(viewLeft, viewTop, viewWidth, viewHeight);
+        ctx.clip();
+
+        const sky = ctx.createLinearGradient(0, viewTop, 0, viewBottom);
         sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
         sky.addColorStop(1, lightMode ? "#f1f7fb" : "#d8e9f4");
         ctx.fillStyle = sky;
-        ctx.fillRect(0, top, w, bottom - top);
+        ctx.fillRect(viewLeft, viewTop, viewWidth, viewHeight);
 
         const points = Physics.terrainPoints || [];
-        if (!points.length) return;
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (const point of points) ctx.lineTo(point.x, point.y);
-        ctx.lineTo(w, bottom);
-        ctx.lineTo(0, bottom);
-        ctx.closePath();
-        ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
-        ctx.fill();
+        if (points.length) {
+            // Draw the terrain silhouette only down to the visible viewport;
+            // there is no need to create a giant off-screen fill polygon.
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (const point of points) ctx.lineTo(point.x, point.y);
+            ctx.lineTo(worldWidth, viewBottom);
+            ctx.lineTo(0, viewBottom);
+            ctx.closePath();
+            ctx.fillStyle = lightMode ? "#7eaa65" : "#64834c";
+            ctx.fill();
 
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y + 9);
-        for (const point of points) ctx.lineTo(point.x, point.y + 9);
-        ctx.lineTo(w, bottom);
-        ctx.lineTo(0, bottom);
-        ctx.closePath();
-        ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
-        ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y + 9);
+            for (const point of points) ctx.lineTo(point.x, point.y + 9);
+            ctx.lineTo(worldWidth, viewBottom);
+            ctx.lineTo(0, viewBottom);
+            ctx.closePath();
+            ctx.fillStyle = lightMode ? "#a9855f" : "#896a48";
+            ctx.fill();
 
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (const point of points) ctx.lineTo(point.x, point.y);
-        ctx.strokeStyle = lightMode ? "#648b50" : "#405c35";
-        ctx.lineWidth = 5;
-        ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (const point of points) ctx.lineTo(point.x, point.y);
+            ctx.strokeStyle = lightMode ? "#648b50" : "#405c35";
+            ctx.lineWidth = 5;
+            ctx.stroke();
+        }
 
-        // Subtle distant ridgelines give the generated battlefield more depth.
+        // Distant ridgelines stay within the visible window instead of
+        // generating another full-world set of off-screen geometry.
         ctx.save();
         ctx.globalAlpha = 0.16;
         ctx.strokeStyle = lightMode ? "#557b75" : "#c3e0ee";
         ctx.lineWidth = 2;
         for (let layer = 0; layer < 2; layer++) {
             ctx.beginPath();
-            for (let x = 0; x <= w; x += 55) {
-                const y = h * (0.55 + layer * 0.055) +
-                    Math.sin(x * 0.0017 + layer * 2) * 24 +
+            const step = 55;
+            for (let x = Math.floor(viewLeft / step) * step; x <= viewRight + step; x += step) {
+                const y = canvasHeight * (0.55 + layer * 0.055) / zoom +
+                    viewTop + Math.sin(x * 0.0017 + layer * 2) * 24 +
                     Math.sin(x * 0.004 + layer) * 10;
-                if (x === 0) ctx.moveTo(x, y);
+                if (x === Math.floor(viewLeft / step) * step) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
         }
+        ctx.restore();
         ctx.restore();
     },
 
