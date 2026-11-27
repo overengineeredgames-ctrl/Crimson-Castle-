@@ -49,8 +49,10 @@ var Game = window.Game = {
         const highestTerrainY = terrainPoints.length
             ? Math.min(...terrainPoints.map(point => point.y))
             : 0;
-        const terrainAwareLimit = highestTerrainY - visibleHeight * 0.5;
-        const upperPanLimit = Math.min(-this.canvas.height * 4, terrainAwareLimit);
+        const terrainAwareLimit = highestTerrainY - visibleHeight * 2;
+        // Keep a generous hard ceiling as a fallback so unusually tall peaks
+        // can never trap the camera at the old four-screen limit.
+        const upperPanLimit = Math.min(-this.canvas.height * 20, terrainAwareLimit);
         this.cameraOffsetY = Math.max(upperPanLimit,
             Math.min(Math.max(upperPanLimit, worldBottom + mobileVerticalRoom - visibleHeight), this.cameraOffsetY));
     },
