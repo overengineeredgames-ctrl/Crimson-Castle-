@@ -1154,9 +1154,14 @@ var Game = window.Game = {
                     panel.querySelector("#melter-menu-status").textContent = "Not enough Energy. Need " + energyCost + ".";
                     return;
                 }
+                // Reserve the full order up front so other systems cannot spend
+                // the Melter's inputs while it is processing.
+                Building.resources.metal -= amount;
+                Building.resources.energy -= energyCost;
                 selected.smeltRemainingMetal = amount;
                 selected.processTimer = 0;
                 selected.operating = true;
+                Building.updateHUD();
                 panel.querySelector("#melter-menu-status").textContent = "Smelting order started: " + amount + " Metal.";
                 Building.showPlacementMessage("Melter order started: " + amount + " Metal.");
             });
@@ -1627,8 +1632,8 @@ var Game = window.Game = {
                 geothermalOutput * seconds
         ));
 
-        // Each Melter consumes 1 Metal and 10 Energy to produce 0.5
-        // Titanium every 0.7 seconds. It only runs when both inputs are available.
+        // The Melter reserves Metal and Energy when an order starts, then
+        // converts the reserved Metal into stored Titanium over time.
         for (const melter of Building.installations.filter(item =>
             !item.removed && item.type === "melter"
         )) {
@@ -1643,12 +1648,8 @@ var Game = window.Game = {
             melter.operating = true;
             melter.processTimer = (melter.processTimer || 0) + seconds;
             while (melter.processTimer >= recipe.cycleSeconds &&
-                melter.smeltRemainingMetal > 0 &&
-                Building.resources.metal >= recipe.metalPerCycle &&
-                Building.resources.energy >= recipe.energyPerCycle) {
+                melter.smeltRemainingMetal > 0) {
                 melter.processTimer -= recipe.cycleSeconds;
-                Building.resources.metal -= recipe.metalPerCycle;
-                Building.resources.energy -= recipe.energyPerCycle;
                 Building.resources.titanium = (Building.resources.titanium || 0) +
                     recipe.titaniumPerCycle;
                 melter.smeltRemainingMetal -= recipe.metalPerCycle;
@@ -1656,9 +1657,6 @@ var Game = window.Game = {
             if (melter.smeltRemainingMetal <= 0) {
                 melter.smeltRemainingMetal = 0;
                 melter.processTimer = 0;
-                melter.operating = false;
-            } else if (Building.resources.metal < recipe.metalPerCycle ||
-                Building.resources.energy < recipe.energyPerCycle) {
                 melter.operating = false;
             }
         }
