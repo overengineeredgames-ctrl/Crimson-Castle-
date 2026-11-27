@@ -309,6 +309,28 @@ body.cc-theme-light .cc-battle-version {
 .hud-topline .resources { gap: 10px; font-size: 13px; }
 .hud-topline .resource { padding: 6px 10px; }
 
+.website-fullscreen-button {
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    border: 1px solid #5b83aa;
+    border-radius: 7px;
+    background: #203b56;
+    color: #e8f4ff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.website-fullscreen-button:hover { background: #315878; }
+.website-fullscreen-button[hidden] { display: none !important; }
+
+:fullscreen {
+    background: #101827;
+}
+:fullscreen #gameCanvas {
+    width: 100vw;
+    height: 100dvh;
+}
+
 .tool-shelf {
     display: flex;
     flex-direction: column;
