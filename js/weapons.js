@@ -27,7 +27,8 @@ var Weapons = window.Weapons = {
     researchProjects: {
         flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
         drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
-            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
+            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false },
+            melter: { name: "Melter", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
     },
     researchRefreshTimer: 0,
     weaponStats: {
@@ -46,7 +47,8 @@ var Weapons = window.Weapons = {
         this.researchProjects = {
             flakCannon: { name: "Flak Cannon", metalCost: 40, duration: 10, progress: 0, researching: false, unlocked: false },
             drillBot: { name: "Drill Bot", metalCost: 70, duration: 15, progress: 0, researching: false, unlocked: false },
-            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
+            titanium: { name: "Titanium", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false },
+            melter: { name: "Melter", metalCost: 120, duration: 20, progress: 0, researching: false, unlocked: false }
         };
         this.researchRefreshTimer = 0;
         this.projectiles = [];
@@ -440,6 +442,9 @@ var Weapons = window.Weapons = {
         if (completed.includes("titanium") && window.Building && Building.updateToolbar) {
             Building.updateToolbar();
             if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "build");
+        }
+        if (completed.includes("melter") && window.Game && Game.selectToolTab) {
+            Game.selectToolTab(Game.activeToolTab || "utilities");
         }
         if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         for (const projectId of completed) {
