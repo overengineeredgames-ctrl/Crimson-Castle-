@@ -437,6 +437,10 @@ var Weapons = window.Weapons = {
             this.ensureDrillBotButton();
             if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "bots");
         }
+        if (completed.includes("titanium") && window.Building && Building.updateToolbar) {
+            Building.updateToolbar();
+            if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "build");
+        }
         if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         for (const projectId of completed) {
             const name = this.researchProjects[projectId]?.name || projectId;
