@@ -1777,7 +1777,13 @@ var Building = window.Building = {
     finishExtrusion(startNode, x, y) {
         if (!startNode || startNode.removed) return false;
 
-        const material = this.settings(this.material);
+        // Capture the selected material once so the resource, new joint, and
+        // beam all use exactly the same material for this placement.
+        const materialName = this.material;
+        const material = this.settings(materialName);
+        const resource = materialName === "wood"
+            ? "wood"
+            : materialName === "titanium" ? "titanium" : "metal";
         const start = startNode.body.position;
         const end = this.snapPoint(x, y);
         const length = this.distance(start, end);
@@ -1789,13 +1795,22 @@ var Building = window.Building = {
         // A node drag creates one direct beam to the destination.
         // Do not add a raised midpoint or extra braces: those turn a simple
         // beam placement into an unwanted triangular frame.
-        const cost = this.material === "titanium" ? length / this.gridSize : material.cost;
-        const resource = this.buildingResource();
-        if (!this.charge(cost, resource)) return false;
+        const cost = materialName === "titanium"
+            ? length / this.gridSize
+            : material.cost;
+        if (!this.charge(cost, resource)) {
+            this.showPlacementMessage(
+                "Not enough " + (resource === "wood" ? "wood" : resource === "titanium" ? "titanium" : "metal") + " to build this beam."
+            );
+            return false;
+        }
 
         const groundNode = this.snapPointToGround(end, startNode.team);
         const createdNode = !groundNode;
-        const newNode = groundNode || this.createNode(end.x, end.y);
+        const newNode = groundNode || this.createNode(end.x, end.y, {
+            team: startNode.team,
+            material: materialName
+        });
 
         if (!newNode) {
             this.resources[resource] += cost;
@@ -1803,7 +1818,9 @@ var Building = window.Building = {
             return false;
         }
 
-        const beam = this.createStrut(startNode, newNode);
+        const beam = this.createStrut(startNode, newNode, {
+            material: materialName
+        });
         if (!beam) {
             if (createdNode) this.removeNode(newNode);
             this.resources[resource] += cost;
