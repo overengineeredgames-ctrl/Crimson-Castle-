@@ -34,7 +34,8 @@ var Building = window.Building = {
         wood: 250,
         energy: CONFIG.STARTING_ENERGY || 100,
         water: 0,
-        research: 0
+        research: 0,
+        titanium: 0
     },
 
     settings(material = this.material) {
@@ -85,7 +86,8 @@ var Building = window.Building = {
             wood: 250,
             energy: CONFIG.STARTING_ENERGY || 100,
             water: 0,
-            research: 0
+            research: 0,
+            titanium: 0
         };
 
         this.groundY = Physics.groundY;
@@ -1169,6 +1171,7 @@ var Building = window.Building = {
     setupToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1178,6 +1181,7 @@ var Building = window.Building = {
 
         if (woodButton) woodButton.onclick = () => this.setMaterial("wood");
         if (steelButton) steelButton.onclick = () => this.setMaterial("steel");
+        if (titaniumButton) titaniumButton.onclick = () => this.setMaterial("titanium");
         if (woodDoorButton) woodDoorButton.onclick = () => this.setDoorMaterial("wood");
         if (steelDoorButton) steelDoorButton.onclick = () => this.setDoorMaterial("steel");
 
@@ -1241,7 +1245,11 @@ var Building = window.Building = {
     },
 
     setMaterial(material) {
-        if (material !== "wood" && material !== "steel") return;
+        if (material !== "wood" && material !== "steel" && material !== "titanium") return;
+        if (material === "titanium" && this.resources.titanium <= 0) {
+            this.showPlacementMessage("No titanium available. Use a Melter to produce titanium first.");
+            return;
+        }
         this.selectMode = false;
         this.selectedInstallation = null;
         this.doorMaterial = null;
@@ -1279,6 +1287,7 @@ var Building = window.Building = {
     updateToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1302,6 +1311,11 @@ var Building = window.Building = {
 
         if (steelButton) {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
+        }
+        if (titaniumButton) {
+            titaniumButton.querySelector("small").textContent = Math.floor(this.resources.titanium || 0) + " units";
+            titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
+            titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
         if (woodDoorButton) woodDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "wood");
         if (steelDoorButton) steelDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "steel");
