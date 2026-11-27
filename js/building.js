@@ -512,7 +512,7 @@ var Building = window.Building = {
 
         const leftX = cameraOffset + 100;
         const rightX = leftX + 160;
-        const baseY = Physics.terrainYAt(leftX) - this.nodeRadius;
+        const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
 
         const bottomLeft = this.createNode(leftX, baseY, {
             isFoundation: true,
