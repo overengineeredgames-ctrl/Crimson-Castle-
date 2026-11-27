@@ -45,7 +45,7 @@ var Game = window.Game = {
         const mobileVerticalRoom = this.isMobileViewport ? this.canvas.height * 0.75 : 0;
         // Allow substantially more upward camera travel so tall Mountain Map
         // terrain and elevated structures can be inspected on mobile and desktop.
-        const upperPanLimit = -this.canvas.height * 1.5;
+        const upperPanLimit = -this.canvas.height * 4;
         this.cameraOffsetY = Math.max(upperPanLimit,
             Math.min(Math.max(upperPanLimit, worldBottom + mobileVerticalRoom - visibleHeight), this.cameraOffsetY));
     },
