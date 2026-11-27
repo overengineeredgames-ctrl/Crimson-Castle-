@@ -506,16 +506,19 @@ var Building = window.Building = {
 
     createStartingFort() {
         let leftX;
-        let baseY;
+        let leftBaseY;
+        let rightBaseY;
         if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
-            // Place the player fortress on the upper-middle portion of the
-            // inward-facing (right) slope of the left Mountain-map peak.
-            // The peak positions and mountain shape are not changed.
+            // Place the player fortress across the inward-facing wall of the
+            // left peak. Each foundation follows the terrain at its own X so
+            // neither end of the fort is buried inside the slope.
             const mountainWidth = Physics.worldWidth * 0.065;
             const leftMountainPeak = Physics.worldWidth * 0.08;
             const fortressCenterX = leftMountainPeak + mountainWidth * 0.55;
             leftX = fortressCenterX - 80;
-            baseY = Physics.terrainYAt(fortressCenterX) - this.nodeRadius;
+            const rightX = leftX + 160;
+            leftBaseY = Physics.terrainYAt(leftX) - this.nodeRadius;
+            rightBaseY = Physics.terrainYAt(rightX) - this.nodeRadius;
         } else {
             // Preserve the original spawn point on every non-Mountain map.
             const cameraOffset = Math.max(
@@ -523,26 +526,29 @@ var Building = window.Building = {
                 (Physics.worldWidth - window.innerWidth) / 2
             );
             leftX = cameraOffset + 100;
-            baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
+            const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
+            leftBaseY = baseY;
+            rightBaseY = baseY;
         }
         const rightX = leftX + 160;
+        const averageBaseY = (leftBaseY + rightBaseY) / 2;
 
-        const bottomLeft = this.createNode(leftX, baseY, {
+        const bottomLeft = this.createNode(leftX, leftBaseY, {
             isFoundation: true,
             isBaseAnchor: true
         });
 
-        const bottomRight = this.createNode(rightX, baseY, {
+        const bottomRight = this.createNode(rightX, rightBaseY, {
             isFoundation: true,
             isBaseAnchor: true
         });
 
-        const topLeft = this.createNode(leftX, baseY - 140);
-        const topRight = this.createNode(rightX, baseY - 140);
+        const topLeft = this.createNode(leftX, leftBaseY - 140);
+        const topRight = this.createNode(rightX, rightBaseY - 140);
 
         const core = this.createCore(
             leftX + 80,
-            baseY - 90
+            averageBaseY - 90
         );
 
         this.createStrut(bottomLeft, bottomRight);
