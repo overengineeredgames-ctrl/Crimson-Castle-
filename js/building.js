@@ -505,15 +505,27 @@ var Building = window.Building = {
     },
 
     createStartingFort() {
-        // Place the player fortress on the upper-middle portion of the
-        // inward-facing (right) slope of the left Mountain-map peak.
-        // Leave the mountain peaks themselves untouched.
-        const mountainWidth = Physics.worldWidth * 0.065;
-        const leftMountainPeak = Physics.worldWidth * 0.08;
-        const fortressCenterX = leftMountainPeak + mountainWidth * 0.55;
-        const leftX = fortressCenterX - 80;
+        let leftX;
+        let baseY;
+        if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
+            // Place the player fortress on the upper-middle portion of the
+            // inward-facing (right) slope of the left Mountain-map peak.
+            // The peak positions and mountain shape are not changed.
+            const mountainWidth = Physics.worldWidth * 0.065;
+            const leftMountainPeak = Physics.worldWidth * 0.08;
+            const fortressCenterX = leftMountainPeak + mountainWidth * 0.55;
+            leftX = fortressCenterX - 80;
+            baseY = Physics.terrainYAt(fortressCenterX) - this.nodeRadius;
+        } else {
+            // Preserve the original spawn point on every non-Mountain map.
+            const cameraOffset = Math.max(
+                0,
+                (Physics.worldWidth - window.innerWidth) / 2
+            );
+            leftX = cameraOffset + 100;
+            baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
+        }
         const rightX = leftX + 160;
-        const baseY = Physics.terrainYAt(fortressCenterX) - this.nodeRadius;
 
         const bottomLeft = this.createNode(leftX, baseY, {
             isFoundation: true,
