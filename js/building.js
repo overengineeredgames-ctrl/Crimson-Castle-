@@ -830,8 +830,12 @@ var Building = window.Building = {
                 button.type = "button";
                 button.className = "tool";
                 button.dataset.toolCategory = "utilities";
+                button.hidden = !!(window.Game && window.Game.activeToolTab !== "utilities");
                 button.innerHTML = label + "<small>" + detail + "</small>";
                 toolbar.appendChild(button);
+            } else {
+                // Utility buttons may be rebuilt after the initial tab selection.
+                button.hidden = !!(window.Game && window.Game.activeToolTab !== "utilities");
             }
             button.onclick = () => this.setUtilityTool(
                 this.utilityTool === type ? null : type
