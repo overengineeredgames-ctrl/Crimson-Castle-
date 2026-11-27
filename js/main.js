@@ -933,7 +933,21 @@ var Game = window.Game = {
     },
 
     loadSelectedMap(mapId) {
-        if (mapId !== "base" || this.mapInitialized) return;
+        if (mapId !== "base") return;
+
+        // If the player returns to the menu after a battle, reuse the already
+        // loaded Base Map instead of initializing a second physics world.
+        if (this.mapInitialized) {
+            AI.setDifficulty(this.difficulty);
+            if (AI.fortCreated && AI.fortDifficulty !== this.difficulty) {
+                AI.resetEnemyFort();
+            }
+            if (!AI.fortCreated) AI.createEnemyFort();
+            this.state = "playing";
+            this.lastFrame = performance.now();
+            this.showOnly(null);
+            return;
+        }
 
         const status = this.mapSelectScreen.querySelector("#cc-map-status");
         const button = this.mapSelectScreen.querySelector("#cc-select-base-map");
