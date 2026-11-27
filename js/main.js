@@ -1103,6 +1103,98 @@ var Game = window.Game = {
         panel.querySelector(".research-close").focus();
     },
 
+    openMelterMenu(melter) {
+        let panel = document.getElementById("melter-menu");
+        if (!panel) {
+            panel = document.createElement("section");
+            panel.id = "melter-menu";
+            panel.className = "research-menu-overlay melter-menu-overlay";
+            panel.setAttribute("role", "dialog");
+            panel.setAttribute("aria-modal", "true");
+            panel.setAttribute("aria-labelledby", "melter-menu-title");
+            panel.innerHTML = `
+                <div class="research-menu melter-menu">
+                    <header class="research-menu-header">
+                        <div><p class="research-eyebrow">MACHINERY CONTROL</p><h2 id="melter-menu-title">Melter</h2></div>
+                        <button type="button" class="research-close" aria-label="Close Melter menu">×</button>
+                    </header>
+                    <p class="research-intro">Choose how much Metal this Melter should process.</p>
+                    <div class="melter-controls">
+                        <label class="melter-amount">
+                            <span>Metal to use</span>
+                            <input id="melter-metal-input" type="number" min="1" step="1" value="1" inputmode="numeric">
+                        </label>
+                        <div class="melter-output" aria-live="polite">
+                            <span>Titanium after smelting</span>
+                            <strong id="melter-titanium-preview">0.5</strong>
+                            <small>units of Titanium</small>
+                        </div>
+                    </div>
+                    <div class="melter-energy-line"><span>Energy needed:</span><strong id="melter-energy-needed">10</strong></div>
+                    <p class="melter-status" id="melter-menu-status">Ready to smelt.</p>
+                    <footer class="research-menu-footer">
+                        <span>0.7 sec per Metal • 10 Energy per Metal</span>
+                        <button type="button" class="research-done melter-start">Start smelting</button>
+                    </footer>
+                </div>`;
+            document.body.appendChild(panel);
+            const close = () => { panel.hidden = true; };
+            panel.querySelector(".research-close").addEventListener("click", close);
+            panel.addEventListener("click", event => { if (event.target === panel) close(); });
+            panel.querySelector(".melter-start").addEventListener("click", () => {
+                const selected = this.activeMelter;
+                const amount = Math.floor(Number(panel.querySelector("#melter-metal-input").value));
+                if (!selected || selected.removed || !Building.installations.includes(selected)) {
+                    panel.querySelector("#melter-menu-status").textContent = "This Melter is no longer available.";
+                    return;
+                }
+                if (!Number.isFinite(amount) || amount < 1) {
+                    panel.querySelector("#melter-menu-status").textContent = "Enter at least 1 Metal.";
+                    return;
+                }
+                const energyCost = amount * Building.utilityDefinitions.melter.energyPerCycle;
+                if (Building.resources.metal < amount) {
+                    panel.querySelector("#melter-menu-status").textContent = "Not enough Metal. You have " + Math.floor(Building.resources.metal) + ".";
+                    return;
+                }
+                if (Building.resources.energy < energyCost) {
+                    panel.querySelector("#melter-menu-status").textContent = "Not enough Energy. Need " + energyCost + ".";
+                    return;
+                }
+                selected.smeltRemainingMetal = amount;
+                selected.processTimer = 0;
+                selected.operating = true;
+                panel.querySelector("#melter-menu-status").textContent = "Smelting order started: " + amount + " Metal.";
+                Building.showPlacementMessage("Melter order started: " + amount + " Metal.");
+            });
+            panel.querySelector("#melter-metal-input").addEventListener("input", () => this.updateMelterPreview());
+        }
+        this.activeMelter = melter;
+        const input = panel.querySelector("#melter-metal-input");
+        input.value = "1";
+        input.max = Math.max(1, Math.floor(Building.resources.metal));
+        const status = panel.querySelector("#melter-menu-status");
+        status.textContent = melter.smeltRemainingMetal > 0
+            ? "Order in progress: " + melter.smeltRemainingMetal + " Metal remaining."
+            : "Ready to smelt.";
+        panel.hidden = false;
+        this.updateMelterPreview();
+        input.focus();
+        input.select();
+    },
+
+    updateMelterPreview() {
+        const panel = document.getElementById("melter-menu");
+        if (!panel) return;
+        const raw = Number(panel.querySelector("#melter-metal-input").value);
+        const amount = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+        const recipe = Building.utilityDefinitions.melter;
+        panel.querySelector("#melter-titanium-preview").textContent =
+            (amount * recipe.titaniumPerCycle).toFixed(1);
+        panel.querySelector("#melter-energy-needed").textContent =
+            (amount * recipe.energyPerCycle).toLocaleString();
+    },
+
     setupInput() {
         this.canvas.addEventListener("pointerdown", event => {
             if (this.state !== "playing") return;
@@ -1139,6 +1231,18 @@ var Game = window.Game = {
             }
 
             if (Building.doorMaterial && Building.startDoorModifier(p.x, p.y)) return;
+
+            // Tapping a placed Melter opens its production controls.
+            if (!Building.deleteMode && !Building.repairMode && !Building.upgradeMode && !Weapons.linkMode) {
+                const melter = [...Building.installations].reverse().find(item =>
+                    !item.removed && item.type === "melter" &&
+                    Building.installationHitTest(item, p.x, p.y)
+                );
+                if (melter) {
+                    this.openMelterMenu(melter);
+                    return;
+                }
+            }
 
             // A placed Research Station is an interactive world object. Check
             // it before utility placement so tapping it opens its menu instead.
@@ -1533,13 +1637,17 @@ var Game = window.Game = {
             !item.removed && item.type === "melter"
         )) {
             const recipe = Building.utilityDefinitions.melter;
-            const canRun = Building.resources.metal >= recipe.metalPerCycle &&
-                Building.resources.energy >= recipe.energyPerCycle;
-            melter.operating = canRun;
-            if (!canRun) continue;
+            if ((melter.smeltRemainingMetal || 0) <= 0) {
+                melter.smeltRemainingMetal = 0;
+                melter.processTimer = 0;
+                melter.operating = false;
+                continue;
+            }
 
+            melter.operating = true;
             melter.processTimer = (melter.processTimer || 0) + seconds;
             while (melter.processTimer >= recipe.cycleSeconds &&
+                melter.smeltRemainingMetal > 0 &&
                 Building.resources.metal >= recipe.metalPerCycle &&
                 Building.resources.energy >= recipe.energyPerCycle) {
                 melter.processTimer -= recipe.cycleSeconds;
@@ -1547,9 +1655,16 @@ var Game = window.Game = {
                 Building.resources.energy -= recipe.energyPerCycle;
                 Building.resources.titanium = (Building.resources.titanium || 0) +
                     recipe.titaniumPerCycle;
+                melter.smeltRemainingMetal -= recipe.metalPerCycle;
             }
-            melter.operating = Building.resources.metal >= recipe.metalPerCycle &&
-                Building.resources.energy >= recipe.energyPerCycle;
+            if (melter.smeltRemainingMetal <= 0) {
+                melter.smeltRemainingMetal = 0;
+                melter.processTimer = 0;
+                melter.operating = false;
+            } else if (Building.resources.metal < recipe.metalPerCycle ||
+                Building.resources.energy < recipe.energyPerCycle) {
+                melter.operating = false;
+            }
         }
 
         Building.resources.metal +=
