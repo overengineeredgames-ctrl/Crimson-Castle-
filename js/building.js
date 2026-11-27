@@ -505,60 +505,89 @@ var Building = window.Building = {
     },
 
     createStartingFort() {
-        let leftX;
-        let leftBaseY;
-        let rightBaseY;
         if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
-            // Place the player fortress across the inward-facing wall of the
-            // left peak. Each foundation follows the terrain at its own X so
-            // neither end of the fort is buried inside the slope.
+            // Mountain-exclusive player fort: two side-by-side rectangular
+            // bays cantilever out from a single foundation embedded at the
+            // inward-facing edge of the left peak.
             const mountainWidth = Physics.worldWidth * 0.065;
             const leftMountainPeak = Physics.worldWidth * 0.08;
-            const fortressCenterX = leftMountainPeak + mountainWidth * 0.55;
-            leftX = fortressCenterX - 80;
-            const rightX = leftX + 160;
-            leftBaseY = Physics.terrainYAt(leftX) - this.nodeRadius;
-            rightBaseY = Physics.terrainYAt(rightX) - this.nodeRadius;
-        } else {
-            // Preserve the original spawn point on every non-Mountain map.
-            const cameraOffset = Math.max(
-                0,
-                (Physics.worldWidth - window.innerWidth) / 2
+            const wallX = leftMountainPeak + mountainWidth * 0.55;
+            const wallY = Physics.terrainYAt(wallX);
+            const boxWidth = 110;
+            const boxHeight = 120;
+            const x0 = wallX;
+            const x1 = x0 + boxWidth;
+            const x2 = x1 + boxWidth;
+            const topY = wallY - boxHeight;
+            const bottomY = wallY;
+
+            const bottomLeft = this.createNode(x0, bottomY, {
+                isFoundation: true,
+                isBaseAnchor: true
+            });
+            const topLeft = this.createNode(x0, topY);
+            const topMiddle = this.createNode(x1, topY);
+            const bottomMiddle = this.createNode(x1, bottomY);
+            const topRight = this.createNode(x2, topY);
+            const bottomRight = this.createNode(x2, bottomY);
+
+            // The two adjacent boxes share their middle wall. The left
+            // foundation is attached to the mountain; the rest extends out
+            // over open air as a normal, level rectangular structure.
+            this.createStrut(bottomLeft, topLeft);
+            this.createStrut(topLeft, topMiddle);
+            this.createStrut(topMiddle, bottomMiddle);
+            this.createStrut(bottomMiddle, bottomLeft);
+            this.createStrut(topMiddle, topRight);
+            this.createStrut(topRight, bottomRight);
+            this.createStrut(bottomRight, bottomMiddle);
+
+            // Cross-bracing keeps both bays rigid without adding extra boxes.
+            this.createStrut(bottomLeft, topMiddle);
+            this.createStrut(topLeft, bottomMiddle);
+            this.createStrut(bottomMiddle, topRight);
+            this.createStrut(topMiddle, bottomRight);
+
+            const core = this.createCore(
+                x0 + boxWidth / 2,
+                topY + boxHeight / 2
             );
-            leftX = cameraOffset + 100;
-            const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
-            leftBaseY = baseY;
-            rightBaseY = baseY;
+            this.createStrut(topLeft, core);
+            this.createStrut(topMiddle, core);
+            this.createStrut(bottomLeft, core);
+            this.createStrut(bottomMiddle, core);
+
+            this.checkSupport();
+            return;
         }
-        const rightX = leftX + 160;
-        const averageBaseY = (leftBaseY + rightBaseY) / 2;
 
-        const bottomLeft = this.createNode(leftX, leftBaseY, {
-            isFoundation: true,
-            isBaseAnchor: true
-        });
-
-        const bottomRight = this.createNode(rightX, rightBaseY, {
-            isFoundation: true,
-            isBaseAnchor: true
-        });
-
-        const topLeft = this.createNode(leftX, leftBaseY - 140);
-        const topRight = this.createNode(rightX, rightBaseY - 140);
-
-        const core = this.createCore(
-            leftX + 80,
-            averageBaseY - 90
+        // Preserve the original starting fortress on every non-Mountain map.
+        const cameraOffset = Math.max(
+            0,
+            (Physics.worldWidth - window.innerWidth) / 2
         );
+        const leftX = cameraOffset + 100;
+        const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
+        const rightX = leftX + 160;
+
+        const bottomLeft = this.createNode(leftX, baseY, {
+            isFoundation: true,
+            isBaseAnchor: true
+        });
+        const bottomRight = this.createNode(rightX, baseY, {
+            isFoundation: true,
+            isBaseAnchor: true
+        });
+        const topLeft = this.createNode(leftX, baseY - 140);
+        const topRight = this.createNode(rightX, baseY - 140);
+        const core = this.createCore(leftX + 80, baseY - 90);
 
         this.createStrut(bottomLeft, bottomRight);
         this.createStrut(bottomLeft, topLeft);
         this.createStrut(bottomRight, topRight);
         this.createStrut(topLeft, topRight);
-
         this.createStrut(bottomLeft, topRight);
         this.createStrut(bottomRight, topLeft);
-
         this.createStrut(topLeft, core);
         this.createStrut(topRight, core);
 
