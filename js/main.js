@@ -945,7 +945,7 @@ var Game = window.Game = {
     },
 
     loadSelectedMap(mapId) {
-        if (mapId !== "base") return;
+        if (mapId !== "base" && mapId !== "mountain") return;
 
         // If the player returns to the menu after a battle, reuse the already
         // loaded Base Map instead of initializing a second physics world.
@@ -969,7 +969,7 @@ var Game = window.Game = {
         status.textContent = "Loading selected map...";
 
         try {
-            this.selectedMap = "base";
+            this.selectedMap = mapId;
             Physics.init(this.selectedMap);
 
             // Construct the existing battlefield only after explicit selection.
@@ -994,6 +994,7 @@ var Game = window.Game = {
             console.error("Could not load selected map:", error);
             status.textContent = "The map could not be loaded. Please try again.";
             button.disabled = false;
+            mountainButton.disabled = false;
         }
     },
 
