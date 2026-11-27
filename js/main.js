@@ -1131,6 +1131,7 @@ var Game = window.Game = {
                         </div>
                     </div>
                     <div class="melter-energy-line"><span>Energy needed:</span><strong id="melter-energy-needed">10</strong></div>
+                    <div class="melter-energy-line"><span>Time needed:</span><strong id="melter-time-needed">0.7 sec</strong></div>
                     <p class="melter-status" id="melter-menu-status">Ready to smelt.</p>
                     <footer class="research-menu-footer">
                         <span>0.7 sec per Metal • 10 Energy per Metal</span>
@@ -1193,6 +1194,9 @@ var Game = window.Game = {
             (amount * recipe.titaniumPerCycle).toFixed(1);
         panel.querySelector("#melter-energy-needed").textContent =
             (amount * recipe.energyPerCycle).toLocaleString();
+        const totalSeconds = amount * recipe.cycleSeconds;
+        panel.querySelector("#melter-time-needed").textContent =
+            totalSeconds.toFixed(1) + (totalSeconds === 1 ? " sec" : " sec");
     },
 
     setupInput() {
