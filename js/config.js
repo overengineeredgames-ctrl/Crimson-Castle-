@@ -56,6 +56,8 @@ const CONFIG = {
         woodDark: "#704321",
         steel: "#9eafbd",
         steelDark: "#586b7c",
+        titanium: "#dff6ff",
+        titaniumDark: "#668da8",
         node: "#dceaff",
         reactor: "#26eaff"
     }
