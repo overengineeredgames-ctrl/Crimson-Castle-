@@ -33,12 +33,12 @@ var Physics = window.Physics = {
             const safe = Math.max(safePlayer, safeEnemy);
             const hills = Math.sin(x * 0.0021) * 34 + Math.sin(x * 0.0063 + 1.4) * 17 + Math.sin(x * 0.011 + 0.7) * 7;
 
-            // Mountain Map: tall, broad peaks rise directly beside both outer walls.
-            // The 300px peak is a little over twice the starting fort's 140px height.
-            // Long inward slopes keep the player and enemy building zones open.
+            // Mountain Map: broad 300px peaks placed where the starting camera
+            // can see their inner faces. The outer edges still climb toward the walls.
+            // Keep the main fort-building zones comparatively clear.
             const sideHills = mapId === "mountain"
-                ? 300 * Math.exp(-Math.pow((x - this.worldWidth * 0.055) / (this.worldWidth * 0.105), 2)) +
-                  300 * Math.exp(-Math.pow((x - this.worldWidth * 0.945) / (this.worldWidth * 0.105), 2))
+                ? 300 * Math.exp(-Math.pow((x - this.worldWidth * 0.17) / (this.worldWidth * 0.105), 2)) +
+                  300 * Math.exp(-Math.pow((x - this.worldWidth * 0.83) / (this.worldWidth * 0.105), 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
