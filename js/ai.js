@@ -173,10 +173,8 @@ var AI = window.AI = {
         };
 
         for (const [key, offset] of Object.entries(preset.points)) {
-            // Mirror the enemy fortress horizontally so its outward-facing
-            // geometry is turned toward the player on the left.
             nodes[key] = Building.createNode(
-                leftX + (160 - offset[0]),
+                leftX + offset[0],
                 baseY + offset[1],
                 { team: "enemy", material: this.difficulty === "easy" ? "wood" : "steel" }
             );
