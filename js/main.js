@@ -105,7 +105,7 @@ var Game = window.Game = {
         // physics world, player fort, weapons and AI are created only after
         // the player selects a map.
         this.isMobileViewport = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
-        this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
+        this.cameraZoom = this.isMobileViewport ? 0.42 : 0.78;
         this.cameraOffsetX = 0;
         this.cameraOffsetY = 0;
 
@@ -643,12 +643,12 @@ var Game = window.Game = {
                 <div class="cc-map-grid">
                     <div class="cc-map-option">
                         <div class="cc-map-preview" role="img" aria-label="Stylized preview of the existing default battlefield">
-                            <span class="cc-map-preview-label">CURRENT DEFAULT BATTLEFIELD</span>
+                            <span class="cc-map-preview-label">FIRST MOUNTAIN PASS</span>
                         </div>
-                        <h2>Base Map</h2>
-                        <p>The original Crimson Castle battlefield. The existing map, unchanged.</p>
+                        <h2>Mountain Map</h2>
+                        <p>The original battlefield with a wider view and small hills along the sides.</p>
                         <button class="forts-menu-button primary" id="cc-select-base-map">
-                            SELECT BASE MAP
+                            SELECT MOUNTAIN MAP
                         </button>
                     </div>
                 </div>
@@ -952,11 +952,11 @@ var Game = window.Game = {
         const status = this.mapSelectScreen.querySelector("#cc-map-status");
         const button = this.mapSelectScreen.querySelector("#cc-select-base-map");
         button.disabled = true;
-        status.textContent = "Loading Base Map...";
+        status.textContent = "Loading Mountain Map...";
 
         try {
             this.selectedMap = "base";
-            Physics.init();
+            Physics.init(this.selectedMap);
 
             // Construct the existing battlefield only after explicit selection.
             this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
