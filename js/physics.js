@@ -37,8 +37,8 @@ var Physics = window.Physics = {
             // can see their inner faces. The outer edges still climb toward the walls.
             // Keep the main fort-building zones comparatively clear.
             const sideHills = mapId === "mountain"
-                ? 300 * Math.exp(-Math.pow((x - this.worldWidth * 0.17) / (this.worldWidth * 0.105), 2)) +
-                  300 * Math.exp(-Math.pow((x - this.worldWidth * 0.83) / (this.worldWidth * 0.105), 2))
+                ? 300 * Math.exp(-Math.pow((x - this.worldWidth * 0.25) / (this.worldWidth * 0.075), 2)) +
+                  300 * Math.exp(-Math.pow((x - this.worldWidth * 0.75) / (this.worldWidth * 0.075), 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
