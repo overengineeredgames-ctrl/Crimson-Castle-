@@ -21,7 +21,7 @@ var Physics = window.Physics = {
         return a.y + (b.y - a.y) * t;
     },
 
-    generateTerrain() {
+    generateTerrain(mapId = "base") {
         this.terrainPoints = [];
         this.terrainBodies = [];
         const step = 90;
@@ -32,7 +32,14 @@ var Physics = window.Physics = {
             const safeEnemy = Math.max(0, 1 - Math.abs(x - enemyZone) / 280);
             const safe = Math.max(safePlayer, safeEnemy);
             const hills = Math.sin(x * 0.0021) * 34 + Math.sin(x * 0.0063 + 1.4) * 17 + Math.sin(x * 0.011 + 0.7) * 7;
-            const y = this.groundY + hills * (1 - safe * 0.92);
+
+            // The first Mountain Map pass keeps the original central battlefield
+            // clear and adds only low, rounded hills near the far edges.
+            const sideHills = mapId === "mountain"
+                ? 92 * Math.exp(-Math.pow((x - this.worldWidth * 0.105) / (this.worldWidth * 0.055), 2)) +
+                  92 * Math.exp(-Math.pow((x - this.worldWidth * 0.895) / (this.worldWidth * 0.055), 2))
+                : 0;
+            const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
             if (x >= this.worldWidth) break;
         }
@@ -53,7 +60,7 @@ var Physics = window.Physics = {
         Matter.Composite.add(this.world, this.terrainBodies);
     },
 
-    init() {
+    init(mapId = "base") {
         this.engine = Matter.Engine.create();
         this.world = this.engine.world;
 
@@ -131,7 +138,7 @@ var Physics = window.Physics = {
             this.rightWall
         ]);
 
-        this.generateTerrain();
+        this.generateTerrain(mapId);
         this.setupCollisions();
     },
 
