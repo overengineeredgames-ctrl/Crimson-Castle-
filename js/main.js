@@ -642,18 +642,28 @@ var Game = window.Game = {
                 </p>
                 <div class="cc-map-grid">
                     <div class="cc-map-option">
-                        <div class="cc-map-preview" role="img" aria-label="Stylized preview of the existing default battlefield">
-                            <span class="cc-map-preview-label">FIRST MOUNTAIN PASS</span>
+                        <div class="cc-map-preview" role="img" aria-label="Preview of the original battlefield">
+                            <span class="cc-map-preview-label">ORIGINAL BATTLEFIELD</span>
+                        </div>
+                        <h2>Base Map</h2>
+                        <p>The original Crimson Castle battlefield.</p>
+                        <button class="forts-menu-button primary" id="cc-select-base-map">
+                            SELECT BASE MAP
+                        </button>
+                    </div>
+                    <div class="cc-map-option">
+                        <div class="cc-map-preview" role="img" aria-label="Early preview of the Mountain Map">
+                            <span class="cc-map-preview-label">MOUNTAIN MAP PROTOTYPE</span>
                         </div>
                         <h2>Mountain Map</h2>
-                        <p>The original battlefield with a wider view and small hills along the sides.</p>
-                        <button class="forts-menu-button primary" id="cc-select-base-map">
+                        <p>Prototype selection. Uses the existing battlefield until its new terrain is built.</p>
+                        <button class="forts-menu-button primary" id="cc-select-mountain-map">
                             SELECT MOUNTAIN MAP
                         </button>
                     </div>
                 </div>
                 <div class="cc-map-status" id="cc-map-status" aria-live="polite">
-                    1 map available
+                    2 maps available
                 </div>
                 <button class="forts-menu-button" id="cc-map-back">BACK TO DIFFICULTY</button>
             </div>
@@ -765,6 +775,8 @@ var Game = window.Game = {
             .addEventListener("click", () => this.showOnly(this.startScreen));
         this.mapSelectScreen.querySelector("#cc-select-base-map")
             .addEventListener("click", () => this.loadSelectedMap("base"));
+        this.mapSelectScreen.querySelector("#cc-select-mountain-map")
+            .addEventListener("click", () => this.loadSelectedMap("mountain"));
 
         this.startScreen.querySelectorAll("[data-difficulty]").forEach(button => {
             button.addEventListener("click", () => {
@@ -951,8 +963,10 @@ var Game = window.Game = {
 
         const status = this.mapSelectScreen.querySelector("#cc-map-status");
         const button = this.mapSelectScreen.querySelector("#cc-select-base-map");
+        const mountainButton = this.mapSelectScreen.querySelector("#cc-select-mountain-map");
         button.disabled = true;
-        status.textContent = "Loading Mountain Map...";
+        mountainButton.disabled = true;
+        status.textContent = "Loading selected map...";
 
         try {
             this.selectedMap = "base";
