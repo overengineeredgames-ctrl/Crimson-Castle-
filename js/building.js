@@ -505,14 +505,15 @@ var Building = window.Building = {
     },
 
     createStartingFort() {
-        const cameraOffset = Math.max(
-            0,
-            (Physics.worldWidth - window.innerWidth) / 2
-        );
-
-        const leftX = cameraOffset + 100;
+        // Place the player fortress on the upper-middle portion of the
+        // inward-facing (right) slope of the left Mountain-map peak.
+        // Leave the mountain peaks themselves untouched.
+        const mountainWidth = Physics.worldWidth * 0.065;
+        const leftMountainPeak = Physics.worldWidth * 0.08;
+        const fortressCenterX = leftMountainPeak + mountainWidth * 0.55;
+        const leftX = fortressCenterX - 80;
         const rightX = leftX + 160;
-        const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
+        const baseY = Physics.terrainYAt(fortressCenterX) - this.nodeRadius;
 
         const bottomLeft = this.createNode(leftX, baseY, {
             isFoundation: true,
