@@ -1755,6 +1755,10 @@ var Building = window.Building = {
     },
 
     finishBeam(nodeA, nodeB, materialName = this.material) {
+        if (materialName === "titanium") {
+            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
+            return false;
+        }
         // Doors may only be created by the joint-to-existing-beam modifier
         // flow. Never let them fall through to normal beam construction.
         if (this.doorMaterial) {
@@ -1795,6 +1799,10 @@ var Building = window.Building = {
     },
 
     finishExtrusion(startNode, x, y, materialName = this.material) {
+        if (materialName === "titanium") {
+            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
+            return false;
+        }
         if (!startNode || startNode.removed) return false;
 
         // Use the material captured when the drag began for consistent
@@ -1852,6 +1860,10 @@ var Building = window.Building = {
     },
 
     finishStrutExtrusion(sourceStrut, x, y, materialName = this.material) {
+        if (materialName === "titanium") {
+            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
+            return false;
+        }
         if (
             !sourceStrut ||
             !this.struts.includes(sourceStrut) ||
