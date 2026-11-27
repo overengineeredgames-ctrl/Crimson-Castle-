@@ -559,10 +559,11 @@ var Building = window.Building = {
             const E = add(C, outward, boxWidth);
             const F = add(D, outward, boxWidth);
 
-            const mountainTop = this.createNode(A.x, A.y, {
-                isFoundation: true,
-                isBaseAnchor: true
-            });
+            // Only the lower mountain contact is a true foundation.
+            // The upper contact remains an ordinary structural node, so the
+            // mountain-side beam is retained without creating a second,
+            // duplicated foundation anchor higher up the slope.
+            const mountainTop = this.createNode(A.x, A.y);
             const mountainBottom = this.createNode(B.x, B.y, {
                 isFoundation: true,
                 isBaseAnchor: true
