@@ -7,6 +7,8 @@ var Game = window.Game = {
 
     running: false,
     state: "menu",
+    mapInitialized: false,
+    selectedMap: "base",
 
     lastFrame: 0,
     resourceTimer: 0,
@@ -99,21 +101,13 @@ var Game = window.Game = {
         this.applyTheme();
         this.resizeCanvas();
 
-        Physics.init();
-
-        // Phones have a much narrower landscape viewport than desktop.
-        // Start mobile battles zoomed out so more of the battlefield is visible.
+        // Keep the title/menu backdrop lightweight. The actual battlefield,
+        // physics world, player fort, weapons and AI are created only after
+        // the player selects a map.
         this.isMobileViewport = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
         this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
-        const visibleWorldWidth = this.canvas.width / this.cameraZoom;
-        this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
-        // Raise the mobile battlefield slightly in the opening view.
-        this.cameraOffsetY = this.isMobileViewport ? -this.canvas.height * 0.75 : 0;
-        this.clampCamera();
-        Building.init();
-        Weapons.init();
-        if (window.DrillBot) DrillBot.init();
-        AI.init();
+        this.cameraOffsetX = 0;
+        this.cameraOffsetY = 0;
 
         this.createMenus();
         this.setupInput();
@@ -357,6 +351,85 @@ var Game = window.Game = {
                 line-height:1.6;
             }
 
+            .cc-map-menu-card {
+                width:min(760px,100%);
+                max-height:min(90vh,820px);
+                overflow:auto;
+                padding:clamp(22px,4vw,36px);
+            }
+            .cc-map-grid {
+                display:grid;
+                grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));
+                gap:14px;
+                margin:20px 0;
+                text-align:left;
+            }
+            .cc-map-option {
+                padding:12px;
+                border:2px solid #71869a;
+                border-radius:10px;
+                background:rgba(8,18,29,.55);
+            }
+            .cc-map-preview {
+                position:relative;
+                height:150px;
+                overflow:hidden;
+                border:1px solid #637b91;
+                border-radius:7px;
+                background:linear-gradient(180deg,#17334e 0%,#4f83a7 65%,#1a2b3b 66%,#263c32 100%);
+            }
+            .cc-map-preview:before {
+                content:"";
+                position:absolute;
+                left:-8%;
+                right:-8%;
+                bottom:18px;
+                height:65px;
+                background:linear-gradient(160deg,transparent 0 20%,#5f7d52 21% 45%,#354d3d 46% 100%);
+                clip-path:polygon(0 65%,18% 25%,32% 55%,50% 5%,68% 48%,82% 20%,100% 65%,100% 100%,0 100%);
+                opacity:.9;
+            }
+            .cc-map-preview:after {
+                content:"";
+                position:absolute;
+                left:0;
+                right:0;
+                bottom:0;
+                height:20px;
+                background:#1b2c28;
+            }
+            .cc-map-preview-label {
+                position:absolute;
+                z-index:1;
+                top:10px;
+                left:12px;
+                color:#f1f6fb;
+                font-size:10px;
+                font-weight:800;
+                letter-spacing:2px;
+                text-shadow:0 2px 5px #07111d;
+            }
+            .cc-map-option h2 {
+                margin:12px 0 5px;
+                color:#f1c45c;
+                font-size:19px;
+            }
+            .cc-map-option p {
+                min-height:38px;
+                color:#c4d2df;
+                font-size:13px;
+                line-height:1.45;
+            }
+            .cc-map-status {
+                color:#e7c56f;
+                font-size:12px;
+                min-height:18px;
+            }
+            @media (max-width:520px) {
+                .cc-map-preview { height:125px; }
+                .cc-map-menu-card { padding:20px 16px; }
+            }
+
             .forts-settings-row {
                 display:flex;
                 align-items:center;
@@ -560,6 +633,32 @@ var Game = window.Game = {
             </div>
         `);
 
+        this.mapSelectScreen = this.createOverlay("forts-map-select-screen", `
+            <div class="forts-menu-card cc-map-menu-card">
+                <div class="forts-pause-label">BATTLE SETUP</div>
+                <h1 class="forts-menu-title">SELECT MAP</h1>
+                <p class="forts-menu-subtitle">
+                    Choose the battlefield for your match. Your selected difficulty is already set.
+                </p>
+                <div class="cc-map-grid">
+                    <div class="cc-map-option">
+                        <div class="cc-map-preview" role="img" aria-label="Stylized preview of the existing default battlefield">
+                            <span class="cc-map-preview-label">CURRENT DEFAULT BATTLEFIELD</span>
+                        </div>
+                        <h2>Base Map</h2>
+                        <p>The original Crimson Castle battlefield. The existing map, unchanged.</p>
+                        <button class="forts-menu-button primary" id="cc-select-base-map">
+                            SELECT BASE MAP
+                        </button>
+                    </div>
+                </div>
+                <div class="cc-map-status" id="cc-map-status" aria-live="polite">
+                    1 map available
+                </div>
+                <button class="forts-menu-button" id="cc-map-back">BACK TO DIFFICULTY</button>
+            </div>
+        `);
+
         this.pauseScreen = this.createOverlay("forts-pause-screen", `
             <div class="forts-menu-card">
                 <div class="forts-pause-label">BATTLE TEMPORARILY HALTED</div>
@@ -661,6 +760,11 @@ var Game = window.Game = {
 
         this.startScreen.querySelector("#forts-start-button")
             .addEventListener("click", () => this.startGame());
+
+        this.mapSelectScreen.querySelector("#cc-map-back")
+            .addEventListener("click", () => this.showOnly(this.startScreen));
+        this.mapSelectScreen.querySelector("#cc-select-base-map")
+            .addEventListener("click", () => this.loadSelectedMap("base"));
 
         this.startScreen.querySelectorAll("[data-difficulty]").forEach(button => {
             button.addEventListener("click", () => {
@@ -801,6 +905,7 @@ var Game = window.Game = {
     showOnly(screen) {
         for (const item of [
             this.startScreen,
+            this.mapSelectScreen,
             this.pauseScreen,
             this.endScreen,
             this.bootScreen,
@@ -822,19 +927,46 @@ var Game = window.Game = {
     },
 
     startGame() {
-        AI.setDifficulty(this.difficulty);
-        // A new difficulty selection must get a fresh enemy fort built for
-        // that mode, rather than carrying over the previous mode's base.
-        if (AI.fortCreated && AI.fortDifficulty !== this.difficulty) {
-            AI.resetEnemyFort();
+        // Difficulty is chosen first; map selection comes before any battlefield
+        // is constructed or any default terrain is loaded.
+        this.showOnly(this.mapSelectScreen);
+    },
+
+    loadSelectedMap(mapId) {
+        if (mapId !== "base" || this.mapInitialized) return;
+
+        const status = this.mapSelectScreen.querySelector("#cc-map-status");
+        const button = this.mapSelectScreen.querySelector("#cc-select-base-map");
+        button.disabled = true;
+        status.textContent = "Loading Base Map...";
+
+        try {
+            this.selectedMap = "base";
+            Physics.init();
+
+            // Construct the existing battlefield only after explicit selection.
+            this.cameraZoom = this.isMobileViewport ? 0.5 : 1;
+            const visibleWorldWidth = this.canvas.width / this.cameraZoom;
+            this.cameraOffsetX = Math.max(0, (Physics.worldWidth - visibleWorldWidth) / 2);
+            this.cameraOffsetY = this.isMobileViewport ? -this.canvas.height * 0.75 : 0;
+            this.clampCamera();
+
+            Building.init();
+            Weapons.init();
+            if (window.DrillBot) DrillBot.init();
+            AI.init();
+            AI.setDifficulty(this.difficulty);
+            AI.createEnemyFort();
+
+            this.mapInitialized = true;
+            this.state = "playing";
+            this.lastFrame = performance.now();
+            this.showOnly(null);
+        } catch (error) {
+            console.error("Could not load selected map:", error);
+            status.textContent = "The map could not be loaded. Please try again.";
+            button.disabled = false;
         }
-        // Build the enemy fort only after the player has chosen a difficulty.
-        if (!AI.fortCreated) AI.createEnemyFort();
-
-        this.state = "playing";
-        this.lastFrame = performance.now();
-
-        this.showOnly(null);
     },
 
     pauseGame() {
@@ -1696,6 +1828,32 @@ var Game = window.Game = {
 
     draw() {
         const ctx = this.ctx;
+
+        if (!this.mapInitialized) {
+            const width = this.canvas.width;
+            const height = this.canvas.height;
+            const sky = ctx.createLinearGradient(0, 0, 0, height);
+            sky.addColorStop(0, "#101d31");
+            sky.addColorStop(0.62, "#23415d");
+            sky.addColorStop(1, "#111d2b");
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, width, height);
+
+            // Abstract background texture only: no terrain, fort, or map is
+            // generated while the player is still in the menus.
+            ctx.save();
+            ctx.globalAlpha = 0.12;
+            ctx.strokeStyle = "#a9c7df";
+            ctx.lineWidth = 1;
+            for (let y = 0; y < height; y += 42) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+            return;
+        }
 
         ctx.save();
 
