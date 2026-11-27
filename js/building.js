@@ -506,104 +506,81 @@ var Building = window.Building = {
 
     createStartingFort() {
         if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
-            // Mountain fort: one rectangular bay in a local rotated frame.
-            // The mountain edge is the left wall; the lower edge is a
-            // continuous, two-anchor foundation.
+            // Mountain Bastion: a compact cliffside watch-fort with a peaked
+            // roof, a reinforced outer wall, and a braced core.
             const mountainWidth = Physics.worldWidth * 0.065;
             const leftMountainPeak = Physics.worldWidth * 0.08;
             const mountX = leftMountainPeak + mountainWidth * 0.55;
-            const bayWidth = 110;
-            const bayHeight = 120;
+            const wallHeight = 150;
+            const bayDepth = 150;
 
-            const lowerSurface = {
-                x: mountX,
-                y: Physics.terrainYAt(mountX)
-            };
+            const lowerSurface = { x: mountX, y: Physics.terrainYAt(mountX) };
             let upperSurface = { ...lowerSurface };
             for (let x = mountX; x >= leftMountainPeak; x -= 1) {
                 const sample = { x, y: Physics.terrainYAt(x) };
                 upperSurface = sample;
-                if (Math.hypot(
-                    lowerSurface.x - sample.x,
-                    lowerSurface.y - sample.y
-                ) >= bayHeight) break;
+                if (Math.hypot(lowerSurface.x - sample.x, lowerSurface.y - sample.y) >= wallHeight) break;
             }
 
-            // Local vertical axis follows the mountain slope from bottom
-            // to top. Local horizontal axis points out into the battlefield.
-            const slopeX = upperSurface.x - lowerSurface.x;
-            const slopeY = upperSurface.y - lowerSurface.y;
-            const slopeLength = Math.hypot(slopeX, slopeY) || 1;
-            const upSlope = {
-                x: slopeX / slopeLength,
-                y: slopeY / slopeLength
-            };
-            let outward = { x: upSlope.y, y: -upSlope.x };
+            // Follow the cliff tangent; the normal points into the battlefield.
+            const tangentX = lowerSurface.x - upperSurface.x;
+            const tangentY = lowerSurface.y - upperSurface.y;
+            const tangentLength = Math.hypot(tangentX, tangentY) || 1;
+            const downSlope = { x: tangentX / tangentLength, y: tangentY / tangentLength };
+            let outward = { x: downSlope.y, y: -downSlope.x };
             if (outward.x < 0) outward = { x: -outward.x, y: -outward.y };
 
-            const clearance = this.nodeRadius + 2;
-            const pointAt = (surface, across, up) => ({
-                x: surface.x + outward.x * (clearance + across) + upSlope.x * up,
-                y: surface.y + outward.y * (clearance + across) + upSlope.y * up
+            const clearance = this.nodeRadius + 12;
+            const cliffPoint = surface => ({
+                x: surface.x + outward.x * clearance,
+                y: surface.y + outward.y * clearance
             });
+            const A = cliffPoint(upperSurface);
+            const B = cliffPoint(lowerSurface);
+            const C = { x: A.x + outward.x * bayDepth, y: A.y + outward.y * bayDepth };
+            const D = { x: B.x + outward.x * bayDepth, y: B.y + outward.y * bayDepth };
+            const E = { x: C.x + downSlope.x * 38, y: C.y + downSlope.y * 38 };
 
-            // Four corners of the single rectangular bay.
-            const A = pointAt(upperSurface, 0, 0);          // mountain / top
-            const B = pointAt(lowerSurface, 0, 0);          // mountain / bottom
-            const C = pointAt(upperSurface, bayWidth, 0);   // outer / top
-            const D = pointAt(lowerSurface, bayWidth, 0);   // outer / bottom
+            const cliffTop = this.createNode(A.x, A.y, { isFoundation: true, isBaseAnchor: true });
+            const cliffFoot = this.createNode(B.x, B.y, { isFoundation: true, isBaseAnchor: true });
+            const outerTop = this.createNode(C.x, C.y);
+            const outerFoot = this.createNode(D.x, D.y, { isFoundation: true, isBaseAnchor: true });
+            const roofCrown = this.createNode(E.x, E.y);
 
-            // Both lower corners anchor the continuous bottom foundation.
-            // The upper mountain corner is deliberately NOT a foundation.
-            const mountainTop = this.createNode(A.x, A.y);
-            const mountainBottom = this.createNode(B.x, B.y, {
-                isFoundation: true,
-                isBaseAnchor: true
-            });
-            const firstOuterTop = this.createNode(C.x, C.y);
-            const firstOuterBottom = this.createNode(D.x, D.y, {
-                isFoundation: true,
-                isBaseAnchor: true
-            });
+            // Continuous cliff wall, peaked roof, outer wall, and anchored floor.
+            this.createStrut(cliffTop, cliffFoot);
+            this.createStrut(cliffTop, roofCrown);
+            this.createStrut(roofCrown, outerTop);
+            this.createStrut(outerTop, outerFoot);
+            this.createStrut(outerFoot, cliffFoot);
 
-            // One complete box: mountain-side wall, top, outer wall, base.
-            this.createStrut(mountainTop, mountainBottom);
-            this.createStrut(mountainTop, firstOuterTop);
-            this.createStrut(firstOuterTop, firstOuterBottom);
-            this.createStrut(firstOuterBottom, mountainBottom);
+            // Triangulated braces keep the frame rigid and fully connected.
+            this.createStrut(cliffTop, outerFoot);
+            this.createStrut(cliffFoot, outerTop);
+            this.createStrut(roofCrown, outerFoot);
 
-            // Put the core at the center of the box and connect it directly
-            // to all four corners. No loose intermediate rail joints.
             const core = this.createCore(
-                (A.x + C.x + B.x + D.x) / 4,
-                (A.y + C.y + B.y + D.y) / 4
+                (A.x + B.x + C.x + D.x + E.x) / 5,
+                (A.y + B.y + C.y + D.y + E.y) / 5
             );
-            this.createStrut(mountainTop, core);
-            this.createStrut(mountainBottom, core);
-            this.createStrut(firstOuterTop, core);
-            this.createStrut(firstOuterBottom, core);
+            this.createStrut(core, cliffTop);
+            this.createStrut(core, cliffFoot);
+            this.createStrut(core, outerTop);
+            this.createStrut(core, outerFoot);
+            this.createStrut(core, roofCrown);
 
             this.checkSupport();
             return;
         }
 
         // Preserve the original starting fortress on every non-Mountain map.
-        const cameraOffset = Math.max(
-            0,
-            (Physics.worldWidth - window.innerWidth) / 2
-        );
+        const cameraOffset = Math.max(0, (Physics.worldWidth - window.innerWidth) / 2);
         const leftX = cameraOffset + 100;
         const baseY = Physics.terrainYAt(leftX + 80) - this.nodeRadius;
         const rightX = leftX + 160;
 
-        const bottomLeft = this.createNode(leftX, baseY, {
-            isFoundation: true,
-            isBaseAnchor: true
-        });
-        const bottomRight = this.createNode(rightX, baseY, {
-            isFoundation: true,
-            isBaseAnchor: true
-        });
+        const bottomLeft = this.createNode(leftX, baseY, { isFoundation: true, isBaseAnchor: true });
+        const bottomRight = this.createNode(rightX, baseY, { isFoundation: true, isBaseAnchor: true });
         const topLeft = this.createNode(leftX, baseY - 140);
         const topRight = this.createNode(rightX, baseY - 140);
         const core = this.createCore(leftX + 80, baseY - 90);
