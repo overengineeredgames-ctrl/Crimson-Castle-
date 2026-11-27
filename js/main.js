@@ -1000,7 +1000,7 @@ var Game = window.Game = {
             projects.innerHTML = `
                 <h3>Machinery Research</h3>
                 <article class="research-project" data-project="melter">
-                    <div><strong>Melter</strong><p>Unlocks a medium-sized industrial furnace that will process Metal into Titanium using Energy.</p><small>120 Metal • 20 seconds</small></div>
+                    <div><strong>Melter</strong><p>Unlocks the existing Melter, which processes queued Metal and Energy over time and adds Titanium to your stored resources.</p><small>120 Metal • 20 seconds</small></div>
                     <button type="button" class="research-start" data-start-research="melter">Research</button>
                     <p class="research-project-status" aria-live="polite"></p>
                 </article>`;
