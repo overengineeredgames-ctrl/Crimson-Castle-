@@ -1215,7 +1215,6 @@ var Building = window.Building = {
     setupToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
-        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1225,7 +1224,6 @@ var Building = window.Building = {
 
         if (woodButton) woodButton.onclick = () => this.setMaterial("wood");
         if (steelButton) steelButton.onclick = () => this.setMaterial("steel");
-        if (titaniumButton) titaniumButton.onclick = () => this.setMaterial("titanium");
         if (woodDoorButton) woodDoorButton.onclick = () => this.setDoorMaterial("wood");
         if (steelDoorButton) steelDoorButton.onclick = () => this.setDoorMaterial("steel");
 
@@ -1290,10 +1288,6 @@ var Building = window.Building = {
 
     setMaterial(material) {
         if (material !== "wood" && material !== "steel") return;
-        if (material === "titanium" && this.resources.titanium <= 0) {
-            this.showPlacementMessage("No titanium available. Use a Melter to produce titanium first.");
-            return;
-        }
         this.selectMode = false;
         this.selectedInstallation = null;
         this.doorMaterial = null;
@@ -1331,7 +1325,6 @@ var Building = window.Building = {
     updateToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
-        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1355,11 +1348,6 @@ var Building = window.Building = {
 
         if (steelButton) {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
-        }
-        if (titaniumButton) {
-            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " units";
-            titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
-            titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
         if (woodDoorButton) woodDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "wood");
         if (steelDoorButton) steelDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "steel");
@@ -1467,9 +1455,7 @@ var Building = window.Building = {
     },
 
     buildingResource() {
-        if (this.material === "wood") return "wood";
-        if (this.material === "titanium") return "titanium";
-        return "metal";
+        return this.material === "wood" ? "wood" : "metal";
     },
 
     getStrutAtPoint(x, y, maxDistance = 26) {
@@ -1755,10 +1741,6 @@ var Building = window.Building = {
     },
 
     finishBeam(nodeA, nodeB, materialName = this.material) {
-        if (materialName === "titanium") {
-            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
-            return false;
-        }
         // Doors may only be created by the joint-to-existing-beam modifier
         // flow. Never let them fall through to normal beam construction.
         if (this.doorMaterial) {
@@ -1777,12 +1759,8 @@ var Building = window.Building = {
         );
 
         if (length > material.maxLength) return false;
-        const resource = materialName === "wood"
-            ? "wood"
-            : materialName === "titanium" ? "titanium" : "metal";
-        const buildCost = materialName === "titanium"
-            ? length / this.gridSize
-            : material.cost;
+        const resource = materialName === "wood" ? "wood" : "metal";
+        const buildCost = material.cost;
         if (!this.charge(buildCost, resource)) return false;
 
         const strut = this.createStrut(nodeA, nodeB, { material: materialName });
@@ -1799,18 +1777,12 @@ var Building = window.Building = {
     },
 
     finishExtrusion(startNode, x, y, materialName = this.material) {
-        if (materialName === "titanium") {
-            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
-            return false;
-        }
         if (!startNode || startNode.removed) return false;
 
         // Use the material captured when the drag began for consistent
         // resource charging, joint creation, and beam construction.
         const material = this.settings(materialName);
-        const resource = materialName === "wood"
-            ? "wood"
-            : materialName === "titanium" ? "titanium" : "metal";
+        const resource = materialName === "wood" ? "wood" : "metal";
         const start = startNode.body.position;
         const end = this.snapPoint(x, y);
         const length = this.distance(start, end);
@@ -1822,9 +1794,7 @@ var Building = window.Building = {
         // A node drag creates one direct beam to the destination.
         // Do not add a raised midpoint or extra braces: those turn a simple
         // beam placement into an unwanted triangular frame.
-        const cost = materialName === "titanium"
-            ? length / this.gridSize
-            : material.cost;
+        const cost = material.cost;
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
                 "Not enough " + (resource === "wood" ? "wood" : resource === "titanium" ? "titanium" : "metal") + " to build this beam."
@@ -1860,10 +1830,6 @@ var Building = window.Building = {
     },
 
     finishStrutExtrusion(sourceStrut, x, y, materialName = this.material) {
-        if (materialName === "titanium") {
-            this.showPlacementMessage("Titanium can only be used to upgrade steel beams.");
-            return false;
-        }
         if (
             !sourceStrut ||
             !this.struts.includes(sourceStrut) ||
@@ -1903,9 +1869,7 @@ var Building = window.Building = {
 
         // A box adds three outer beams. Braces are optional, so do not
         // make the whole build fail just because its center joint is blocked.
-        const cost = materialName === "titanium"
-            ? lengths.reduce((total, length) => total + length, 0) / this.gridSize
-            : material.cost * 3;
+        const cost = material.cost * 3;
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
@@ -2422,12 +2386,8 @@ var Building = window.Building = {
         }
         const researchElement = document.getElementById("research-count");
         if (researchElement) researchElement.textContent = Math.floor(this.resources.research || 0);
-        const titaniumButton = document.getElementById("btn-titanium");
-        if (titaniumButton) {
-            const titaniumLabel = titaniumButton.querySelector("small");
-            if (titaniumLabel) titaniumLabel.textContent = (this.resources.titanium || 0).toFixed(1) + " units";
-            titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
-        }
+        const titaniumElement = document.getElementById("titanium-count");
+        if (titaniumElement) titaniumElement.textContent = (this.resources.titanium || 0).toFixed(1);
     },
 
     setDoorOpen(door, open) {
