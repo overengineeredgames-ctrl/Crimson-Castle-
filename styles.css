@@ -1015,9 +1015,3 @@ body.cc-drill-bot-mode #mobile-controls .mobile-camera-pad { display: none !impo
 }
 
 
-/* Titanium building material: icy silver-blue polished metal. */
-#btn-titanium { color:#e8f8ff; background:linear-gradient(145deg,#45677f,#263e55); border-color:#a9e5ff; }
-#btn-titanium.active { color:#fff; background:linear-gradient(145deg,#8bcde9,#477e9f); border-color:#e7fbff; box-shadow:0 0 13px rgba(135,220,255,.48); }
-#btn-titanium:disabled { opacity:.48; filter:saturate(.55); }
-body.cc-theme-light #btn-titanium { color:#17384e; background:linear-gradient(145deg,#e8f8ff,#b9dbea); border-color:#6cabc8; }
-body.cc-theme-light #btn-titanium.active { background:linear-gradient(145deg,#bcecff,#83c2df); border-color:#397b9b; }
