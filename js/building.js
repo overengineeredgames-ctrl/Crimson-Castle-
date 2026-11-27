@@ -1289,7 +1289,7 @@ var Building = window.Building = {
     },
 
     setMaterial(material) {
-        if (material !== "wood" && material !== "steel" && material !== "titanium") return;
+        if (material !== "wood" && material !== "steel") return;
         if (material === "titanium" && this.resources.titanium <= 0) {
             this.showPlacementMessage("No titanium available. Use a Melter to produce titanium first.");
             return;
@@ -1403,28 +1403,44 @@ var Building = window.Building = {
         if (!this.upgradeMode) return false;
         const beam = this.getStrutAtPoint(x, y, 30);
         if (!beam) {
-            this.showPlacementMessage("Tap a wooden beam to upgrade it.");
+            this.showPlacementMessage("Tap a wooden or steel beam to upgrade it.");
             return true;
         }
-        if (beam.material !== "wood" || beam.isDoor || beam.debrisGroup) {
-            this.showPlacementMessage("Only regular wooden beams can be upgraded.");
+        if (beam.isDoor || beam.debrisGroup) {
+            this.showPlacementMessage("Doors and debris cannot be upgraded.");
             return true;
         }
-        const cost = Math.max(5, Math.min(10, Math.ceil(beam.length / 35)));
-        if (!this.canAfford(cost)) {
-            this.showPlacementMessage("Need " + cost + " metal to upgrade this beam.");
+        if (beam.material === "titanium") {
+            this.showPlacementMessage("This beam is already titanium.");
             return true;
         }
+        if (beam.material !== "wood" && beam.material !== "steel") {
+            this.showPlacementMessage("Only wooden or steel beams can be upgraded.");
+            return true;
+        }
+
+        const targetMaterial = beam.material === "wood" ? "steel" : "titanium";
+        const resource = targetMaterial === "titanium" ? "titanium" : "metal";
+        const cost = targetMaterial === "titanium"
+            ? 1
+            : Math.max(5, Math.min(10, Math.ceil(beam.length / 35)));
+        if (!this.charge(cost, resource)) {
+            this.showPlacementMessage("Need " + cost + " " + resource + " to upgrade this beam.");
+            return true;
+        }
+
         const oldHealthRatio = Math.max(0, Math.min(1, beam.health / beam.maxHealth));
         const a = beam.a;
         const b = beam.b;
         this.removeStrut(beam, false);
-        const upgraded = this.createStrut(a, b, { material: "steel" });
+        const upgraded = this.createStrut(a, b, { material: targetMaterial });
         if (!upgraded) {
-            const restored = this.createStrut(a, b, { material: "wood" });
+            const restored = this.createStrut(a, b, { material: beam.material });
+            this.resources[resource] += cost;
+            this.updateHUD();
             if (restored) {
                 restored.health = Math.max(1, restored.maxHealth * oldHealthRatio);
-                this.showPlacementMessage("Upgrade couldn't be placed; wooden beam restored.");
+                this.showPlacementMessage("Upgrade couldn't be placed; original beam restored.");
             } else {
                 this.showPlacementMessage("Upgrade failed and the original beam could not be restored. Please report this.");
                 this.checkSupport();
@@ -1432,9 +1448,8 @@ var Building = window.Building = {
             return true;
         }
         upgraded.health = Math.max(1, upgraded.maxHealth * oldHealthRatio);
-        this.resources.metal -= cost;
         this.updateHUD();
-        this.showPlacementMessage("Beam upgraded to steel! -" + cost + " metal");
+        this.showPlacementMessage("Beam upgraded to " + targetMaterial + "! -" + cost + " " + resource);
         return true;
     },
 
