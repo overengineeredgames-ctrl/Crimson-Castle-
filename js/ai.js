@@ -149,7 +149,7 @@ var AI = window.AI = {
         this.fortDifficulty = this.difficulty;
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
         const leftX = Math.round(worldWidth * 0.68);
-        const baseY = Physics.terrainYAt(leftX) - Building.nodeRadius;
+        const baseY = Physics.terrainYAt(leftX + 80) - Building.nodeRadius;
         const availablePresets = this.difficulty === "easy"
             ? [
                 ...this.presetDefinitions.filter(item => item.weapon === "cannon"),
