@@ -1357,7 +1357,7 @@ var Building = window.Building = {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         }
         if (titaniumButton) {
-            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " m";
+            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " units";
             titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
             titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
@@ -1856,11 +1856,13 @@ var Building = window.Building = {
 
         // A box adds three outer beams. Braces are optional, so do not
         // make the whole build fail just because its center joint is blocked.
-        const cost = material.cost * 3;
+        const cost = materialName === "titanium"
+            ? lengths.reduce((total, length) => total + length, 0) / this.gridSize
+            : material.cost * 3;
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
-                "Not enough " + (resource === "wood" ? "wood" : "metal") +
+                "Not enough " + (resource === "wood" ? "wood" : resource === "titanium" ? "titanium" : "metal") +
                 " to build this box."
             );
             return false;
