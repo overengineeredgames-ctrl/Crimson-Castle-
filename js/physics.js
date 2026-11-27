@@ -37,8 +37,8 @@ var Physics = window.Physics = {
             // can see their inner faces. The outer edges still climb toward the walls.
             // Keep the main fort-building zones comparatively clear.
             const sideHills = mapId === "mountain"
-                ? 2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.08) / (this.worldWidth * 0.10), 2)) +
-                  2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.92) / (this.worldWidth * 0.10), 2))
+                ? 2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.08) / (this.worldWidth * 0.065), 2)) +
+                  2150 * Math.exp(-Math.pow((x - this.worldWidth * 0.92) / (this.worldWidth * 0.065), 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
@@ -87,7 +87,7 @@ var Physics = window.Physics = {
         this.engine.enableSleeping = false;
 
         // A wider battlefield gives both forts room to expand and fight.
-        this.worldWidth = Math.round(window.innerWidth * 3.6);
+        this.worldWidth = Math.round(window.innerWidth * 4.8);
         this.groundY = window.innerHeight * 0.82;
 
         const groundThickness = 160;
