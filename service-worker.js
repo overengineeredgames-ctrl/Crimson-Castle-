@@ -1,4 +1,4 @@
-const CACHE_NAME = "crimson-castle-v1.0.50";
+const CACHE_NAME = "crimson-castle-v1.0.51";
 const APP_SHELL = [
   "./",
   "./index.html",
