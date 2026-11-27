@@ -44,6 +44,7 @@
                     Water: <span id="water-count">0 / 100</span>
                 </div>
             </div>
+            <button id="website-fullscreen" class="website-fullscreen-button" type="button" aria-label="Enter fullscreen">⛶ Fullscreen</button>
         </div>
 
         <div class="tool-shelf">
@@ -141,6 +142,39 @@
             debugScript.src = "js/debug-panel.js?v=1.4.3";
             document.head.appendChild(debugScript);
         }
+    </script>
+
+    <script>
+        // Fullscreen is a browser-website feature; keep it out of installed and desktop app modes.
+        (() => {
+            const button = document.getElementById("website-fullscreen");
+            if (!button) return;
+            const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+                window.matchMedia("(display-mode: fullscreen)").matches ||
+                navigator.standalone === true;
+            const browserWebsite = /^https?:$/.test(window.location.protocol) &&
+                !standalone && !window.ccUpdater;
+            if (!browserWebsite || !document.documentElement.requestFullscreen) {
+                button.hidden = true;
+                return;
+            }
+            button.addEventListener("click", async () => {
+                try {
+                    if (document.fullscreenElement) {
+                        await document.exitFullscreen();
+                    } else {
+                        await document.documentElement.requestFullscreen();
+                    }
+                } catch (error) {
+                    console.warn("Fullscreen could not be enabled:", error);
+                }
+            });
+            document.addEventListener("fullscreenchange", () => {
+                const active = Boolean(document.fullscreenElement);
+                button.textContent = active ? "⤢ Exit fullscreen" : "⛶ Fullscreen";
+                button.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+            });
+        })();
     </script>
 
     <script>
