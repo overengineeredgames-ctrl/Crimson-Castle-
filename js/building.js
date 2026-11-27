@@ -2354,6 +2354,12 @@ var Building = window.Building = {
         }
         const researchElement = document.getElementById("research-count");
         if (researchElement) researchElement.textContent = Math.floor(this.resources.research || 0);
+        const titaniumButton = document.getElementById("btn-titanium");
+        if (titaniumButton) {
+            const titaniumLabel = titaniumButton.querySelector("small");
+            if (titaniumLabel) titaniumLabel.textContent = (this.resources.titanium || 0).toFixed(1) + " units";
+            titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
+        }
     },
 
     setDoorOpen(door, open) {
