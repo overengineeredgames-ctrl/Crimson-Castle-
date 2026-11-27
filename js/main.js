@@ -992,7 +992,18 @@ var Game = window.Game = {
             });
             this.refreshResearchMenu();
         } else if (category === "buildings") {
-            projects.innerHTML = "<h3>Building Research</h3><p class='research-empty'>No building research projects are available yet.</p>";
+            projects.innerHTML = `
+                <h3>Building Research</h3>
+                <article class="research-project" data-project="titanium">
+                    <div><strong>Titanium</strong><p>Unlocks the ability to produce titanium building material. A Melter will still be required to process metal into usable titanium beam length.</p><small>120 Metal • 20 seconds</small></div>
+                    <button type="button" class="research-start" data-start-research="titanium">Research</button>
+                    <p class="research-project-status" aria-live="polite"></p>
+                </article>`;
+            projects.querySelector("[data-start-research='titanium']").addEventListener("click", () => {
+                Weapons.startResearch("titanium");
+                this.refreshResearchMenu();
+            });
+            this.refreshResearchMenu();
         } else if (category === "machinery") {
             projects.innerHTML = "<h3>Machinery Research</h3><p class='research-empty'>No machinery research projects are available yet.</p>";
         } else if (category === "bots") {
@@ -1022,7 +1033,7 @@ var Game = window.Game = {
             if (project.unlocked) {
                 button.textContent = "Researched";
                 button.disabled = true;
-                status.textContent = (projectId === "drillBot" ? "Drill Bot" : "Flak Cannon") + " unlocked.";
+                status.textContent = (project.name || (projectId === "drillBot" ? "Drill Bot" : "Flak Cannon")) + " unlocked.";
             } else if (project.researching) {
                 button.textContent = projectId === "drillBot" ? "🔒 Researching…" : "Researching…";
                 button.disabled = true;
