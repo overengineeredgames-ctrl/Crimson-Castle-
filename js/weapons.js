@@ -444,7 +444,7 @@ var Weapons = window.Weapons = {
             if (window.Game && Game.selectToolTab) Game.selectToolTab(Game.activeToolTab || "build");
         }
         if (completed.includes("melter") && window.Game && Game.selectToolTab) {
-            Game.selectToolTab(Game.activeToolTab || "utilities");
+            Game.selectToolTab("utilities");
         }
         if (completed.length && window.Game && Game.refreshResearchMenu) Game.refreshResearchMenu();
         for (const projectId of completed) {
