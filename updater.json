@@ -1,15 +1,15 @@
 {
   "game": "Crimson Castle",
   "shortName": "CC",
-  "version": "1.1.0",
-  "releaseDate": "2026-11-25T00:00:00.000Z",
+  "version": "1.1.1",
+  "releaseDate": "2026-11-26T00:00:00.000Z",
   "channel": "stable",
-  "title": "Crimson Castle 1.1.0",
-  "description": "Crimson Castle 1.1.0 is available.",
+  "title": "Crimson Castle 1.1.1",
+  "description": "Crimson Castle 1.1.1 is available.",
   "changes": [
-    "Updated the game version to 1.1.0 across the website, desktop build, and Android app.",
-    "Includes the latest Drill Bot camera and mobile control updates.",
-    "Includes the Flak Cannon category visibility fix."
+    "Fixed Smelter production so processed Metal is converted into stored Titanium.",
+    "Added Titanium as a selectable construction material, costing 1 Titanium per beam.",
+    "Updated Android and Windows release version metadata to 1.1.1."
   ],
   "required": false,
   "minimumVersion": "1.0.0"
