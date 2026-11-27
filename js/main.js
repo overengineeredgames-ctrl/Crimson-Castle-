@@ -386,7 +386,7 @@ var Game = window.Game = {
                 bottom:18px;
                 height:65px;
                 background:linear-gradient(160deg,transparent 0 20%,#5f7d52 21% 45%,#354d3d 46% 100%);
-                clip-path:polygon(0 65%,18% 25%,32% 55%,50% 5%,68% 48%,82% 20%,100% 65%,100% 100%,0 100%);
+                clip-path:polygon(0 72%,12% 48%,23% 72%,77% 72%,88% 48%,100% 72%,100% 100%,0 100%);
                 opacity:.9;
             }
             .cc-map-preview:after {
