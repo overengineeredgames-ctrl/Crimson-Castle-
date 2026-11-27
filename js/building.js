@@ -1650,6 +1650,7 @@ var Building = window.Building = {
             if (t >= 0.18 && t <= 0.82) {
                 this.drag = {
                     sourceStrut: beam,
+                    material: this.material,
                     x,
                     y,
                     mode: "extrude"
@@ -1664,6 +1665,8 @@ var Building = window.Building = {
 
         this.drag = {
             startNode: node,
+            // Lock the chosen material for the entire pointer gesture.
+            material: this.material,
             x,
             y,
             mode
@@ -1695,8 +1698,9 @@ var Building = window.Building = {
             return false;
         }
 
+        const materialName = drag.material || this.material;
         if (drag.sourceStrut) {
-            return this.finishStrutExtrusion(drag.sourceStrut, x, y);
+            return this.finishStrutExtrusion(drag.sourceStrut, x, y, materialName);
         }
 
         // Give the player a little extra room to snap onto an existing
@@ -1726,16 +1730,16 @@ var Building = window.Building = {
         }
 
         if (endNode) {
-            return this.finishBeam(drag.startNode, endNode);
+            return this.finishBeam(drag.startNode, endNode, materialName);
         }
 
         // Doors connect existing joints only; never silently turn a door drag
         // into a new beam-and-joint extrusion.
         if (this.doorMaterial) return false;
-        return this.finishExtrusion(drag.startNode, x, y);
+        return this.finishExtrusion(drag.startNode, x, y, materialName);
     },
 
-    finishBeam(nodeA, nodeB) {
+    finishBeam(nodeA, nodeB, materialName = this.material) {
         // Doors may only be created by the joint-to-existing-beam modifier
         // flow. Never let them fall through to normal beam construction.
         if (this.doorMaterial) {
@@ -1774,12 +1778,11 @@ var Building = window.Building = {
         return true;
     },
 
-    finishExtrusion(startNode, x, y) {
+    finishExtrusion(startNode, x, y, materialName = this.material) {
         if (!startNode || startNode.removed) return false;
 
-        // Capture the selected material once so the resource, new joint, and
-        // beam all use exactly the same material for this placement.
-        const materialName = this.material;
+        // Use the material captured when the drag began for consistent
+        // resource charging, joint creation, and beam construction.
         const material = this.settings(materialName);
         const resource = materialName === "wood"
             ? "wood"
@@ -1832,7 +1835,7 @@ var Building = window.Building = {
         return true;
     },
 
-    finishStrutExtrusion(sourceStrut, x, y) {
+    finishStrutExtrusion(sourceStrut, x, y, materialName = this.material) {
         if (
             !sourceStrut ||
             !this.struts.includes(sourceStrut) ||
