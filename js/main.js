@@ -1527,6 +1527,31 @@ var Game = window.Game = {
                 geothermalOutput * seconds
         ));
 
+        // Each Melter consumes 1 Metal and 10 Energy to produce 0.5
+        // Titanium every 0.7 seconds. It only runs when both inputs are available.
+        for (const melter of Building.installations.filter(item =>
+            !item.removed && item.type === "melter"
+        )) {
+            const recipe = Building.utilityDefinitions.melter;
+            const canRun = Building.resources.metal >= recipe.metalPerCycle &&
+                Building.resources.energy >= recipe.energyPerCycle;
+            melter.operating = canRun;
+            if (!canRun) continue;
+
+            melter.processTimer = (melter.processTimer || 0) + seconds;
+            while (melter.processTimer >= recipe.cycleSeconds &&
+                Building.resources.metal >= recipe.metalPerCycle &&
+                Building.resources.energy >= recipe.energyPerCycle) {
+                melter.processTimer -= recipe.cycleSeconds;
+                Building.resources.metal -= recipe.metalPerCycle;
+                Building.resources.energy -= recipe.energyPerCycle;
+                Building.resources.titanium = (Building.resources.titanium || 0) +
+                    recipe.titaniumPerCycle;
+            }
+            melter.operating = Building.resources.metal >= recipe.metalPerCycle &&
+                Building.resources.energy >= recipe.energyPerCycle;
+        }
+
         Building.resources.metal +=
             (CONFIG.METAL_GENERATION || 2) * seconds +
             drills.length * Building.utilityDefinitions.drill.drillRate *
