@@ -37,8 +37,9 @@ var Physics = window.Physics = {
             // open battlefield between them. The fortresses sit on the inward-facing
             // slopes rather than directly beneath the peaks.
             const mountainWidth = this.worldWidth * 0.065;
-            const playerPeak = this.worldWidth * 0.31;
-            const enemyPeak = this.worldWidth * 0.78;
+            // Keep the peaks far apart near the outer edges of the battlefield.
+            const playerPeak = this.worldWidth * 0.08;
+            const enemyPeak = this.worldWidth * 0.92;
             const sideHills = mapId === "mountain"
                 ? 2150 * Math.exp(-Math.pow((x - playerPeak) / mountainWidth, 2)) +
                   2150 * Math.exp(-Math.pow((x - enemyPeak) / mountainWidth, 2))
