@@ -970,3 +970,24 @@ body.cc-theme-light #drill-bot-build-button {
 
 /* During Drill Bot operation, hide only camera pan and zoom controls. */
 body.cc-drill-bot-mode #mobile-controls .mobile-camera-pad { display: none !important; }
+
+
+/* Melter production controls */
+.melter-menu-overlay[hidden] { display:none !important; }
+.melter-menu { width:min(620px,100%); }
+.melter-controls { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+.melter-amount, .melter-output { min-width:0; display:flex; flex-direction:column; justify-content:center; gap:9px; padding:16px; border:1px solid #38566c; border-radius:10px; background:rgba(4,12,20,.42); }
+.melter-amount span, .melter-output span { color:#b8ccdc; font-size:13px; font-weight:700; }
+.melter-amount input { width:100%; box-sizing:border-box; min-height:48px; padding:10px 12px; border:1px solid #62849a; border-radius:8px; background:#091725; color:#f1f8ff; font:700 22px/1.2 inherit; }
+.melter-output strong { color:#ffb45f; font-size:30px; line-height:1.1; }
+.melter-output small { color:#91a9bb; font-size:12px; }
+.melter-energy-line { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border:1px solid #344e62; border-radius:8px; color:#c8d8e5; background:rgba(4,12,20,.28); }
+.melter-energy-line strong { color:#70dafa; font-size:18px; }
+.melter-status { min-height:18px; margin:12px 0 0; color:#9fb8ca; font-size:13px; }
+.melter-start { color:#071521 !important; background:#ffb45f !important; border-color:#ffd39b !important; }
+@media (max-width:480px) {
+    .melter-controls { grid-template-columns:1fr 1fr; gap:8px; }
+    .melter-amount, .melter-output { padding:11px; }
+    .melter-output strong { font-size:25px; }
+    .melter-amount input { font-size:20px; }
+}
