@@ -33,11 +33,12 @@ var Physics = window.Physics = {
             const safe = Math.max(safePlayer, safeEnemy);
             const hills = Math.sin(x * 0.0021) * 34 + Math.sin(x * 0.0063 + 1.4) * 17 + Math.sin(x * 0.011 + 0.7) * 7;
 
-            // The first Mountain Map pass keeps the original central battlefield
-            // clear and adds only low, rounded hills near the far edges.
+            // Mountain Map: tall, broad peaks rise directly beside both outer walls.
+            // The 300px peak is a little over twice the starting fort's 140px height.
+            // Long inward slopes keep the player and enemy building zones open.
             const sideHills = mapId === "mountain"
-                ? 92 * Math.exp(-Math.pow((x - this.worldWidth * 0.105) / (this.worldWidth * 0.055), 2)) +
-                  92 * Math.exp(-Math.pow((x - this.worldWidth * 0.895) / (this.worldWidth * 0.055), 2))
+                ? 300 * Math.exp(-Math.pow((x - this.worldWidth * 0.055) / (this.worldWidth * 0.105), 2)) +
+                  300 * Math.exp(-Math.pow((x - this.worldWidth * 0.945) / (this.worldWidth * 0.105), 2))
                 : 0;
             const y = this.groundY + hills * (1 - safe * 0.92) - sideHills;
             this.terrainPoints.push({ x: Math.min(x, this.worldWidth), y });
