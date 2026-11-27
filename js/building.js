@@ -1215,6 +1215,7 @@ var Building = window.Building = {
     setupToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1224,6 +1225,7 @@ var Building = window.Building = {
 
         if (woodButton) woodButton.onclick = () => this.setMaterial("wood");
         if (steelButton) steelButton.onclick = () => this.setMaterial("steel");
+        if (titaniumButton) titaniumButton.onclick = () => this.setMaterial("titanium");
         if (woodDoorButton) woodDoorButton.onclick = () => this.setDoorMaterial("wood");
         if (steelDoorButton) steelDoorButton.onclick = () => this.setDoorMaterial("steel");
 
@@ -1287,7 +1289,7 @@ var Building = window.Building = {
     },
 
     setMaterial(material) {
-        if (material !== "wood" && material !== "steel") return;
+        if (material !== "wood" && material !== "steel" && material !== "titanium") return;
         this.selectMode = false;
         this.selectedInstallation = null;
         this.doorMaterial = null;
@@ -1325,6 +1327,7 @@ var Building = window.Building = {
     updateToolbar() {
         const woodButton = document.getElementById("btn-wood");
         const steelButton = document.getElementById("btn-steel");
+        const titaniumButton = document.getElementById("btn-titanium");
         const deleteButton = document.getElementById("btn-delete");
         const repairButton = document.getElementById("btn-repair");
         const upgradeButton = document.getElementById("btn-upgrade");
@@ -1348,6 +1351,9 @@ var Building = window.Building = {
 
         if (steelButton) {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
+        }
+        if (titaniumButton) {
+            titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
         if (woodDoorButton) woodDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "wood");
         if (steelDoorButton) steelDoorButton.classList.toggle("active", !linking && !this.deleteMode && this.doorMaterial === "steel");
@@ -1454,8 +1460,10 @@ var Building = window.Building = {
         return true;
     },
 
-    buildingResource() {
-        return this.material === "wood" ? "wood" : "metal";
+    buildingResource(material = this.material) {
+        if (material === "wood") return "wood";
+        if (material === "titanium") return "titanium";
+        return "metal";
     },
 
     getStrutAtPoint(x, y, maxDistance = 26) {
@@ -1759,7 +1767,7 @@ var Building = window.Building = {
         );
 
         if (length > material.maxLength) return false;
-        const resource = materialName === "wood" ? "wood" : "metal";
+        const resource = this.buildingResource(materialName);
         const buildCost = material.cost;
         if (!this.charge(buildCost, resource)) return false;
 
@@ -1782,7 +1790,7 @@ var Building = window.Building = {
         // Use the material captured when the drag began for consistent
         // resource charging, joint creation, and beam construction.
         const material = this.settings(materialName);
-        const resource = materialName === "wood" ? "wood" : "metal";
+        const resource = this.buildingResource(materialName);
         const start = startNode.body.position;
         const end = this.snapPoint(x, y);
         const length = this.distance(start, end);
@@ -1797,7 +1805,7 @@ var Building = window.Building = {
         const cost = material.cost;
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
-                "Not enough " + (resource === "wood" ? "wood" : "metal") + " to build this beam."
+                "Not enough " + resource + " to build this beam."
             );
             return false;
         }
@@ -1873,8 +1881,7 @@ var Building = window.Building = {
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) {
             this.showPlacementMessage(
-                "Not enough " + (resource === "wood" ? "wood" : "metal") +
-                " to build this box."
+                "Not enough " + resource + " to build this box."
             );
             return false;
         }
