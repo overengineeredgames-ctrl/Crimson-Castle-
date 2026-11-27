@@ -39,6 +39,20 @@ var Building = window.Building = {
     },
 
     settings(material = this.material) {
+        if (material === "titanium") {
+            return {
+                stiffness: 0.995,
+                density: 0.0025,
+                cost: 1,
+                color: CONFIG.COLORS.titanium,
+                dark: CONFIG.COLORS.titaniumDark,
+                width: 10,
+                maxLength: CONFIG.MAX_STRUT_LENGTH || 220,
+                breakRatio: 2.2,
+                maxHealth: 650
+            };
+        }
+
         if (material === "steel") {
             return {
                 stiffness: CONFIG.STEEL_STIFFNESS || 0.98,
@@ -1343,7 +1357,7 @@ var Building = window.Building = {
             steelButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "steel");
         }
         if (titaniumButton) {
-            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " units";
+            titaniumButton.querySelector("small").textContent = (this.resources.titanium || 0).toFixed(1) + " m";
             titaniumButton.disabled = (this.resources.titanium || 0) <= 0;
             titaniumButton.classList.toggle("active", !linking && !this.deleteMode && !this.doorMaterial && this.material === "titanium");
         }
@@ -1438,7 +1452,9 @@ var Building = window.Building = {
     },
 
     buildingResource() {
-        return this.material === "wood" ? "wood" : "metal";
+        if (this.material === "wood") return "wood";
+        if (this.material === "titanium") return "titanium";
+        return "metal";
     },
 
     getStrutAtPoint(x, y, maxDistance = 26) {
@@ -1740,12 +1756,15 @@ var Building = window.Building = {
 
         if (length > material.maxLength) return false;
         const resource = this.buildingResource();
-        if (!this.charge(material.cost, resource)) return false;
+        const buildCost = materialName === "titanium"
+            ? length / this.gridSize
+            : material.cost;
+        if (!this.charge(buildCost, resource)) return false;
 
         const strut = this.createStrut(nodeA, nodeB, { material: materialName });
 
         if (!strut) {
-            this.resources[resource] += material.cost;
+            this.resources[resource] += buildCost;
             this.updateHUD();
             return false;
         }
@@ -1770,7 +1789,7 @@ var Building = window.Building = {
         // A node drag creates one direct beam to the destination.
         // Do not add a raised midpoint or extra braces: those turn a simple
         // beam placement into an unwanted triangular frame.
-        const cost = material.cost;
+        const cost = this.material === "titanium" ? length / this.gridSize : material.cost;
         const resource = this.buildingResource();
         if (!this.charge(cost, resource)) return false;
 
@@ -2473,6 +2492,20 @@ var Building = window.Building = {
                     ? "#c16a50"
                     : material.color;
             ctx.stroke();
+
+            // Titanium has a cool polished-metal highlight so it reads
+            // distinctly from the darker, matte steel beams.
+            if (strut.material === "titanium" && damage <= 0.2) {
+                ctx.save();
+                ctx.globalAlpha = 0.9;
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.stroke();
+                ctx.restore();
+            }
 
             // A red damage seam makes enemy and player beam damage easy to spot.
             if (damage > 0.05) {
