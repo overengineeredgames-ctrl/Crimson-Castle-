@@ -506,90 +506,116 @@ var Building = window.Building = {
 
     createStartingFort() {
         if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
-            // Mountain-exclusive player fort: two level rectangular bays
-            // extending outward from the inward-facing slope.
+            // Mountain-exclusive player fort. Build a true rectangular frame
+            // in the mountain face's local coordinate system instead of
+            // assuming the curved slope is a vertical wall.
             const mountainWidth = Physics.worldWidth * 0.065;
             const leftMountainPeak = Physics.worldWidth * 0.08;
-            const wallX = leftMountainPeak + mountainWidth * 0.55;
-            const wallSurfaceY = Physics.terrainYAt(wallX);
+            const mountX = leftMountainPeak + mountainWidth * 0.55;
             const boxWidth = 110;
             const boxHeight = 120;
-            const x0 = wallX;
-            const x1 = x0 + boxWidth;
-            const x2 = x1 + boxWidth;
 
-            // Foundation joint centers sit one node radius above the terrain
-            // surface, so the bottom row rests on the mountain rather than
-            // being buried in it.
-            const bottomY = wallSurfaceY - this.nodeRadius;
-            const topY = bottomY - boxHeight;
-            const centerY = (topY + bottomY) / 2;
+            // Find two points on the actual terrain surface, one box-height
+            // apart along the slope. The lower point is the mount reference.
+            const lowerSurface = {
+                x: mountX,
+                y: Physics.terrainYAt(mountX)
+            };
+            let upperSurface = { ...lowerSurface };
+            for (let x = mountX; x >= leftMountainPeak; x -= 1) {
+                const candidate = { x, y: Physics.terrainYAt(x) };
+                upperSurface = candidate;
+                if (Math.hypot(
+                    lowerSurface.x - candidate.x,
+                    lowerSurface.y - candidate.y
+                ) >= boxHeight) break;
+            }
 
-            const bottomLeft = this.createNode(x0, bottomY, {
+            // The mountain edge is the first side of the rectangle. Its
+            // perpendicular points out into open air on the inward-facing
+            // side of the left mountain.
+            const edgeX = lowerSurface.x - upperSurface.x;
+            const edgeY = lowerSurface.y - upperSurface.y;
+            const edgeLength = Math.hypot(edgeX, edgeY) || 1;
+            const tangent = { x: edgeX / edgeLength, y: edgeY / edgeLength };
+            const outward = { x: tangent.y, y: -tangent.x };
+            const clearance = this.nodeRadius + 2;
+
+            const offsetFromMountain = point => ({
+                x: point.x + outward.x * clearance,
+                y: point.y + outward.y * clearance
+            });
+            const add = (point, vector, amount) => ({
+                x: point.x + vector.x * amount,
+                y: point.y + vector.y * amount
+            });
+
+            // Four corners of the first bay and the far edge of the second.
+            // A-B follows the mountain; each bay extends away from that face.
+            const A = offsetFromMountain(upperSurface);
+            const B = offsetFromMountain(lowerSurface);
+            const C = add(A, outward, boxWidth);
+            const D = add(B, outward, boxWidth);
+            const E = add(C, outward, boxWidth);
+            const F = add(D, outward, boxWidth);
+
+            const mountainTop = this.createNode(A.x, A.y, {
                 isFoundation: true,
                 isBaseAnchor: true
             });
-            const topLeft = this.createNode(x0, topY);
-            const topMiddle = this.createNode(x1, topY);
-            const bottomMiddle = this.createNode(x1, bottomY);
-            const topRight = this.createNode(x2, topY);
-            const bottomRight = this.createNode(x2, bottomY);
+            const mountainBottom = this.createNode(B.x, B.y, {
+                isFoundation: true,
+                isBaseAnchor: true
+            });
+            const firstOuterTop = this.createNode(C.x, C.y);
+            const firstOuterBottom = this.createNode(D.x, D.y);
+            const secondOuterTop = this.createNode(E.x, E.y);
+            const secondOuterBottom = this.createNode(F.x, F.y);
 
-            // Find the point on the mountain face level with the top-left
-            // corner. This second foundation anchor gives that corner a real
-            // structural connection into the slope.
-            let upperAnchorX = leftMountainPeak;
-            let bestError = Infinity;
-            const targetSurfaceY = topY + this.nodeRadius;
-            for (let step = 0; step <= 80; step++) {
-                const sampleX = leftMountainPeak +
-                    (wallX - leftMountainPeak) * step / 80;
-                const error = Math.abs(Physics.terrainYAt(sampleX) - targetSurfaceY);
-                if (error < bestError) {
-                    bestError = error;
-                    upperAnchorX = sampleX;
-                }
-            }
-            const upperAnchorY = Physics.terrainYAt(upperAnchorX) - this.nodeRadius;
-            const upperMountainAnchor = this.createNode(
-                upperAnchorX,
-                upperAnchorY,
-                { isFoundation: true, isBaseAnchor: true }
+            // Two genuine rectangular bays share their middle wall.
+            this.createStrut(mountainTop, mountainBottom);
+            this.createStrut(mountainTop, firstOuterTop);
+            this.createStrut(firstOuterTop, firstOuterBottom);
+            this.createStrut(firstOuterBottom, mountainBottom);
+            this.createStrut(firstOuterTop, secondOuterTop);
+            this.createStrut(secondOuterTop, secondOuterBottom);
+            this.createStrut(secondOuterBottom, firstOuterBottom);
+
+            // The core is centered inside the mountain-side bay, supported
+            // by a straight center rail rather than an upward-pointing brace.
+            const railMountainPoint = {
+                x: (A.x + B.x) / 2,
+                y: (A.y + B.y) / 2
+            };
+            const railOuterPoint = {
+                x: (C.x + D.x) / 2,
+                y: (C.y + D.y) / 2
+            };
+            const railMountain = this.createNode(
+                railMountainPoint.x,
+                railMountainPoint.y
             );
-
-            // Two side-by-side boxes share the middle wall.
-            this.createStrut(bottomLeft, topLeft);
-            this.createStrut(topLeft, topMiddle);
-            this.createStrut(topMiddle, bottomMiddle);
-            this.createStrut(bottomMiddle, bottomLeft);
-            this.createStrut(topMiddle, topRight);
-            this.createStrut(topRight, bottomRight);
-            this.createStrut(bottomRight, bottomMiddle);
-
-            // Tie the upper-left corner directly back into the mountain.
-            this.createStrut(upperMountainAnchor, topLeft);
-
-            // Keep the first bay rectangular around the core: a horizontal
-            // center rail supports the core instead of an upward-pointing
-            // triangular brace.
-            const leftCenter = this.createNode(x0, centerY);
-            const middleCenter = this.createNode(x1, centerY);
-            this.createStrut(topLeft, leftCenter);
-            this.createStrut(leftCenter, bottomLeft);
-            this.createStrut(topMiddle, middleCenter);
-            this.createStrut(middleCenter, bottomMiddle);
-            this.createStrut(leftCenter, middleCenter);
-
-            // Cross-brace only the outer bay to keep the two-box frame rigid.
-            this.createStrut(bottomMiddle, topRight);
-            this.createStrut(topMiddle, bottomRight);
+            const railOuter = this.createNode(
+                railOuterPoint.x,
+                railOuterPoint.y
+            );
+            this.createStrut(mountainTop, railMountain);
+            this.createStrut(railMountain, mountainBottom);
+            this.createStrut(firstOuterTop, railOuter);
+            this.createStrut(railOuter, firstOuterBottom);
+            this.createStrut(railMountain, railOuter);
 
             const core = this.createCore(
-                x0 + boxWidth / 2,
-                centerY
+                (railMountainPoint.x + railOuterPoint.x) / 2,
+                (railMountainPoint.y + railOuterPoint.y) / 2
             );
-            this.createStrut(leftCenter, core);
-            this.createStrut(middleCenter, core);
+            this.createStrut(railMountain, core);
+            this.createStrut(railOuter, core);
+
+            // Keep the cross-bracing in the outer bay so the core bay stays
+            // visually open and rectangular.
+            this.createStrut(firstOuterTop, secondOuterBottom);
+            this.createStrut(firstOuterBottom, secondOuterTop);
 
             this.checkSupport();
             return;
