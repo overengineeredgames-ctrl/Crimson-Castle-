@@ -1686,10 +1686,10 @@ var Game = window.Game = {
         ctx.rect(viewLeft, viewTop, viewWidth, viewHeight);
         ctx.clip();
 
-        const sky = ctx.createLinearGradient(0, viewTop, 0, viewBottom);
-        sky.addColorStop(0, lightMode ? "#c8e5f8" : "#72b5e5");
-        sky.addColorStop(1, lightMode ? "#f1f7fb" : "#d8e9f4");
-        ctx.fillStyle = sky;
+        // Use a flat sky fill rather than a canvas gradient. Some mobile/GPU
+        // canvas implementations band or tile large transformed gradients,
+        // which appeared as repeated horizontal copies while panning vertically.
+        ctx.fillStyle = lightMode ? "#dcecf5" : "#82b9df";
         ctx.fillRect(viewLeft, viewTop, viewWidth, viewHeight);
 
         const points = Physics.terrainPoints || [];
