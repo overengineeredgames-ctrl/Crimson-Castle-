@@ -148,6 +148,92 @@ var AI = window.AI = {
         this.fortCreated = true;
         this.fortDifficulty = this.difficulty;
         const worldWidth = Physics.worldWidth || window.innerWidth * 2.4;
+
+        // Mountain enemy bastion: mirror the player's terrain-aware cliff fort
+        // onto the inward-facing (left) slope of the right mountain.
+        if (typeof Game !== "undefined" && Game.selectedMap === "mountain") {
+            const mountainWidth = worldWidth * 0.065;
+            const rightMountainPeak = worldWidth * 0.92;
+            const mountX = rightMountainPeak - mountainWidth * 0.55;
+            const wallHeight = 150;
+            const bayDepth = 150;
+
+            const lowerSurface = { x: mountX, y: Physics.terrainYAt(mountX) };
+            let upperSurface = { ...lowerSurface };
+            for (let x = mountX; x <= rightMountainPeak; x += 1) {
+                const sample = { x, y: Physics.terrainYAt(x) };
+                upperSurface = sample;
+                if (Math.hypot(lowerSurface.x - sample.x, lowerSurface.y - sample.y) >= wallHeight) break;
+            }
+
+            // The right-hand cliff is the horizontal mirror of the player's cliff.
+            // Its outward normal points left, into the central battlefield.
+            const tangentX = lowerSurface.x - upperSurface.x;
+            const tangentY = lowerSurface.y - upperSurface.y;
+            const tangentLength = Math.hypot(tangentX, tangentY) || 1;
+            const downSlope = { x: tangentX / tangentLength, y: tangentY / tangentLength };
+            let outward = { x: downSlope.y, y: -downSlope.x };
+            if (outward.x > 0) outward = { x: -outward.x, y: -outward.y };
+
+            const clearance = Building.nodeRadius + 4;
+            const cliffPoint = surface => ({
+                x: surface.x + outward.x * clearance,
+                y: surface.y + outward.y * clearance
+            });
+            const A = cliffPoint(upperSurface);
+            const B = cliffPoint(lowerSurface);
+            const C = { x: A.x + outward.x * bayDepth, y: A.y + outward.y * bayDepth };
+            const D = { x: B.x + outward.x * bayDepth, y: B.y + outward.y * bayDepth };
+            const E = {
+                x: (A.x + C.x) / 2 - downSlope.x * 38,
+                y: (A.y + C.y) / 2 - downSlope.y * 38
+            };
+
+            const nodes = {
+                cliffTop: Building.createNode(A.x, A.y, {
+                    isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
+                }),
+                cliffFoot: Building.createNode(B.x, B.y, {
+                    isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
+                }),
+                outerTop: Building.createNode(C.x, C.y, { team: "enemy", material: "wood" }),
+                outerFoot: Building.createNode(D.x, D.y, {
+                    isFoundation: true, isBaseAnchor: true, team: "enemy", material: "wood"
+                }),
+                roofCrown: Building.createNode(E.x, E.y, { team: "enemy", material: "wood" })
+            };
+
+            const edges = [
+                ["cliffTop", "cliffFoot"],
+                ["cliffTop", "roofCrown"],
+                ["roofCrown", "outerTop"],
+                ["outerTop", "outerFoot"],
+                ["outerFoot", "cliffFoot"],
+                ["cliffTop", "outerFoot"],
+                ["cliffFoot", "outerTop"],
+                ["roofCrown", "outerFoot"]
+            ];
+            for (const [a, b] of edges) {
+                Building.createStrut(nodes[a], nodes[b], { material: "wood" });
+            }
+
+            nodes.core = Building.createNode(
+                (A.x + B.x + C.x + D.x + E.x) / 5,
+                (A.y + B.y + C.y + D.y + E.y) / 5,
+                { isCore: true, team: "enemy", material: this.difficulty === "easy" ? "wood" : "steel" }
+            );
+            for (const key of ["cliffTop", "cliffFoot", "outerTop", "outerFoot", "roofCrown"]) {
+                Building.createStrut(nodes.core, nodes[key], {
+                    material: this.difficulty === "easy" ? "wood" : "steel"
+                });
+            }
+
+            Building.checkSupport();
+            const weapon = this.difficulty === "easy" ? "cannon" : this.chooseAIWeaponType();
+            Weapons.addCannon(nodes.outerTop, "enemy", true, weapon);
+            return;
+        }
+
         const leftX = Math.round(worldWidth * 0.68);
         const baseY = Physics.terrainYAt(leftX + 80) - Building.nodeRadius;
         const availablePresets = this.difficulty === "easy"
