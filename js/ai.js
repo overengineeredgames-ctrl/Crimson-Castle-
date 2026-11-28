@@ -172,8 +172,20 @@ var AI = window.AI = {
             const tangentY = lowerSurface.y - upperSurface.y;
             const tangentLength = Math.hypot(tangentX, tangentY) || 1;
             const downSlope = { x: tangentX / tangentLength, y: tangentY / tangentLength };
+            // Choose the perpendicular that faces the central battlefield.
+            // A left/right sign check alone can select the mountain-facing side
+            // when the cliff's slope is steep.
             let outward = { x: downSlope.y, y: -downSlope.x };
-            if (outward.x > 0) outward = { x: -outward.x, y: -outward.y };
+            const towardBattlefield = {
+                x: worldWidth / 2 - (upperSurface.x + lowerSurface.x) / 2,
+                y: Physics.groundY - (upperSurface.y + lowerSurface.y) / 2
+            };
+            if (
+                outward.x * towardBattlefield.x +
+                outward.y * towardBattlefield.y < 0
+            ) {
+                outward = { x: -outward.x, y: -outward.y };
+            }
 
             const clearance = Building.nodeRadius + 4;
             const cliffPoint = surface => ({
